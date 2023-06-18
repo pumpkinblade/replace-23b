@@ -20,6 +20,9 @@ namespace replace
     bool isFixed() const { return isFixed_; }
     void setFixed(bool on) { isFixed_ = on; }
 
+  // Dummy is virtual instance to fill in
+  // empty fragmented row structures.
+  // will have inst_ as nullptr
     // bool isDummy() const { return isDummy_; }
     // void setDummy(bool on) { isDummy_ = on; }
 
@@ -228,16 +231,16 @@ namespace replace
 
     Die &die() { return die_; }
 
-    // int siteSizeX() const { return siteSizeX_; }
-    // int siteSizeY() const { return siteSizeY_; }
+    int siteSizeX() const { return siteSizeX_; }
+    int siteSizeY() const { return siteSizeY_; }
 
     int64_t hpwl() const;
     void printInfo() const;
 
     int64_t placeInstsArea() const { return placeInstsArea_; }
-    // int64_t nonPlaceInstsArea() const { return nonPlaceInstsArea_; }
-    // int64_t macroInstsArea() const { return macroInstsArea_; }
-    // int64_t stdInstsArea() const { return stdInstsArea_; }
+    int64_t nonPlaceInstsArea() const { return nonPlaceInstsArea_; }
+    int64_t macroInstsArea() const { return macroInstsArea_; }
+    int64_t stdInstsArea() const { return stdInstsArea_; }
 
   private:
     Die die_;
@@ -252,21 +255,21 @@ namespace replace
 
     std::vector<Instance *> placeInsts_;
     std::vector<Instance *> fixedInsts_;
-
     // std::vector<Instance *> dummyInsts_;
     // std::vector<Instance *> nonPlaceInsts_;
 
-    // int siteSizeX_;
-    // int siteSizeY_;
+    // site is the smallest module
+    int siteSizeX_;
+    int siteSizeY_;
 
     int64_t placeInstsArea_;
-    // int64_t nonPlaceInstsArea_;
+    int64_t nonPlaceInstsArea_;
 
     // macroInstsArea_ + stdInstsArea_ = placeInstsArea_;
     // macroInstsArea_ should be separated
     // because of target_density tuning
-    // int64_t macroInstsArea_;
-    // int64_t stdInstsArea_;
+    int64_t macroInstsArea_;
+    int64_t stdInstsArea_;
 
     // void init();
     // void initInstsForFragmentedRow();

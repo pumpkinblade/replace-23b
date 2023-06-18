@@ -1,13 +1,5 @@
 cmake_minimum_required(VERSION 3.12)
 
-if (DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
-    set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
-endif()
-
-if (DEFINED ENV{VCPKG_DEFAULT_TRIPLET} AND NOT DEFINED VCPKG_TARGET_TRIPLET)
-    set(VCPKG_TARGET_TRIPLET "$ENV{VCPKG_DEFAULT_TRIPLET}")
-endif()
-
 project(replace)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -39,6 +31,11 @@ set(PLACE_HEADER
   src/placerBase.h
   src/replace.h
   src/initialPlace.h
+  src/fft.h
+  src/nesterovBase.h
+  src/nesterovPlace.h
+  src/point.h
+  src/plot.h
 )
 
 set(PLACE_SRC
@@ -48,6 +45,14 @@ set(PLACE_SRC
   src/placerBase.cpp
   src/replace.cpp
   src/initialPlace.cpp
+  src/fft.cpp
+  src/fftsg.cpp
+  src/fftsg2d.cpp
+  src/fftsg3d.cpp
+  src/nesterovBase.cpp
+  src/nesterovPlace.cpp
+  src/point.cpp
+  src/plot.cpp
 )
 
 add_executable(replace ${PLACE_SRC} ${PLACE_HEADER})

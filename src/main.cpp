@@ -51,6 +51,7 @@ int main(int argc, const char *argv[])
   Replace rp;
   rp.setPlacerBase(pb);
   rp.doInitialPlace();
+  rp.doNesterovPlace();
 
   return 0;
 }

@@ -585,6 +585,7 @@ namespace replace
 
     placeInsts_.clear();
     fixedInsts_.clear();
+    // dummyInsts_.clear();
     // nonPlaceInsts_.clear();
   }
 
@@ -627,9 +628,16 @@ namespace replace
     int64_t coreArea =
         static_cast<int64_t>(die_.coreUx() - die_.coreLx()) *
         static_cast<int64_t>(die_.coreUy() - die_.coreLy());
+    float util = 
+      static_cast<float>(placeInstsArea_) 
+      / (coreArea - nonPlaceInstsArea_) * 100;
 
     LOG_INFO("CoreArea: {}", coreArea);
+    LOG_INFO("NonPlaceInstArea: {}", nonPlaceInstsArea_);
     LOG_INFO("PlaceInstsArea: {}", placeInstsArea_);
+    LOG_INFO("Util(%): {}", util);
+    LOG_INFO("StdInstArea: {}", stdInstsArea_);
+    LOG_INFO("MacroInstArea: {}", macroInstsArea_);
   }
 
   // static odb::Rect getCoreRectFromDb(dbSet<odb::dbRow> &rows)

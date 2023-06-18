@@ -6,8 +6,10 @@
 namespace replace
 {
   class PlacerBase;
+  class NesterovBase;
 
   class InitialPlace;
+  class NesterovPlace;
 
   class Replace
   {
@@ -21,7 +23,7 @@ namespace replace
     void setPlacerBase(const std::shared_ptr<PlacerBase>& pb);
 
     void doInitialPlace();
-    // void doNesterovPlace();
+    void doNesterovPlace();
 
     // Initial Place param settings
     void setInitialPlaceMaxIter(int iter);
@@ -30,30 +32,29 @@ namespace replace
     void setInitialPlaceMaxFanout(int fanout);
     void setInitialPlaceNetWeightScale(float scale);
 
-    // void setNesterovPlaceMaxIter(int iter);
+    void setNesterovPlaceMaxIter(int iter);
 
-    // void setBinGridCntX(int binGridCntX);
-    // void setBinGridCntY(int binGridCntY);
+    void setBinGridCntX(int binGridCntX);
+    void setBinGridCntY(int binGridCntY);
 
-    // void setTargetDensity(float density);
-    // void setTargetOverflow(float overflow);
-    // void setInitDensityPenalityFactor(float penaltyFactor);
-    // void setInitWireLengthCoef(float coef);
-    // void setMinPhiCoef(float minPhiCoef);
-    // void setMaxPhiCoef(float maxPhiCoef);
+    void setTargetDensity(float density);
+    void setTargetOverflow(float overflow);
+    void setInitDensityPenalityFactor(float penaltyFactor);
+    void setInitWireLengthCoef(float coef);
+    void setMinPhiCoef(float minPhiCoef);
+    void setMaxPhiCoef(float maxPhiCoef);
 
     // HPWL: half-parameter wire length.
-    // void setReferenceHpwl(float deltaHpwl);
+    void setReferenceHpwl(float deltaHpwl);
 
     void setIncrementalPlaceMode(bool mode);
-    // void setVerboseLevel(int verbose);
 
   private:
     std::shared_ptr<PlacerBase> pb_;
-    // std::shared_ptr<NesterovBase> nb_;
+    std::shared_ptr<NesterovBase> nb_;
 
     std::unique_ptr<InitialPlace> ip_;
-    // std::unique_ptr<NesterovPlace> np_;
+    std::unique_ptr<NesterovPlace> np_;
 
     int initialPlaceMaxIter_;
     int initialPlaceMinDiffLength_;
@@ -61,19 +62,18 @@ namespace replace
     int initialPlaceMaxFanout_;
     float initialPlaceNetWeightScale_;
 
-    // int nesterovPlaceMaxIter_;
-    // int binGridCntX_;
-    // int binGridCntY_;
-    // float overflow_;
-    // float density_;
-    // float initDensityPenalityFactor_;
-    // float initWireLengthCoef_;
-    // float minPhiCoef_;
-    // float maxPhiCoef_;
-    // float referenceHpwl_;
+    int nesterovPlaceMaxIter_;
+    int binGridCntX_;
+    int binGridCntY_;
+    float overflow_;
+    float density_;
+    float initDensityPenalityFactor_;
+    float initWireLengthCoef_;
+    float minPhiCoef_;
+    float maxPhiCoef_;
+    float referenceHpwl_;
 
     bool incrementalPlaceMode_;
-    // int verbose_;
   };
 }
 

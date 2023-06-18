@@ -65,7 +65,7 @@ namespace replace
     FILE *lefFile = nullptr;
     if ((lefFile = fopen(lefFilename.c_str(), "r")) == 0)
     {
-      LOG_ERROR("Couldn't open LEF File `{}`", lefFilename);
+      LOG_CRITICAL("Couldn't open LEF File `{}`", lefFilename);
       exit(1);
     }
 
@@ -74,7 +74,7 @@ namespace replace
     fclose(lefFile);
     if (res != 0)
     {
-      LOG_ERROR("An error occurs when parsing LEF file `{}`", lefFilename);
+      LOG_CRITICAL("An error occurs when parsing LEF file `{}`", lefFilename);
       exit(1);
     }
   }
@@ -137,7 +137,7 @@ namespace replace
     FILE *defFile = nullptr;
     if ((defFile = fopen(defFilename.c_str(), "r")) == 0)
     {
-      LOG_ERROR("Couldn't open DEF File `{}`", defFilename);
+      LOG_CRITICAL("Couldn't open DEF File `{}`", defFilename);
       exit(1);
     }
 
@@ -146,7 +146,7 @@ namespace replace
     fclose(defFile);
     if (res != 0)
     {
-      LOG_ERROR("An error occurs when parsing DEF file `{}`", defFilename);
+      LOG_CRITICAL("An error occurs when parsing DEF file `{}`", defFilename);
       exit(1);
     }
   }
@@ -258,6 +258,8 @@ namespace replace
     const auto& site = lefdb.lefSiteMap[siteName];
     int siteWidth = static_cast<int>(site.sizeX() * defdb.defUnit);
     int siteHeight = static_cast<int>(site.sizeY() * defdb.defUnit);
+    pb->siteSizeX_ = siteWidth;
+    pb->siteSizeY_ = siteHeight;
 
     LOG_TRACE("Process die and rows");
     // Process die and rows
@@ -306,10 +308,6 @@ namespace replace
       inst.setFixed(compIt.second.isFixed());
       inst.setExtId(static_cast<int>(pb->instStor_.size()));
       pb->instStor_.push_back(inst);
-      if (pb->instStor_.back().isFixed())
-        pb->fixedInsts_.push_back(&pb->instStor_.back());
-      else
-        pb->placeInsts_.push_back(&pb->instStor_.back());
 
       instExtIds.emplace(compIt.second.id(), inst.extId());
     }
@@ -354,17 +352,34 @@ namespace replace
       pb->netStor_.back().updateBox();
     }
 
-    int64_t placeInstArea = 0;
+    pb->placeInstsArea_ = 0;
+    pb->macroInstsArea_ = 0;
+    pb->stdInstsArea_ = 0;
     for(auto& inst : pb->instStor_)
     {
       pb->insts_.push_back(&inst);
-      placeInstArea += static_cast<int64_t>(inst.dx()) * static_cast<int64_t>(inst.dy());
+      if(inst.isFixed())
+        pb->fixedInsts_.push_back(&inst);
+      else
+        pb->placeInsts_.push_back(&inst);
+
+      int64_t instArea = static_cast<int64_t>(inst.dx()) * static_cast<int64_t>(inst.dy());
+      pb->placeInstsArea_ += instArea;
+      if(inst.dy() > pb->siteSizeY_ * 6)
+        pb->macroInstsArea_ += instArea;
+      else
+        pb->stdInstsArea_ += instArea;
     }
-    pb->placeInstsArea_ = placeInstArea;
+    int64_t coreArea =
+        static_cast<int64_t>(pb->die_.coreUx() - pb->die_.coreLx()) *
+        static_cast<int64_t>(pb->die_.coreUy() - pb->die_.coreLy());
+    pb->nonPlaceInstsArea_ = coreArea - pb->placeInstsArea_;
+
     for(auto& pin : pb->pinStor_)
     {
       pb->pins_.push_back(&pin);
     }
+
     for(auto& net : pb->netStor_)
     {
       pb->nets_.push_back(&net);
