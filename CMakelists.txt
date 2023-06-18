@@ -1,0 +1,60 @@
+cmake_minimum_required(VERSION 3.12)
+
+if (DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
+    set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
+endif()
+
+if (DEFINED ENV{VCPKG_DEFAULT_TRIPLET} AND NOT DEFINED VCPKG_TARGET_TRIPLET)
+    set(VCPKG_TARGET_TRIPLET "$ENV{VCPKG_DEFAULT_TRIPLET}")
+endif()
+
+project(replace)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+set(REPLACE_HOME ${PROJECT_SOURCE_DIR} )
+set(DEFLIB_HOME
+    ${PROJECT_SOURCE_DIR}/module/def
+)
+set(LEFLIB_HOME
+    ${PROJECT_SOURCE_DIR}/module/lef
+)
+set(SPDLOG_HOME
+    ${PROJECT_SOURCE_DIR}/module/spdlog
+)
+set(TCLAP_HOME
+    ${PROJECT_SOURCE_DIR}/module/tclap
+)
+
+add_subdirectory(${DEFLIB_HOME})
+add_subdirectory(${LEFLIB_HOME})
+
+find_package(Eigen3 CONFIG REQUIRED)
+
+set(PLACE_HEADER
+  src/log.h
+  src/parser.h
+  src/placerBase.h
+  src/replace.h
+  src/initialPlace.h
+)
+
+set(PLACE_SRC
+  src/main.cpp
+  src/log.cpp
+  src/lefdefParser.cpp
+  src/placerBase.cpp
+  src/replace.cpp
+  src/initialPlace.cpp
+)
+
+add_executable(replace ${PLACE_SRC} ${PLACE_HEADER})
+
+target_include_directories(replace PRIVATE ${SPDLOG_HOME}/include)
+target_include_directories(replace PRIVATE ${TCLAP_HOME}/include)
+
+target_link_libraries(replace PRIVATE Eigen3::Eigen)
+target_link_libraries(replace PRIVATE def)
+target_link_libraries(replace PRIVATE lef)
