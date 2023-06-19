@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.12)
 
 project(replace)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -19,11 +19,12 @@ set(SPDLOG_HOME
 set(TCLAP_HOME
     ${PROJECT_SOURCE_DIR}/module/tclap
 )
+set(EIGEN_HOME
+    ${PROJECT_SOURCE_DIR}/module/eigen
+)
 
 add_subdirectory(${DEFLIB_HOME})
 add_subdirectory(${LEFLIB_HOME})
-
-find_package(Eigen3 CONFIG REQUIRED)
 
 set(PLACE_HEADER
   src/log.h
@@ -59,7 +60,7 @@ add_executable(replace ${PLACE_SRC} ${PLACE_HEADER})
 
 target_include_directories(replace PRIVATE ${SPDLOG_HOME}/include)
 target_include_directories(replace PRIVATE ${TCLAP_HOME}/include)
+target_include_directories(replace PRIVATE ${EIGEN_HOME}/include)
 
-target_link_libraries(replace PRIVATE Eigen3::Eigen)
 target_link_libraries(replace PRIVATE def)
 target_link_libraries(replace PRIVATE lef)
