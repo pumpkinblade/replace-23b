@@ -306,6 +306,7 @@ namespace replace
       Instance inst;
       inst.setBox(instLx, instLy, instLx + instSize.first, instLy + instSize.second);
       inst.setFixed(compIt.second.isFixed());
+      inst.setDummy(false);
       inst.setExtId(static_cast<int>(pb->instStor_.size()));
       pb->instStor_.push_back(inst);
 
@@ -355,25 +356,35 @@ namespace replace
     pb->placeInstsArea_ = 0;
     pb->macroInstsArea_ = 0;
     pb->stdInstsArea_ = 0;
+    pb->nonPlaceInstsArea_ = 0;
     for(auto& inst : pb->instStor_)
     {
+      int64_t instArea = static_cast<int64_t>(inst.dx()) * static_cast<int64_t>(inst.dy());
+
       pb->insts_.push_back(&inst);
       if(inst.isFixed())
+      {
         pb->fixedInsts_.push_back(&inst);
+        pb->nonPlaceInsts_.push_back(&inst);
+        pb->nonPlaceInstsArea_ += instArea;
+      }
+      else if(inst.isDummy())
+      {
+        pb->dummyInsts_.push_back(&inst);
+        pb->nonPlaceInsts_.push_back(&inst);
+        pb->nonPlaceInstsArea_ += instArea;
+      }
       else
+      {
         pb->placeInsts_.push_back(&inst);
-
-      int64_t instArea = static_cast<int64_t>(inst.dx()) * static_cast<int64_t>(inst.dy());
-      pb->placeInstsArea_ += instArea;
+        pb->placeInstsArea_ += instArea;
+      }
+      
       if(inst.dy() > pb->siteSizeY_ * 6)
         pb->macroInstsArea_ += instArea;
       else
         pb->stdInstsArea_ += instArea;
     }
-    int64_t coreArea =
-        static_cast<int64_t>(pb->die_.coreUx() - pb->die_.coreLx()) *
-        static_cast<int64_t>(pb->die_.coreUy() - pb->die_.coreLy());
-    pb->nonPlaceInstsArea_ = coreArea - pb->placeInstsArea_;
 
     for(auto& pin : pb->pinStor_)
     {

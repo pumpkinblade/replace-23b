@@ -23,8 +23,8 @@ namespace replace
   // Dummy is virtual instance to fill in
   // empty fragmented row structures.
   // will have inst_ as nullptr
-    // bool isDummy() const { return isDummy_; }
-    // void setDummy(bool on) { isDummy_ = on; }
+    bool isDummy() const { return isDummy_; }
+    void setDummy(bool on) { isDummy_ = on; }
 
     void setLocation(int x, int y);
     void setCenterLocation(int x, int y);
@@ -54,7 +54,7 @@ namespace replace
     int uy_;
     int extId_;
     bool isFixed_;
-    // bool isDummy_;
+    bool isDummy_;
   };
 
   class Pin
@@ -226,8 +226,8 @@ namespace replace
     //
     const std::vector<Instance *> &placeInsts() const { return placeInsts_; }
     const std::vector<Instance *> &fixedInsts() const { return fixedInsts_; }
-    // const std::vector<Instance *> &dummyInsts() const { return dummyInsts_; }
-    // const std::vector<Instance *> &nonPlaceInsts() const { return nonPlaceInsts_; }
+    const std::vector<Instance *> &dummyInsts() const { return dummyInsts_; }
+    const std::vector<Instance *> &nonPlaceInsts() const { return nonPlaceInsts_; }
 
     Die &die() { return die_; }
 
@@ -255,8 +255,8 @@ namespace replace
 
     std::vector<Instance *> placeInsts_;
     std::vector<Instance *> fixedInsts_;
-    // std::vector<Instance *> dummyInsts_;
-    // std::vector<Instance *> nonPlaceInsts_;
+    std::vector<Instance *> dummyInsts_;
+    std::vector<Instance *> nonPlaceInsts_;
 
     // site is the smallest module
     int siteSizeX_;

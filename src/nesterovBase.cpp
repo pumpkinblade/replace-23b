@@ -714,8 +714,7 @@ BinGrid::updateBinsNonPlaceArea() {
     bin->setNonPlaceArea(0);
   }
 
-  // for(auto& inst : pb_->nonPlaceInsts()) {
-  for(auto& inst : pb_->fixedInsts()) {
+  for(auto& inst : pb_->nonPlaceInsts()) {
     std::pair<int, int> pairX = getMinMaxIdxX(inst);
     std::pair<int, int> pairY = getMinMaxIdxY(inst);
     for(int i = pairX.first; i < pairX.second; i++) {

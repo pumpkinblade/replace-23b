@@ -49,6 +49,7 @@ int main(int argc, const char *argv[])
   pb->printInfo();
 
   Replace rp;
+  rp.setInitialPlaceMaxIter(5);
   rp.setPlacerBase(pb);
   rp.doInitialPlace();
   rp.doNesterovPlace();
