@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.12)
 
 project(replace)
 
+option(USE_CIMG "use cimg" OFF)
+
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -25,6 +27,12 @@ set(EIGEN_HOME
 
 add_subdirectory(${DEFLIB_HOME})
 add_subdirectory(${LEFLIB_HOME})
+
+if(USE_CIMG)
+    find_package(JPEG REQUIRED)
+    find_package(Cimg CONFIG REQUIRED)
+    find_package(X11 REQUIRED)
+endif()
 
 set(PLACE_HEADER
   src/log.h
@@ -64,3 +72,10 @@ target_include_directories(replace PRIVATE ${EIGEN_HOME}/include)
 
 target_link_libraries(replace PRIVATE def)
 target_link_libraries(replace PRIVATE lef)
+
+if(USE_CIMG)
+    target_link_libraries(replace PRIVATE CImg::CImg)
+    target_link_libraries(replace PRIVATE ${JPEG_LIBRARIES})
+    target_link_libraries(replace PRIVATE ${X11_LIBRARIES})
+    target_compile_options(replace PRIVATE -DENABLE_CIMG_LIB)
+endif()

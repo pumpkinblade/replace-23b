@@ -1,5 +1,6 @@
-#ifdef ENABLE_CIMG_LIB 
-#include "CImg.h"
+#ifdef ENABLE_CIMG_LIB
+#define cimg_use_jpeg
+#include <CImg.h>
 
 #include "plot.h"
 #include "placerBase.h"

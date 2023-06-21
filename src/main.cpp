@@ -50,6 +50,7 @@ int main(int argc, const char *argv[])
 
   Replace rp;
   rp.setInitialPlaceMaxIter(5);
+  rp.setNesterovPlaceMaxIter(100);
   rp.setPlacerBase(pb);
   rp.doInitialPlace();
   rp.doNesterovPlace();

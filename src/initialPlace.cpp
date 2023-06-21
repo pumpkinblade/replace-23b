@@ -1,6 +1,7 @@
 #include "initialPlace.h"
 #include "placerBase.h"
 #include "log.h"
+#include "plot.h"
 
 #include <Eigen/IterativeLinearSolvers>
 
