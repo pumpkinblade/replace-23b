@@ -1,5 +1,6 @@
 #include "parser.h"
 #include "log.h"
+#include "technology.h"
 #include <algorithm>
 #include <lefrReader.hpp>
 #include <defrReader.hpp>
@@ -8,8 +9,8 @@ namespace replace
 {
   struct LEF_DATABASE
   {
-    lefiUnits lefUnit;
-    std::unordered_map<std::string, lefiSite> lefSiteMap;
+    double lefUnit;
+    lefiSite lefCoreSite;
     std::unordered_map<std::string, lefiMacro> lefMacroMap;
     std::unordered_map<std::string, int> lefMacroPinIdxMap;
     std::vector<std::vector<lefiPin>> lefMacroPins;
@@ -18,14 +19,15 @@ namespace replace
   static int LefUnitCallback(lefrCallbackType_e typ, lefiUnits *unit, lefiUserData data)
   {
     LEF_DATABASE *db = reinterpret_cast<LEF_DATABASE *>(data);
-    db->lefUnit = *unit;
+    db->lefUnit = unit->databaseNumber();
     return 0;
   }
 
   static int LefSiteCallback(lefrCallbackType_e typ, lefiSite *site, lefiUserData data)
   {
     LEF_DATABASE *db = reinterpret_cast<LEF_DATABASE *>(data);
-    db->lefSiteMap.emplace(site->name(), *site);
+    if(std::strcmp(site->name(), "CoreSite") == 0)
+      db->lefCoreSite = *site;
     return 0;
   }
 
@@ -79,6 +81,78 @@ namespace replace
     }
   }
 
+  std::pair<double, double> GetPinLocation(const lefiPin &pin)
+  {
+    double lx = INT_MAX;
+    double ux = INT_MIN;
+    double ly = INT_MAX;
+    double uy = INT_MIN;
+    for (int i = 0; i < pin.numPorts(); i++)
+    {
+      lefiGeometries *geo = pin.port(i);
+      for (int j = 0; j < geo->numItems(); j++)
+      {
+        if (geo->itemType(j) == lefiGeomRectE)
+        {
+          lx = std::min(lx, geo->getRect(j)->xl);
+          ux = std::max(ux, geo->getRect(j)->xh);
+          ly = std::min(ly, geo->getRect(j)->yl);
+          uy = std::max(uy, geo->getRect(j)->yh);
+        }
+      }
+    }
+    return std::make_pair((lx + ux) / 2, (ly + uy) / 2);
+  }
+
+  std::shared_ptr<Technology> Parser::LefToTechnology(const std::string& lefFilename)
+  {
+    auto tech = std::make_shared<Technology>();
+
+    LEF_DATABASE lefdb;
+    LOG_TRACE("Parse LEF Begin");
+    ParseLef(lefFilename, &lefdb);
+    LOG_TRACE("Parse LEF End");
+
+    LOG_TRACE("Process lef site");
+    int siteX = static_cast<int>(lefdb.lefCoreSite.sizeX() * lefdb.lefUnit);
+    int siteY = static_cast<int>(lefdb.lefCoreSite.sizeY() * lefdb.lefUnit);
+    tech->siteSizeX_ = siteX;
+    tech->siteSizeY_ = siteY;
+
+    LOG_TRACE("Process lef libcell and libpin");
+    tech->cellStor_.reserve(lefdb.lefMacroMap.size());
+    tech->pinStor_.reserve(lefdb.lefMacroMap.size());
+
+    // add libcell and libpin to tech
+    for (const auto& it : lefdb.lefMacroMap)
+    {
+      int w = static_cast<int>(it.second.sizeX() * lefdb.lefUnit);
+      int h = static_cast<int>(it.second.sizeY() * lefdb.lefUnit);
+      bool isMacro = h > siteY * 6;
+      tech->cellStor_.emplace_back(w, h, isMacro);
+      tech->cellNameMap_.emplace(it.second.name(), &tech->cellStor_.back());
+      tech->cells_.push_back(&tech->cellStor_.back());
+      if(isMacro)
+        tech->macros_.push_back(&tech->cellStor_.back());
+      else
+        tech->stdCells_.push_back(&tech->cellStor_.back());
+
+      int idx = lefdb.lefMacroPinIdxMap[it.first];
+      const auto& pins = lefdb.lefMacroPins[idx];
+      tech->pinStor_.emplace_back();
+      tech->pinStor_.back().reserve(pins.size());
+      for (const auto &pin : pins)
+      {
+        std::pair<double, double> offset = GetPinLocation(pin);
+        int x = static_cast<int>(offset.first * lefdb.lefUnit);
+        int y = static_cast<int>(offset.second * lefdb.lefUnit);
+        tech->pinStor_.back().emplace_back(x, y);
+        tech->cellStor_.back().addPin(pin.name(), &tech->pinStor_.back().back());
+      }
+    }
+    return tech;
+  }
+
   struct DEF_DATABASE
   {
     defiBox defDieArea;
@@ -119,6 +193,12 @@ namespace replace
   static int DefNetCallback(defrCallbackType_e typ, defiNet *net, defiUserData data)
   {
     DEF_DATABASE *db = reinterpret_cast<DEF_DATABASE *>(data);
+    // ignore io pin
+    for (int i = 0; i < net->numConnections(); i++)
+    {
+      if (strcmp(net->instance(i), "PIN") == 0)
+        return 0;
+    }
     db->defNets.push_back(*net);
     return 0;
   }
@@ -149,29 +229,6 @@ namespace replace
       LOG_CRITICAL("An error occurs when parsing DEF file `{}`", defFilename);
       exit(1);
     }
-  }
-
-  std::pair<double, double> GetPinOffset(const lefiPin &pin)
-  {
-    double lx = INT_MAX;
-    double ux = INT_MIN;
-    double ly = INT_MAX;
-    double uy = INT_MIN;
-    for (int i = 0; i < pin.numPorts(); i++)
-    {
-      lefiGeometries *geo = pin.port(i);
-      for (int j = 0; j < geo->numItems(); j++)
-      {
-        if (geo->itemType(j) == lefiGeomRectE)
-        {
-          lx = std::min(lx, geo->getRect(j)->xl);
-          ux = std::max(ux, geo->getRect(j)->xh);
-          ly = std::min(ly, geo->getRect(j)->yl);
-          uy = std::max(uy, geo->getRect(j)->yh);
-        }
-      }
-    }
-    return std::make_pair((lx + ux) / 2, (ly + uy) / 2);
   }
 
   std::pair<int, int> GetOrientSize(int orient, int w, int h)
@@ -220,29 +277,16 @@ namespace replace
     return std::make_pair(x, y);
   }
 
-  std::shared_ptr<PlacerBase> Parser::FromLefDef(const std::string &lefFilename, const std::string &defFilename)
+  std::shared_ptr<PlacerBase> Parser::LefDefToPlacerBase(const std::string &lefFilename, const std::string &defFilename)
   {
-    LEF_DATABASE lefdb;
-    DEF_DATABASE defdb;
+    auto pb = std::make_shared<PlacerBase>();
 
-    LOG_TRACE("Parse LEF Begin");
-    ParseLef(lefFilename, &lefdb);
-    LOG_TRACE("Parse LEF End");
+    auto tech = LefToTechnology(lefFilename);
+    DEF_DATABASE defdb;
     LOG_TRACE("Parse DEF Begin");
     ParseDef(defFilename, &defdb);
     LOG_TRACE("Parse DEF End");
 
-    LOG_INFO("Unit: {} {}", lefdb.lefUnit.databaseName(), lefdb.lefUnit.databaseNumber());
-    LOG_INFO("Num Site: {}", lefdb.lefSiteMap.size());
-    LOG_INFO("Num Macro: {}", lefdb.lefMacroMap.size());
-
-    LOG_INFO("Die Area: [{}, {}] x [{}, {}]", defdb.defDieArea.xl(), defdb.defDieArea.xh(), defdb.defDieArea.yl(), defdb.defDieArea.yh());
-    LOG_INFO("DEF Unit: {}", defdb.defUnit);
-    LOG_INFO("Num Row: {}", defdb.defRows.size());
-    LOG_INFO("Num Component: {}", defdb.defComponentMap.size());
-    LOG_INFO("Num Net: {}", defdb.defNets.size());
-
-    auto pb = std::make_shared<PlacerBase>();
     pb->instStor_.reserve(defdb.defComponentMap.size());
     pb->netStor_.reserve(defdb.defNets.size());
     int numPins = 0;
@@ -252,14 +296,9 @@ namespace replace
     }
     pb->pinStor_.reserve(numPins);
 
-    LOG_TRACE("Process Site");
-    // assume that every row uses same site
-    const char* siteName = defdb.defRows.front().macro();
-    const auto& site = lefdb.lefSiteMap[siteName];
-    int siteWidth = static_cast<int>(site.sizeX() * defdb.defUnit);
-    int siteHeight = static_cast<int>(site.sizeY() * defdb.defUnit);
-    pb->siteSizeX_ = siteWidth;
-    pb->siteSizeY_ = siteHeight;
+    LOG_TRACE("Process def site");
+    pb->siteSizeX_ = tech->siteSizeX();
+    pb->siteSizeY_ = tech->siteSizeY();
 
     LOG_TRACE("Process die and rows");
     // Process die and rows
@@ -268,27 +307,11 @@ namespace replace
     {
       int lx = static_cast<int>(defRow.x());
       int ly = static_cast<int>(defRow.y());
-      int ux = lx + static_cast<int>(defRow.xNum()) * siteWidth;
-      int uy = ly + siteHeight;
-      pb->die_.addRow(Row(siteWidth, lx, ly, ux, uy));
+      int ux = lx + static_cast<int>(defRow.xNum()) * pb->siteSizeX_;
+      int uy = ly + pb->siteSizeY_;
+      pb->die_.addRow(Row(pb->siteSizeX_, lx, ly, ux, uy));
     }
     pb->die_.updateCoreBox();
-
-    LOG_TRACE("Process lef macro");
-    // Process lef macro
-    std::unordered_map<std::string, std::pair<int, int>> pinOffsets; // $macroName-$pinName -> (pinOffsetX, pinOffsetY)
-    for (const auto &lefMacroIt : lefdb.lefMacroMap)
-    {
-      int idx = lefdb.lefMacroPinIdxMap[lefMacroIt.first];
-      for (const auto &pin : lefdb.lefMacroPins[idx])
-      {
-        std::string key = lefMacroIt.first + std::string("-") + pin.name();
-        std::pair<double, double> offset = GetPinOffset(pin);
-        int offsetX = static_cast<int>(offset.first * defdb.defUnit);
-        int offsetY = static_cast<int>(offset.second * defdb.defUnit);
-        pinOffsets.emplace(key, std::make_pair(offsetX, offsetY));
-      }
-    }
 
     LOG_TRACE("Process def component");
     // Process def component
@@ -297,10 +320,10 @@ namespace replace
     {
       int instLx = compIt.second.placementX();
       int instLy = compIt.second.placementY();
-      const auto& macro = lefdb.lefMacroMap[compIt.second.name()];
+      const LibCell* libcell = tech->cell(compIt.second.name());
       int orient = compIt.second.placementOrient();
-      int w = static_cast<int>(macro.sizeX() * defdb.defUnit);
-      int h = static_cast<int>(macro.sizeY() * defdb.defUnit);
+      int w = libcell->sizeX();
+      int h = libcell->sizeY();
       std::pair<int, int> instSize = GetOrientSize(orient, w, h);
 
       Instance inst;
@@ -326,18 +349,13 @@ namespace replace
         // find component
         const auto& compIt = defdb.defComponentMap.find(instName);
 
-        // find macro
-        auto macroName = std::string(compIt->second.name());
-        const auto& macro = lefdb.lefMacroMap[macroName];
+        // find libcell
+        const LibCell* libcell = tech->cell(compIt->second.name());
         int orient = compIt->second.placementOrient();
 
         // find pinOffset
-        std::pair<int, int> pinOffset = pinOffsets[macroName + "-" + pinName];
-        int x = pinOffset.first;
-        int y = pinOffset.second;
-        int w = static_cast<int>(macro.sizeX() * defdb.defUnit);
-        int h = static_cast<int>(macro.sizeY() * defdb.defUnit);
-        pinOffset = GetOrientPoint(orient, x, y, w, h);
+        const LibPin* libpin = libcell->pin(pinName);
+        auto pinLoc = GetOrientPoint(orient, libpin->x(), libpin->y(), libcell->sizeX(), libcell->sizeY());
 
         // find instance extId
         int extId = instExtIds[instName];
@@ -346,7 +364,7 @@ namespace replace
         pb->pinStor_.emplace_back();
         pb->pinStor_.back().setInstance(&pb->instStor_[extId]);
         pb->pinStor_.back().setNet(&pb->netStor_.back());
-        pb->pinStor_.back().updateLocation(&pb->instStor_[extId], pinOffset.first, pinOffset.second);
+        pb->pinStor_.back().updateLocation(&pb->instStor_[extId], pinLoc.first, pinLoc.second);
         pb->netStor_.back().addPin(&pb->pinStor_.back());
         pb->instStor_[extId].addPin(&pb->pinStor_.back());
       }

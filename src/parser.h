@@ -3,6 +3,7 @@
 
 #include <string>
 #include <memory>
+#include "technology.h"
 #include "placerBase.h"
 
 namespace replace
@@ -10,7 +11,8 @@ namespace replace
   class Parser
   {
   public:
-    static std::shared_ptr<PlacerBase> FromLefDef(const std::string& lefFilename, const std::string& defFilename);
+    static std::shared_ptr<Technology> LefToTechnology(const std::string& lefFilename);
+    static std::shared_ptr<PlacerBase> LefDefToPlacerBase(const std::string& lefFilename, const std::string& defFilename);
   };
 }
 #endif

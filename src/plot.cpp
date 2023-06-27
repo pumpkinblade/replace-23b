@@ -1,5 +1,4 @@
 #ifdef ENABLE_CIMG_LIB
-#define cimg_use_jpeg
 #include <CImg.h>
 
 #include "plot.h"

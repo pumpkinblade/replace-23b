@@ -45,6 +45,7 @@ set(PLACE_HEADER
   src/nesterovPlace.h
   src/point.h
   src/plot.h
+  src/technology.h
 )
 
 set(PLACE_SRC
@@ -62,6 +63,7 @@ set(PLACE_SRC
   src/nesterovPlace.cpp
   src/point.cpp
   src/plot.cpp
+  src/technology.cpp
 )
 
 add_executable(replace ${PLACE_SRC} ${PLACE_HEADER})
@@ -78,4 +80,5 @@ if(USE_CIMG)
     target_link_libraries(replace PRIVATE ${JPEG_LIBRARIES})
     target_link_libraries(replace PRIVATE ${X11_LIBRARIES})
     target_compile_options(replace PRIVATE -DENABLE_CIMG_LIB)
+    target_compile_options(replace PRIVATE -Dcimg_use_jpeg)
 endif()

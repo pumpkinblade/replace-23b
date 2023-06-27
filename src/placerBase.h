@@ -204,11 +204,9 @@ namespace replace
     std::vector<Row> rows_;
   };
 
-  class Parser;
-
   class PlacerBase
   {
-    friend Parser;
+    friend class Parser;
   public:
     PlacerBase();
     ~PlacerBase();

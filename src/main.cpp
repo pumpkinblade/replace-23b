@@ -44,13 +44,11 @@ int main(int argc, const char *argv[])
   }
 
   LOG_TRACE("Parse Lef/Def Begin");
-  std::shared_ptr<PlacerBase> pb = Parser::FromLefDef(lefFilename, defFilename);
+  std::shared_ptr<PlacerBase> pb = Parser::LefDefToPlacerBase(lefFilename, defFilename);
   LOG_TRACE("Parse Lef/Def End");
   pb->printInfo();
 
   Replace rp;
-  rp.setInitialPlaceMaxIter(5);
-  rp.setNesterovPlaceMaxIter(100);
   rp.setPlacerBase(pb);
   rp.doInitialPlace();
   rp.doNesterovPlace();

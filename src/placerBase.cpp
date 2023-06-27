@@ -8,9 +8,7 @@ namespace replace
 
   using namespace std;
 
-  // static odb::Rect getCoreRectFromDb(dbSet<odb::dbRow> &rows);
-
-  // static int fastModulo(const int input, const int ceil);
+  static int fastModulo(const int input, const int ceil);
 
   static std::pair<int, int> getMinMaxIdx(int ll, int uu, int coreLL, int siteSize, int minIdx, int maxIdx);
 
@@ -249,7 +247,9 @@ namespace replace
   // Die
 
   Die::Die() : dieLx_(0), dieLy_(0), dieUx_(0), dieUy_(0),
-               coreLx_(0), coreLy_(0), coreUx_(0), coreUy_(0) {}
+               coreLx_(0), coreLy_(0), coreUx_(0), coreUy_(0)
+  {
+  }
 
   Die::~Die()
   {
