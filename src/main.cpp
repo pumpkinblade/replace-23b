@@ -17,6 +17,8 @@ int main(int argc, const char *argv[])
 
   string lefFilename;
   string defFilename;
+  string mode;
+  string txtFilename;
 
   // Wrap everything in a try block.  Do this every time, because exceptions will be thrown for problems.
   try
@@ -24,11 +26,15 @@ int main(int argc, const char *argv[])
     CmdLine cmd("Command description message", ' ', "0.1(alpha)");
 
     // Define a value argument and add it to the command line.
-    ValueArg<string> lefArg("l", "lef", "path to lef file", true, "none", "string");
-    ValueArg<string> defArg("d", "def", "path to def file", true, "none", "string");
-    ValueArg<string> tmpArg("t", "tmp", "no description", true, "none", "string");
+    ValueArg<string> lefArg("l", "lef", "path to lef file", false, "none", "string");
+    ValueArg<string> defArg("d", "def", "path to def file", false, "none", "string");
+    ValueArg<string> modeArg("m", "mode", "lefdef/23b", false, "lefdef", "string");
+    ValueArg<string> txtArg("b", "txt23b", "path to 23b text file", false, "none", "string");
+
     cmd.add(lefArg);
     cmd.add(defArg);
+    cmd.add(modeArg);
+    cmd.add(txtArg);
 
     // Parse the args.
     cmd.parse(argc, argv);
@@ -36,6 +42,8 @@ int main(int argc, const char *argv[])
     // Get the value parsed by each arg.
     lefFilename = lefArg.getValue();
     defFilename = defArg.getValue();
+    mode = modeArg.getValue();
+    txtFilename = txtArg.getValue();
   }
   catch (ArgException &e) // catch any exceptions
   {
@@ -43,15 +51,25 @@ int main(int argc, const char *argv[])
     return 1;
   }
 
-  LOG_TRACE("Parse Lef/Def Begin");
-  std::shared_ptr<PlacerBase> pb = Parser::LefDefToPlacerBase(lefFilename, defFilename);
-  LOG_TRACE("Parse Lef/Def End");
-  pb->printInfo();
+  if(mode == "lefdef")
+  {
+    LOG_TRACE("Parse Lef/Def Begin");
+    std::shared_ptr<PlacerBase> pb = Parser::LefDefToPlacerBase(lefFilename, defFilename);
+    LOG_TRACE("Parse Lef/Def End");
+    pb->printInfo();
 
-  Replace rp;
-  rp.setPlacerBase(pb);
-  rp.doInitialPlace();
-  rp.doNesterovPlace();
+    Replace rp;
+    rp.setPlacerBase(pb);
+    rp.doInitialPlace();
+    rp.doNesterovPlace();
+  }
+  else if(mode == "23b")
+  {
+    LOG_TRACE("Parse 23b Text File Begin");
+    std::shared_ptr<Placer23b> pb = Parser::TxtToPlacer23b(txtFilename);
+    pb->printInfo();
+    LOG_TRACE("Parse 23b Text File End");
+  }
 
   return 0;
 }

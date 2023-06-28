@@ -229,18 +229,18 @@ namespace replace
   ////////////////////////////////////////////////////////
   // Row
 
-  Row::Row() : siteWidth_(0), lx_(0), ly_(0), ux_(0), uy_(0)
+  Row::Row() : lx_(0), ly_(0), ux_(0), uy_(0)
   {
   }
 
-  Row::Row(int siteWidth, int lx, int ly, int ux, int uy)
-      : siteWidth_(siteWidth), lx_(lx), ly_(ly), ux_(ux), uy_(uy)
+  Row::Row(int lx, int ly, int ux, int uy)
+      : lx_(lx), ly_(ly), ux_(ux), uy_(uy)
   {
   }
 
   Row::~Row()
   {
-    siteWidth_ = lx_ = ly_ = ux_ = uy_ = 0;
+    lx_ = ly_ = ux_ = uy_ = 0;
   }
 
   ////////////////////////////////////////////////////////

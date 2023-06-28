@@ -121,7 +121,10 @@ namespace replace
 
     LOG_TRACE("Process lef libcell and libpin");
     tech->cellStor_.reserve(lefdb.lefMacroMap.size());
-    tech->pinStor_.reserve(lefdb.lefMacroMap.size());
+    size_t numPins = 0;
+    for(const auto& p : lefdb.lefMacroPins)
+      numPins += p.size();
+    tech->pinStor_.reserve(numPins);
 
     // add libcell and libpin to tech
     for (const auto& it : lefdb.lefMacroMap)
@@ -139,15 +142,13 @@ namespace replace
 
       int idx = lefdb.lefMacroPinIdxMap[it.first];
       const auto& pins = lefdb.lefMacroPins[idx];
-      tech->pinStor_.emplace_back();
-      tech->pinStor_.back().reserve(pins.size());
       for (const auto &pin : pins)
       {
         std::pair<double, double> offset = GetPinLocation(pin);
         int x = static_cast<int>(offset.first * lefdb.lefUnit);
         int y = static_cast<int>(offset.second * lefdb.lefUnit);
-        tech->pinStor_.back().emplace_back(x, y);
-        tech->cellStor_.back().addPin(pin.name(), &tech->pinStor_.back().back());
+        tech->pinStor_.emplace_back(x, y);
+        tech->cellStor_.back().addPin(pin.name(), &tech->pinStor_.back());
       }
     }
     return tech;
@@ -309,7 +310,7 @@ namespace replace
       int ly = static_cast<int>(defRow.y());
       int ux = lx + static_cast<int>(defRow.xNum()) * pb->siteSizeX_;
       int uy = ly + pb->siteSizeY_;
-      pb->die_.addRow(Row(pb->siteSizeX_, lx, ly, ux, uy));
+      pb->die_.addRow(Row(lx, ly, ux, uy));
     }
     pb->die_.updateCoreBox();
 

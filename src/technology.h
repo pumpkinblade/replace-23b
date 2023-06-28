@@ -64,7 +64,7 @@ namespace replace
     void printInfo() const;
 
   private:
-    std::vector<std::vector<LibPin>> pinStor_;
+    std::vector<LibPin> pinStor_;
     std::vector<LibCell> cellStor_;
 
     std::vector<LibCell*> cells_;

@@ -22,12 +22,12 @@ namespace replace
       if(cell->isMacro())
       {
         maxMacroArea = std::max(area, maxMacroArea);
-        sumStdArea += area;
+        sumMacroArea += area;
       }
       else
       {
         maxStdArea = std::max(area, maxStdArea);
-        sumMacroArea += area;
+        sumStdArea += area;
       }
     }
     LOG_INFO("MaxStdArea: {}", maxStdArea);

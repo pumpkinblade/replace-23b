@@ -144,17 +144,15 @@ namespace replace
   {
   public:
     Row();
-    Row(int siteWidth, int lx, int ly, int ux, int uy);
+    Row(int lx, int ly, int ux, int uy);
     ~Row();
 
     int lx() const { return lx_; }
     int ly() const { return ly_; }
     int ux() const { return ux_; }
     int uy() const { return uy_; }
-    int siteWidth() const { return siteWidth_; }    
 
   private:
-    int siteWidth_;
     int lx_;
     int ly_;
     int ux_;
