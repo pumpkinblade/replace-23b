@@ -304,15 +304,19 @@ namespace replace
     LOG_TRACE("Process die and rows");
     // Process die and rows
     pb->die_.setDieBox(defdb.defDieArea.xl(), defdb.defDieArea.yl(), defdb.defDieArea.xh(), defdb.defDieArea.yh());
+    // assume all row has the same height and width
+    int rowStartX = INT_MAX, rowStartY = INT_MAX;
     for (const auto &defRow : defdb.defRows)
     {
       int lx = static_cast<int>(defRow.x());
       int ly = static_cast<int>(defRow.y());
-      int ux = lx + static_cast<int>(defRow.xNum()) * pb->siteSizeX_;
-      int uy = ly + pb->siteSizeY_;
-      pb->die_.addRow(Row(lx, ly, ux, uy));
+      rowStartX = std::min(lx, rowStartX);
+      rowStartY = std::min(ly, rowStartY);
     }
-    pb->die_.updateCoreBox();
+    int rowWidth = static_cast<int>(defdb.defRows.front().xNum() * pb->siteSizeX_);
+    int rowHeight = pb->siteSizeY_;
+    int rowRepeatCount = static_cast<int>(defdb.defRows.size());
+    pb->die_.setRowParams(rowStartX, rowStartY, rowWidth, rowHeight, rowRepeatCount);
 
     LOG_TRACE("Process def component");
     // Process def component

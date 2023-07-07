@@ -317,22 +317,12 @@ namespace replace
                           desc.topDieDesc.ux, desc.topDieDesc.uy);
     pb->bottomDie_.setDieBox(desc.bottomDieDesc.lx, desc.bottomDieDesc.ly,
                              desc.bottomDieDesc.ux, desc.bottomDieDesc.uy);
-    for(size_t i = 0; i < desc.topDieDesc.repeatCount; i++)
-    {
-      pb->topDie_.addRow(Row(desc.topDieDesc.rowStartX, 
-                             desc.topDieDesc.rowStartY + i*desc.topDieDesc.rowSizeY,
-                             desc.topDieDesc.rowStartX + desc.topDieDesc.rowSizeX,
-                             desc.topDieDesc.rowStartY + (i+1)*desc.topDieDesc.rowSizeY));
-    }
-    pb->topDie_.updateCoreBox();
-    for(size_t i = 0; i < desc.bottomDieDesc.repeatCount; i++)
-    {
-      pb->topDie_.addRow(Row(desc.bottomDieDesc.rowStartX, 
-                             desc.bottomDieDesc.rowStartY + i*desc.bottomDieDesc.rowSizeY,
-                             desc.bottomDieDesc.rowStartX + desc.bottomDieDesc.rowSizeX,
-                             desc.bottomDieDesc.rowStartY + (i+1)*desc.bottomDieDesc.rowSizeY));
-    }
-    pb->bottomDie_.updateCoreBox();
+    pb->topDie_.setRowParams(desc.topDieDesc.rowSizeX, desc.topDieDesc.rowSizeY,
+                             desc.topDieDesc.rowSizeX, desc.topDieDesc.rowSizeY,
+                             desc.topDieDesc.repeatCount);
+    pb->bottomDie_.setRowParams(desc.bottomDieDesc.rowSizeX, desc.bottomDieDesc.rowSizeY,
+                                desc.bottomDieDesc.rowSizeX, desc.bottomDieDesc.rowSizeY,
+                                desc.bottomDieDesc.repeatCount);
     pb->topUtil_ = desc.topDieDesc.maxUtil / 100.f;
     pb->bottomUtil_ = desc.bottomDieDesc.maxUtil / 100.f;
     pb->topTech_ = pb->techNameMap_.at(desc.topDieDesc.techName);

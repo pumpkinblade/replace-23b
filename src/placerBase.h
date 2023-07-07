@@ -140,25 +140,6 @@ namespace replace
     int uy_;
   };
 
-  class Row
-  {
-  public:
-    Row();
-    Row(int lx, int ly, int ux, int uy);
-    ~Row();
-
-    int lx() const { return lx_; }
-    int ly() const { return ly_; }
-    int ux() const { return ux_; }
-    int uy() const { return uy_; }
-
-  private:
-    int lx_;
-    int ly_;
-    int ux_;
-    int uy_;
-  };
-
   class Die
   {
   public:
@@ -186,20 +167,29 @@ namespace replace
     int coreDx() const { return coreUx_ - coreLx_; }
     int coreDy() const { return coreUy_ - coreLy_; }
 
-    const std::vector<Row>& rows() { return rows_; }
-    void addRow(const Row& row);
-    void updateCoreBox();
+    void setRowParams(int startX, int startY, int width, int height, int repeatCount);
+    int rowStartX() const { return rowStartX_; }
+    int rowStartY() const { return rowStartY_; }
+    int rowWidth() const { return rowWidth_; }
+    int rowHeight() const { return rowHeight_; }
+    int rowRepeatCount() const { return rowRepeatCount_; }
 
   private:
     int dieLx_;
     int dieLy_;
     int dieUx_;
     int dieUy_;
+
     int coreLx_;
     int coreLy_;
     int coreUx_;
     int coreUy_;
-    std::vector<Row> rows_;
+
+    int rowStartX_;
+    int rowStartY_;
+    int rowWidth_;
+    int rowHeight_;
+    int rowRepeatCount_;
   };
 
   class PlacerBase

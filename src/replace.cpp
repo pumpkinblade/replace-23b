@@ -3,6 +3,7 @@
 #include "nesterovPlace.h"
 #include "placerBase.h"
 #include "nesterovBase.h"
+#include "abacusLegalizer.h"
 #include <iostream>
 
 namespace replace
@@ -12,7 +13,7 @@ namespace replace
 
   Replace::Replace()
       : pb_(nullptr), nb_(nullptr),
-        ip_(nullptr), np_(nullptr),
+        ip_(nullptr), np_(nullptr), alg_(nullptr),
         initialPlaceMaxIter_(20),
         initialPlaceMinDiffLength_(1500),
         initialPlaceMaxSolverIter_(100),
@@ -114,6 +115,24 @@ namespace replace
     np_ = std::move(np);
 
     np_->doNesterovPlace();
+  }
+
+  void Replace::applyGlobalPlacement()
+  {
+    for (Instance* inst : pb_->insts())
+    {
+      auto gc = nb_->placerToNesterov(inst);
+      inst->setLocation(gc->dLx(), gc->dLy());
+    }
+  }
+
+  void Replace::doAbacusLegalization()
+  {
+    AbacusLegalizerVars algVars;
+    algVars.weightOpt = AbacusLegalizerVars::One;
+
+    alg_ = std::make_unique<AbacusLegalizer>(algVars, pb_);
+    alg_->doLegalization();
   }
 
   void

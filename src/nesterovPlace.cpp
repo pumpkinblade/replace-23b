@@ -415,7 +415,7 @@ NesterovPlace::doNesterovPlace() {
     // For JPEG Saving
     // debug
 
-    if( i == 0 || (i+1) % 10 == 0 ) {
+    if( i == 0 || (i+1) % 100 == 0 ) {
       LOG_INFO("[NesterovSolve] Iter: {} overflow: {} HPWL: {}", i+1, sumOverflow_, prevHpwl_);
 #ifdef ENABLE_CIMG_LIB
       pe.SaveCellPlotAsJPEG(string("Nesterov - Iter: " + std::to_string(i+1)), true,

@@ -227,23 +227,6 @@ namespace replace
   }
 
   ////////////////////////////////////////////////////////
-  // Row
-
-  Row::Row() : lx_(0), ly_(0), ux_(0), uy_(0)
-  {
-  }
-
-  Row::Row(int lx, int ly, int ux, int uy)
-      : lx_(lx), ly_(ly), ux_(ux), uy_(uy)
-  {
-  }
-
-  Row::~Row()
-  {
-    lx_ = ly_ = ux_ = uy_ = 0;
-  }
-
-  ////////////////////////////////////////////////////////
   // Die
 
   Die::Die() : dieLx_(0), dieLy_(0), dieUx_(0), dieUy_(0),
@@ -255,7 +238,6 @@ namespace replace
   {
     dieLx_ = dieLy_ = dieUx_ = dieUy_ = 0;
     coreLx_ = coreLy_ = coreUx_ = coreUy_ = 0;
-    rows_.clear();
   }
 
   void Die::setDieBox(int lx, int ly, int ux, int uy)
@@ -266,25 +248,18 @@ namespace replace
     dieUy_ = uy;
   }
 
-  void Die::addRow(const Row &row)
+  void Die::setRowParams(int startX, int startY, int width, int height, int repeatCount)
   {
-    rows_.push_back(row);
-  }
+    rowStartX_ = startX;
+    rowStartY_ = startY;
+    rowWidth_ = width;
+    rowHeight_ = height;
+    rowRepeatCount_ = repeatCount;
 
-  void Die::updateCoreBox()
-  {
-    coreLx_ = INT_MAX;
-    coreLy_ = INT_MAX;
-    coreUx_ = INT_MIN;
-    coreUy_ = INT_MIN;
-
-    for (const Row &row : rows_)
-    {
-      coreLx_ = std::min(row.lx(), coreLx_);
-      coreLy_ = std::min(row.ly(), coreLy_);
-      coreUx_ = std::max(row.ux(), coreUx_);
-      coreUy_ = std::max(row.uy(), coreUy_);
-    }
+    coreLx_ = rowStartX_;
+    coreLy_ = rowStartY_;
+    coreUx_ = rowStartX_ + rowWidth_;
+    coreUy_ = rowStartY_ + rowHeight_ * rowRepeatCount_;
   }
 
   ////////////////////////////////////////////////////////
