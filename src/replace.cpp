@@ -117,15 +117,6 @@ namespace replace
     np_->doNesterovPlace();
   }
 
-  void Replace::applyGlobalPlacement()
-  {
-    for (Instance* inst : pb_->insts())
-    {
-      auto gc = nb_->placerToNesterov(inst);
-      inst->setLocation(gc->dLx(), gc->dLy());
-    }
-  }
-
   void Replace::doAbacusLegalization()
   {
     AbacusLegalizerVars algVars;

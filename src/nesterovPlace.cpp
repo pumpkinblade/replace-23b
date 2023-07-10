@@ -459,8 +459,8 @@ NesterovPlace::doNesterovPlace() {
   }
  
   // in all case including diverge, 
-  // db should be updated. 
-  // updateDb();
+  // PlacerBase should be updated. 
+  updatePlacerBase();
 
   if( isDiverged_ ) { 
     LOG_ERROR("{} : Code `{}`", divergeMsg, divergeCode);
@@ -577,18 +577,14 @@ NesterovPlace::getPhiCoef(float scaledDiffHpwl) {
   return retCoef;
 }
 
-// void
-// NesterovPlace::updateDb() {
-//   for(auto& gCell : nb_->gCells()) {
-//     if( gCell->isInstance() ) {
-//       odb::dbInst* inst = gCell->instance()->dbInst();
-//       inst->setPlacementStatus(odb::dbPlacementStatus::PLACED); 
-//       inst->setLocation( gCell->dCx()-gCell->dDx()/2,
-//            gCell->dCy()-gCell->dDy()/2 ); 
-//     }
-//   }
-// }
-
+void
+NesterovPlace::updatePlacerBase() {
+  for(auto& gCell : nb_->gCells()) {
+    if(gCell->isInstance()) {
+      gCell->instance()->setLocation(gCell->dLx(), gCell->dLy());
+    }
+  }
+}
 
 static float
 getDistance(vector<FloatPoint>& a, vector<FloatPoint>& b) {

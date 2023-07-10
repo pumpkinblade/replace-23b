@@ -60,7 +60,7 @@ public:
   void updateNextIter();
   float getPhiCoef(float scaledDiffHpwl);
 
-  // void updateDb();
+  void updatePlacerBase();
 
 private:
   std::shared_ptr<PlacerBase> pb_;

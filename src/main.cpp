@@ -62,7 +62,6 @@ int main(int argc, const char *argv[])
     rp.setPlacerBase(pb);
     rp.doInitialPlace();
     rp.doNesterovPlace();
-    rp.applyGlobalPlacement();
     rp.doAbacusLegalization();
   }
   else if(mode == "23b")
