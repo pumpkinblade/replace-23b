@@ -714,7 +714,7 @@ BinGrid::updateBinsNonPlaceArea() {
     bin->setNonPlaceArea(0);
   }
 
-  for(auto& inst : pb_->nonPlaceInsts()) {
+  for(auto& inst : pb_->fixedInsts()) {
     std::pair<int, int> pairX = getMinMaxIdxX(inst);
     std::pair<int, int> pairY = getMinMaxIdxY(inst);
     for(int i = pairX.first; i < pairX.second; i++) {
@@ -911,7 +911,7 @@ NesterovBase::init() {
     GCell myGCell(inst); 
     // Check whether the given instance is
     // macro or not
-    if( inst->dy() > pb_->siteSizeY() * 6 ) {
+    if(inst->isMacro()) {
       myGCell.setMacroInstance();
     }
     else {
@@ -1090,16 +1090,15 @@ NesterovBase::initFillerGCells() {
     static_cast<int64_t>(pb_->die().coreDy()); 
 
   // nonPlaceInstsArea should not have targetDensity downscaling!!! 
-  int64_t whiteSpaceArea = coreArea - 
-    static_cast<int64_t>(pb_->nonPlaceInstsArea());
+  int64_t whiteSpaceArea = coreArea - pb_->fixedInstsArea();
 
   // TODO density screening
   int64_t movableArea = whiteSpaceArea 
     * nbVars_.targetDensity;
   
   int64_t totalFillerArea = movableArea 
-    - static_cast<int64_t>(pb_->stdInstsArea())
-    - static_cast<int64_t>(pb_->macroInstsArea() * nbVars_.targetDensity);
+    - static_cast<int64_t>(pb_->placeStdcellsArea())
+    - static_cast<int64_t>(pb_->placeMacrosArea() * nbVars_.targetDensity);
 
 
   if( totalFillerArea < 0 ) {

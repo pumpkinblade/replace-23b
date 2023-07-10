@@ -72,6 +72,7 @@ namespace replace
     std::vector<LibCell*> macros_;
     std::unordered_map<std::string, LibCell*> cellNameMap_;
 
+    // For lef/def parser
     int siteSizeX_, siteSizeY_;
   };
 }

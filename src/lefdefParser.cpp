@@ -298,8 +298,6 @@ namespace replace
     pb->pinStor_.reserve(numPins);
 
     LOG_TRACE("Process def site");
-    pb->siteSizeX_ = tech->siteSizeX();
-    pb->siteSizeY_ = tech->siteSizeY();
 
     LOG_TRACE("Process die and rows");
     // Process die and rows
@@ -313,8 +311,8 @@ namespace replace
       rowStartX = std::min(lx, rowStartX);
       rowStartY = std::min(ly, rowStartY);
     }
-    int rowWidth = static_cast<int>(defdb.defRows.front().xNum() * pb->siteSizeX_);
-    int rowHeight = pb->siteSizeY_;
+    int rowWidth = static_cast<int>(defdb.defRows.front().xNum() * tech->siteSizeX());
+    int rowHeight = tech->siteSizeY();
     int rowRepeatCount = static_cast<int>(defdb.defRows.size());
     pb->die_.setRowParams(rowStartX, rowStartY, rowWidth, rowHeight, rowRepeatCount);
 
@@ -334,11 +332,10 @@ namespace replace
       Instance inst;
       inst.setBox(instLx, instLy, instLx + instSize.first, instLy + instSize.second);
       inst.setFixed(compIt.second.isFixed());
-      inst.setDummy(false);
-      inst.setExtId(static_cast<int>(pb->instStor_.size()));
+      inst.setMacro(instSize.second > tech->siteSizeY());
       pb->instStor_.push_back(inst);
 
-      instExtIds.emplace(compIt.second.id(), inst.extId());
+      instExtIds.emplace(compIt.second.id(), static_cast<int>(pb->instStor_.size() - 1));
     }
 
     LOG_TRACE("Process def net");
@@ -376,10 +373,10 @@ namespace replace
       pb->netStor_.back().updateBox();
     }
 
-    pb->placeInstsArea_ = 0;
-    pb->macroInstsArea_ = 0;
-    pb->stdInstsArea_ = 0;
-    pb->nonPlaceInstsArea_ = 0;
+    pb->placeMacrosArea_ = 0;
+    pb->placeStdcellsArea_ = 0;
+    pb->fixedMacrosArea_ = 0;
+    pb->fixedStdcellsArea_ = 0;
     for(auto& inst : pb->instStor_)
     {
       int64_t instArea = static_cast<int64_t>(inst.dx()) * static_cast<int64_t>(inst.dy());
@@ -388,25 +385,19 @@ namespace replace
       if(inst.isFixed())
       {
         pb->fixedInsts_.push_back(&inst);
-        pb->nonPlaceInsts_.push_back(&inst);
-        pb->nonPlaceInstsArea_ += instArea;
-      }
-      else if(inst.isDummy())
-      {
-        pb->dummyInsts_.push_back(&inst);
-        pb->nonPlaceInsts_.push_back(&inst);
-        pb->nonPlaceInstsArea_ += instArea;
+        if(inst.isMacro())
+          pb->fixedMacrosArea_ += instArea;
+        else
+          pb->fixedStdcellsArea_ += instArea;
       }
       else
       {
         pb->placeInsts_.push_back(&inst);
-        pb->placeInstsArea_ += instArea;
+        if(inst.isMacro())
+          pb->placeMacrosArea_ += instArea;
+        else
+          pb->placeStdcellsArea_ += instArea;
       }
-      
-      if(inst.dy() > pb->siteSizeY_ * 6)
-        pb->macroInstsArea_ += instArea;
-      else
-        pb->stdInstsArea_ += instArea;
     }
 
     for(auto& pin : pb->pinStor_)

@@ -184,7 +184,7 @@ PlotEnv::DrawTerminal(CImgObj *img,
   int pinWidth = 30;
 
   // FIXED CELL
-  for(auto& npInst : pb_->nonPlaceInsts()) {
+  for(auto& npInst : pb_->fixedInsts()) {
     int x1 = GetX(npInst->lx());
     int y1 = GetY(npInst->ly());
     int x3 = GetX(npInst->ux());

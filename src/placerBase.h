@@ -20,11 +20,8 @@ namespace replace
     bool isFixed() const { return isFixed_; }
     void setFixed(bool on) { isFixed_ = on; }
 
-  // Dummy is virtual instance to fill in
-  // empty fragmented row structures.
-  // will have inst_ as nullptr
-    bool isDummy() const { return isDummy_; }
-    void setDummy(bool on) { isDummy_ = on; }
+    bool isMacro() const { return isMacro_; }
+    void setMacro(bool on) { isMacro_ = on; }
 
     void setLocation(int x, int y);
     void setCenterLocation(int x, int y);
@@ -52,9 +49,11 @@ namespace replace
     int ly_;
     int ux_;
     int uy_;
-    int extId_;
     bool isFixed_;
-    bool isDummy_;
+    bool isMacro_;
+
+    // For initialPlace
+    int extId_;
   };
 
   class Pin
@@ -104,6 +103,7 @@ namespace replace
     int offsetCx_;
     int offsetCy_;
 
+    // For initialPlace
     bool minPinX_;
     bool minPinY_;
     bool maxPinX_;
@@ -195,6 +195,7 @@ namespace replace
   class PlacerBase
   {
     friend class Parser;
+
   public:
     PlacerBase();
     ~PlacerBase();
@@ -206,27 +207,21 @@ namespace replace
     //
     // placeInsts : a real instance that need to be placed
     // fixedInsts : a real instance that is fixed (e.g. macros, tapcells)
-    // dummyInsts : a fake instance that is for fragmented-row handling
-    //
-    // nonPlaceInsts : fixedInsts + dummyInsts to enable fast-iterate on Bin-init
     //
     const std::vector<Instance *> &placeInsts() const { return placeInsts_; }
     const std::vector<Instance *> &fixedInsts() const { return fixedInsts_; }
-    const std::vector<Instance *> &dummyInsts() const { return dummyInsts_; }
-    const std::vector<Instance *> &nonPlaceInsts() const { return nonPlaceInsts_; }
 
     Die &die() { return die_; }
-
-    int siteSizeX() const { return siteSizeX_; }
-    int siteSizeY() const { return siteSizeY_; }
 
     int64_t hpwl() const;
     void printInfo() const;
 
-    int64_t placeInstsArea() const { return placeInstsArea_; }
-    int64_t nonPlaceInstsArea() const { return nonPlaceInstsArea_; }
-    int64_t macroInstsArea() const { return macroInstsArea_; }
-    int64_t stdInstsArea() const { return stdInstsArea_; }
+    int64_t placeInstsArea() const { return placeStdcellsArea_ + placeMacrosArea_; }
+    int64_t placeStdcellsArea() const { return placeStdcellsArea_; }
+    int64_t placeMacrosArea() const { return placeMacrosArea_; }
+    int64_t fixedInstsArea() const { return fixedStdcellsArea_ + fixedMacrosArea_; }
+    int64_t fixedStdcellsArea() const { return fixedStdcellsArea_; }
+    int64_t fixedMacrosArea() const { return fixedMacrosArea_; }
 
   private:
     Die die_;
@@ -241,24 +236,13 @@ namespace replace
 
     std::vector<Instance *> placeInsts_;
     std::vector<Instance *> fixedInsts_;
-    std::vector<Instance *> dummyInsts_;
-    std::vector<Instance *> nonPlaceInsts_;
 
-    // site is the smallest module
-    int siteSizeX_;
-    int siteSizeY_;
-
-    int64_t placeInstsArea_;
-    int64_t nonPlaceInstsArea_;
-
-    // macroInstsArea_ + stdInstsArea_ = placeInstsArea_;
-    // macroInstsArea_ should be separated
-    // because of target_density tuning
-    int64_t macroInstsArea_;
-    int64_t stdInstsArea_;
-
-    // void init();
-    // void initInstsForFragmentedRow();
+    // placeInstsArea_ = placeStdcellArea_ + placeMacroArea_
+    int64_t placeStdcellsArea_;
+    int64_t placeMacrosArea_;
+    // fixedInstsArea_ = fixedStdcellArea_ + fixedMacroArea_
+    int64_t fixedStdcellsArea_;
+    int64_t fixedMacrosArea_;
 
     void reset();
   };
