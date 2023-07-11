@@ -5,6 +5,7 @@
 #include "nesterovBase.h"
 #include "abacusLegalizer.h"
 #include <iostream>
+#include <memory>
 
 namespace replace
 {
@@ -131,6 +132,7 @@ namespace replace
     AbacusLegalizerVars algVars;
     algVars.weightOpt = AbacusLegalizerVars::One;
 
+    // make_unique is C++14 std
     alg_ = std::make_unique<AbacusLegalizer>(algVars, pb_);
     alg_->doLegalization();
   }
