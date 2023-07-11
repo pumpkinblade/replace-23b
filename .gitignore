@@ -33,6 +33,8 @@
 
 # Others
 .vscode
-build
+build/*
+!build/.gitkeep
 lib
 *.log
+
