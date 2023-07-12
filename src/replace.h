@@ -69,8 +69,8 @@ namespace replace
     int nesterovPlaceMaxIter_;
     int binGridCntX_;
     int binGridCntY_;
-    float overflow_;
-    float density_;
+    float overflow_;      // target density overflow
+    float density_;       // target density
     float initDensityPenalityFactor_;
     float initWireLengthCoef_;
     float minPhiCoef_;

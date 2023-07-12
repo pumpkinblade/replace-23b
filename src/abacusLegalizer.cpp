@@ -157,8 +157,10 @@ namespace replace
 
   void AbacusLegalizer::doLegalization()
   {
+    LOG_TRACE("start AbacusLegalizer::doLegalization");
     std::sort(cells_.begin(), cells_.end(), [](const AbacusCell *left, const AbacusCell *right)
               { return left->gpLx() < right->gpLx(); });
+    LOG_TRACE("finish sorting in AbacusLegalizer::doLegalization");
     for(AbacusCell* cell : cells_)
     {
       double cbest = std::numeric_limits<double>::infinity();
@@ -187,8 +189,9 @@ namespace replace
       rbest->pushCell(cell);
       rbest->placeRow();
     }
-
+    LOG_TRACE("finish row assignment");
 #ifdef ENABLE_CIMG_LIB
+    LOG_TRACE("save cell BeforeLegalization to ./plot/cell/before_lg");
     PlotEnv pe;
     pe.setPlacerBase(pb_);
     pe.Init();

@@ -38,3 +38,6 @@ build/*
 lib
 *.log
 *.jpg
+*.code-workspace
+core.[0-9]*
+

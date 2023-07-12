@@ -51,7 +51,7 @@ int main(int argc, const char *argv[])
     return 1;
   }
 
-  if(mode == "lefdef")
+  if (mode == "lefdef")
   {
     LOG_TRACE("Parse Lef/Def Begin");
     std::shared_ptr<PlacerBase> pb = Parser::LefDefToPlacerBase(lefFilename, defFilename);
@@ -65,7 +65,7 @@ int main(int argc, const char *argv[])
     rp.applyGlobalPlacement();
     rp.doAbacusLegalization();
   }
-  else if(mode == "23b")
+  else if (mode == "23b")
   {
     LOG_TRACE("Parse 23b Text File Begin");
     std::shared_ptr<Placer23b> pb = Parser::TxtToPlacer23b(txtFilename);
