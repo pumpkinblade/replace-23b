@@ -13,7 +13,7 @@ namespace replace
 
   using namespace std;
 
-  Replace::Replace()
+  Replace::Replace(float targetDensity)
       : pb_(nullptr), nb_(nullptr),
         ip_(nullptr), np_(nullptr), alg_(nullptr),
         initialPlaceMaxIter_(20),
@@ -23,7 +23,7 @@ namespace replace
         initialPlaceNetWeightScale_(800),
         nesterovPlaceMaxIter_(2000),
         binGridCntX_(0), binGridCntY_(0),
-        overflow_(0.1), density_(1.5),
+        overflow_(0.1), density_(targetDensity),
         initDensityPenalityFactor_(0.00008),
         initWireLengthCoef_(0.25),
         minPhiCoef_(0.95), maxPhiCoef_(1.05),

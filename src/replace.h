@@ -15,7 +15,9 @@ namespace replace
   class Replace
   {
   public:
-    Replace();
+    // targetDesntiy can be set between 0.7~1, or 1~2 if we place cells of 
+    // two layers on one layer
+    Replace(float targetDensity);
     ~Replace();
 
     void init();

@@ -4,6 +4,7 @@
 #include "log.h"
 #include <algorithm>
 #include <string>
+#include <cassert>
 
 namespace replace
 {
@@ -23,6 +24,7 @@ namespace replace
     gpLy_ = static_cast<float>(inst->ly());
     width_ = static_cast<float>(inst->dx());
     height_ = static_cast<float>(inst->dy());
+    lgLx_ = gpLx_; lgLy_ = gpLy_;
     weight_ = 1.0f;
   }
 
@@ -184,6 +186,7 @@ namespace replace
           cbest = c;
           rbest = row;
         }
+        assert(rbest != nullptr);
         row->popCell();
       }
       rbest->pushCell(cell);
@@ -240,8 +243,9 @@ namespace replace
     }
 
     cells_.resize(cellStor_.size());
-    for(size_t i = 0; i < cells_.size(); i++)
+    for(size_t i = 0; i < cells_.size(); i++){
       cells_[i] = &cellStor_[i];
+    }
   }
 
   void AbacusLegalizer::generateRows()
