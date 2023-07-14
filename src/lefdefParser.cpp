@@ -301,7 +301,10 @@ namespace replace
 
     LOG_TRACE("Process die and rows");
     // Process die and rows
-    pb->die_.setDieBox(defdb.defDieArea.xl(), defdb.defDieArea.yl(), defdb.defDieArea.xh(), defdb.defDieArea.yh());
+    pb->dieStor_.emplace_back();
+    pb->dies_.push_back(&pb->dieStor_.back());
+    pb->die()->setDieBox(defdb.defDieArea.xl(), defdb.defDieArea.yl(), defdb.defDieArea.xh(), defdb.defDieArea.yh());
+    pb->die()->setDieBox(defdb.defDieArea.xl(), defdb.defDieArea.yl(), defdb.defDieArea.xh(), defdb.defDieArea.yh());
     // assume all row has the same height and width
     int rowStartX = INT_MAX, rowStartY = INT_MAX;
     for (const auto &defRow : defdb.defRows)
@@ -314,7 +317,7 @@ namespace replace
     int rowWidth = static_cast<int>(defdb.defRows.front().xNum() * tech->siteSizeX());
     int rowHeight = tech->siteSizeY();
     int rowRepeatCount = static_cast<int>(defdb.defRows.size());
-    pb->die_.setRowParams(rowStartX, rowStartY, rowWidth, rowHeight, rowRepeatCount);
+    pb->die()->setRowParams(rowStartX, rowStartY, rowWidth, rowHeight, rowRepeatCount);
 
     LOG_TRACE("Process def component");
     // Process def component
@@ -382,6 +385,7 @@ namespace replace
       int64_t instArea = static_cast<int64_t>(inst.dx()) * static_cast<int64_t>(inst.dy());
 
       pb->insts_.push_back(&inst);
+      pb->die()->addInstance(&inst);
       if(inst.isFixed())
       {
         pb->fixedInsts_.push_back(&inst);

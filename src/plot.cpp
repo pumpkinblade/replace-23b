@@ -52,8 +52,8 @@ PlotEnv::PlotEnv(
   minLength(1000), 
   imageWidth(0), imageHeight(0), // init later
   xMargin(30), yMargin(30), 
-  origWidth(pb_->die().dieUx()-pb_->die().dieLx()), 
-  origHeight(pb_->die().dieUy()-pb_->die().dieLy()),
+  origWidth(pb_->die()->dieUx()-pb_->die()->dieLx()), 
+  origHeight(pb_->die()->dieUy()-pb_->die()->dieLy()),
   unitX(0), unitY(0), // init later
   dispWidth(0), dispHeight(0), // init later
   hasCellColor(false)
@@ -65,10 +65,10 @@ void PlotEnv::Init() {
   minLength = 1000;
   xMargin = yMargin = 30;
   origWidth 
-    = pb_->die().dieUx()-pb_->die().dieLx();
+    = pb_->die()->dieUx()-pb_->die()->dieLx();
 
   origHeight
-    = pb_->die().dieUy()-pb_->die().dieLy();
+    = pb_->die()->dieUy()-pb_->die()->dieLy();
 
   hasCellColor = false;
 
@@ -161,19 +161,19 @@ int PlotEnv::GetTotalImageHeight() {
 }
 
 int PlotEnv::GetX(FloatPoint &coord) {
-  return (coord.x - pb_->die().dieLx()) * unitX + xMargin;
+  return (coord.x - pb_->die()->dieLx()) * unitX + xMargin;
 }
 
 int PlotEnv::GetX(float coord) {
-  return (coord - pb_->die().dieLx()) * unitX + xMargin;
+  return (coord - pb_->die()->dieLx()) * unitX + xMargin;
 }
 
 int PlotEnv::GetY(FloatPoint &coord) {
-  return (origHeight - (coord.y - pb_->die().dieLy())) * unitY + yMargin;
+  return (origHeight - (coord.y - pb_->die()->dieLy())) * unitY + yMargin;
 }
 
 int PlotEnv::GetY(float coord) {
-  return (origHeight - (coord - pb_->die().dieLy())) * unitY + yMargin;
+  return (origHeight - (coord - pb_->die()->dieLy())) * unitY + yMargin;
 }
 
 

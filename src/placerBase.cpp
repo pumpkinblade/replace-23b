@@ -8,14 +8,6 @@ namespace replace
 
   using namespace std;
 
-  static int fastModulo(const int input, const int ceil);
-
-  static std::pair<int, int> getMinMaxIdx(int ll, int uu, int coreLL, int siteSize, int minIdx, int maxIdx);
-
-  static bool isCoreAreaOverlap(Die &die, Instance &inst);
-
-  static int64_t getOverlapWithCoreArea(Die &die, Instance &inst);
-
   ////////////////////////////////////////////////////////
   // Instance
 
@@ -238,14 +230,15 @@ namespace replace
     LOG_INFO("MaxFanout: {}", maxFanout);
     LOG_INFO("AvgFanout: {}", sumFanout / (float)nets_.size());
 
-    LOG_INFO("DieAreaLxLy: ({}, {})", die_.dieLx(), die_.dieLy());
-    LOG_INFO("DieAreaUxUy: ({}, {})", die_.dieUx(), die_.dieUy());
-    LOG_INFO("CoreAreaLxLy: ({}, {})", die_.coreLx(), die_.coreLy());
-    LOG_INFO("CoreAreaUxUy: ({}, {})", die_.coreUx(), die_.coreUy());
+    Die* die = dies_.front();
+    LOG_INFO("DieAreaLxLy: ({}, {})", die->dieLx(), die->dieLy());
+    LOG_INFO("DieAreaUxUy: ({}, {})", die->dieUx(), die->dieUy());
+    LOG_INFO("CoreAreaLxLy: ({}, {})", die->coreLx(), die->coreLy());
+    LOG_INFO("CoreAreaUxUy: ({}, {})", die->coreUx(), die->coreUy());
 
     int64_t coreArea =
-        static_cast<int64_t>(die_.coreUx() - die_.coreLx()) *
-        static_cast<int64_t>(die_.coreUy() - die_.coreLy());
+        static_cast<int64_t>(die->coreUx() - die->coreLx()) *
+        static_cast<int64_t>(die->coreUy() - die->coreLy());
 
     LOG_INFO("CoreArea: {}", coreArea);
     LOG_INFO("PlaceInstArea: {}", placeStdcellsArea_ + placeMacrosArea_);

@@ -113,8 +113,8 @@ namespace replace
   // starting point of initial place is center.
   void InitialPlace::placeInstsCenter()
   {
-    const int centerX = pb_->die().coreCx();
-    const int centerY = pb_->die().coreCy();
+    const int centerX = pb_->die()->coreCx();
+    const int centerY = pb_->die()->coreCy();
 
     for (auto &inst : pb_->placeInsts())
     {

@@ -245,13 +245,13 @@ namespace replace
   {
     // TODO: If a row is blocked by macros or fixed instances, we should split it
 
-    rowStor_.reserve(pb_->die().rowRepeatCount());
-    for(int i = 0; i < pb_->die().rowRepeatCount(); i++)
+    rowStor_.reserve(pb_->die()->rowRepeatCount());
+    for(int i = 0; i < pb_->die()->rowRepeatCount(); i++)
     {
-      rowStor_.emplace_back(static_cast<float>(pb_->die().rowStartX()),
-                            static_cast<float>(pb_->die().rowStartY() + i * pb_->die().rowHeight()),
-                            static_cast<float>(pb_->die().rowWidth()),
-                            static_cast<float>(pb_->die().rowHeight()));
+      rowStor_.emplace_back(static_cast<float>(pb_->die()->rowStartX()),
+                            static_cast<float>(pb_->die()->rowStartY() + i * pb_->die()->rowHeight()),
+                            static_cast<float>(pb_->die()->rowWidth()),
+                            static_cast<float>(pb_->die()->rowHeight()));
       rows_.push_back(&rowStor_.back());
     }
   }

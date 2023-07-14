@@ -174,6 +174,9 @@ namespace replace
     int rowHeight() const { return rowHeight_; }
     int rowRepeatCount() const { return rowRepeatCount_; }
 
+    const std::vector<Instance*>& instances() const { return insts_; }
+    void addInstance(Instance* inst) { insts_.push_back(inst); }
+
   private:
     int dieLx_;
     int dieLy_;
@@ -190,6 +193,8 @@ namespace replace
     int rowWidth_;
     int rowHeight_;
     int rowRepeatCount_;
+
+    std::vector<Instance*> insts_;
   };
 
   class PlacerBase
@@ -211,7 +216,9 @@ namespace replace
     const std::vector<Instance *> &placeInsts() const { return placeInsts_; }
     const std::vector<Instance *> &fixedInsts() const { return fixedInsts_; }
 
-    Die &die() { return die_; }
+    // Note: each die should have the same size
+    Die* die() { return dies_.front(); }
+    const std::vector<Die*>& dies() const { return dies_; }
 
     int64_t hpwl() const;
     void printInfo() const;
@@ -224,12 +231,12 @@ namespace replace
     int64_t fixedMacrosArea() const { return fixedMacrosArea_; }
 
   private:
-    Die die_;
-
+    std::vector<Die> dieStor_;
     std::vector<Instance> instStor_;
     std::vector<Pin> pinStor_;
     std::vector<Net> netStor_;
 
+    std::vector<Die *> dies_;
     std::vector<Instance *> insts_;
     std::vector<Pin *> pins_;
     std::vector<Net *> nets_;
