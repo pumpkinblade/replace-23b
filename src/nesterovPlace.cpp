@@ -1,7 +1,6 @@
 #include "placerBase.h"
 #include "nesterovBase.h"
 #include "nesterovPlace.h"
-// #include "opendb/db.h"
 #include "log.h"
 #include <iostream>
 using namespace std;
@@ -55,10 +54,6 @@ NesterovPlace::~NesterovPlace() {
   reset();
 }
 
-#ifdef ENABLE_CIMG_LIB
-static PlotEnv pe;
-#endif
-
 void NesterovPlace::init() {
   LOG_TRACE("NesterovInit Begin");
 
@@ -101,22 +96,29 @@ void NesterovPlace::init() {
   // FFT update
   nb_->updateDensityForceBin();
 
-  baseWireLengthCoef_ 
-    = npVars_.initWireLengthCoef 
-    / (static_cast<float>(nb_->binSizeX() + nb_->binSizeY()) * 0.5);
+  float avgBinSizeX = 0.f; 
+  float avgBinSizeY = 0.f;
+  for(BinGrid* bg : nb_->binGrids())
+  {
+    avgBinSizeX += static_cast<float>(bg->binSizeX());
+    avgBinSizeY += static_cast<float>(bg->binSizeY());
+  }
+  avgBinSizeX /= static_cast<float>(nb_->binGrids().size());
+  avgBinSizeY /= static_cast<float>(nb_->binGrids().size());
+  baseWireLengthCoef_  = npVars_.initWireLengthCoef / (0.5f * (avgBinSizeX + avgBinSizeY));
 
   LOG_INFO("BaseWireLengthCoef: {}", baseWireLengthCoef_);
   
   sumOverflow_ = 
     static_cast<float>(nb_->overflowArea()) 
-        / static_cast<float>(pb_->stdInstsArea() 
-            + pb_->macroInstsArea() * nb_->targetDensity() );
+        / static_cast<float>(pb_->placeStdcellsArea() 
+            + pb_->placeMacrosArea() * nb_->targetDensity() );
 
   LOG_INFO("InitSumOverflow: {}", sumOverflow_);
 
   updateWireLengthCoef(sumOverflow_);
 
-  LOG_INFO("WireLengthCoef: {}", wireLengthCoefX_);
+  LOG_INFO("WireLengthCoef: {}, {}", wireLengthCoefX_, wireLengthCoefY_);
 
   // WL update
   nb_->updateWireLengthForceWA(wireLengthCoefX_, wireLengthCoefY_);
@@ -159,8 +161,8 @@ void NesterovPlace::init() {
   
   sumOverflow_ = 
     static_cast<float>(nb_->overflowArea()) 
-        / static_cast<float>(pb_->stdInstsArea() 
-            + pb_->macroInstsArea() * nb_->targetDensity() );
+        / static_cast<float>(pb_->placeStdcellsArea() 
+            + pb_->placeMacrosArea() * nb_->targetDensity() );
   
   LOG_INFO("PrevSumOverflow: {}", sumOverflow_);
   
@@ -280,18 +282,9 @@ NesterovPlace::doNesterovPlace() {
     return;
   }
 
-#ifdef ENABLE_CIMG_LIB  
-  pe.setPlacerBase(pb_);
-  pe.setNesterovBase(nb_);
-  pe.Init();
-      
-  pe.SaveCellPlotAsJPEG("Nesterov - BeforeStart", true,
-     "./plot/cell/cell_0");
-  pe.SaveBinPlotAsJPEG("Nesterov - BeforeStart",
-     "./plot/bin/bin_0");
-  pe.SaveArrowPlotAsJPEG("Nesterov - BeforeStart",
-     "./plot/arrow/arrow_0");
-#endif
+  Plot::plot(nb_.get(), PlotNesterovType::GCell, "./plot/cell", "cell_0");
+  Plot::plot(nb_.get(), PlotNesterovType::Bin, "./plot/bin", "bin_0");
+  Plot::plot(nb_.get(), PlotNesterovType::Arrow, "./plot/arrow", "arrow_0");
 
 
   // backTracking variable.
@@ -417,17 +410,9 @@ NesterovPlace::doNesterovPlace() {
 
     if( i == 0 || (i+1) % 100 == 0 ) {
       LOG_INFO("[NesterovSolve] Iter: {} overflow: {} HPWL: {}", i+1, sumOverflow_, prevHpwl_);
-#ifdef ENABLE_CIMG_LIB
-      pe.SaveCellPlotAsJPEG(string("Nesterov - Iter: " + std::to_string(i+1)), true,
-          string("./plot/cell/cell_") +
-          std::to_string (i+1));
-      pe.SaveBinPlotAsJPEG(string("Nesterov - Iter: " + std::to_string(i+1)),
-          string("./plot/bin/bin_") +
-          std::to_string(i+1));
-      pe.SaveArrowPlotAsJPEG(string("Nesterov - Iter: " + std::to_string(i+1)),
-          string("./plot/arrow/arrow_") +
-          std::to_string(i+1));
-#endif
+      Plot::plot(nb_.get(), PlotNesterovType::GCell, "./plot/cell", "cell_" + std::to_string(i+1));
+      Plot::plot(nb_.get(), PlotNesterovType::Bin, "./plot/bin", "bin_" + std::to_string(i+1));
+      Plot::plot(nb_.get(), PlotNesterovType::Arrow, "./plot/arrow", "arrow_" + std::to_string(i+1));
     }
 
     if( minSumOverflow > sumOverflow_ ) {
@@ -459,8 +444,8 @@ NesterovPlace::doNesterovPlace() {
   }
  
   // in all case including diverge, 
-  // db should be updated. 
-  // updateDb();
+  // PlacerBase should be updated. 
+  updatePlacerBase();
 
   if( isDiverged_ ) { 
     LOG_ERROR("{} : Code `{}`", divergeMsg, divergeCode);
@@ -524,8 +509,8 @@ NesterovPlace::updateNextIter() {
 
   sumOverflow_ = 
       static_cast<float>(nb_->overflowArea()) 
-        / static_cast<float>(pb_->stdInstsArea() 
-            + pb_->macroInstsArea() * nb_->targetDensity() );
+        / static_cast<float>(pb_->placeStdcellsArea() 
+            + pb_->placeMacrosArea() * nb_->targetDensity() );
 
   LOG_INFO("Gradient: {}", getSecondNorm(curSLPSumGrads_));
   LOG_INFO("Phi: {}", nb_->sumPhi());
@@ -577,18 +562,14 @@ NesterovPlace::getPhiCoef(float scaledDiffHpwl) {
   return retCoef;
 }
 
-// void
-// NesterovPlace::updateDb() {
-//   for(auto& gCell : nb_->gCells()) {
-//     if( gCell->isInstance() ) {
-//       odb::dbInst* inst = gCell->instance()->dbInst();
-//       inst->setPlacementStatus(odb::dbPlacementStatus::PLACED); 
-//       inst->setLocation( gCell->dCx()-gCell->dDx()/2,
-//            gCell->dCy()-gCell->dDy()/2 ); 
-//     }
-//   }
-// }
-
+void
+NesterovPlace::updatePlacerBase() {
+  for(auto& gCell : nb_->gCells()) {
+    if(gCell->isInstance()) {
+      gCell->instance()->setLocation(gCell->dLx(), gCell->dLy());
+    }
+  }
+}
 
 static float
 getDistance(vector<FloatPoint>& a, vector<FloatPoint>& b) {

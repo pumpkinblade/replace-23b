@@ -119,15 +119,6 @@ namespace replace
     np_->doNesterovPlace();
   }
 
-  void Replace::applyGlobalPlacement()
-  {
-    for (Instance* inst : pb_->insts())
-    {
-      auto gc = nb_->placerToNesterov(inst);
-      inst->setLocation(gc->dLx(), gc->dLy());
-    }
-  }
-
   void Replace::doAbacusLegalization()
   {
     LOG_TRACE("start Replace::doAbacusLegalization");
@@ -135,7 +126,8 @@ namespace replace
     algVars.weightOpt = AbacusLegalizerVars::One;
 
     // make_unique is C++14 std
-    alg_ = std::make_unique<AbacusLegalizer>(algVars, pb_);
+    // alg_ = std::make_unique<AbacusLegalizer>(algVars, pb_);
+    alg_.reset(new AbacusLegalizer(algVars, pb_));
     alg_->doLegalization();
     LOG_TRACE("end Replace::doAbacusLegalization");
   }

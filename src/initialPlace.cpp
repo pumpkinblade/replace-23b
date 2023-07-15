@@ -53,20 +53,11 @@ namespace replace
     ipVars_.reset();
   }
 
-#ifdef ENABLE_CIMG_LIB
-  static PlotEnv pe;
-#endif
-
   void InitialPlace::doBicgstabPlace()
   {
     LOG_TRACE("Initial Placement Begin");
 
     float errorX = 0.0f, errorY = 0.0f;
-
-#ifdef ENABLE_CIMG_LIB
-    pe.setPlacerBase(pb_);
-    pe.Init();
-#endif
 
     // normally, initial place will place all cells in the centers.
     if (!ipVars_.incrementalPlaceMode)
@@ -95,11 +86,7 @@ namespace replace
       LOG_INFO("[InitialPlace] Iter {} CG Error: {} HPWL: {}", i, max(errorX, errorY), pb_->hpwl());
       updateCoordi();
 
-#ifdef ENABLE_CIMG_LIB
-      pe.SaveCellPlotAsJPEG(
-          string("InitPlace ") + to_string(i), false,
-          string("./plot/cell/ip_") + to_string(i));
-#endif
+      Plot::plot(pb_.get(), "./plot/cell", "ip_" + to_string(i));
 
       if (max(errorX, errorY) <= 1e-5 && i >= 5)
       {
@@ -113,8 +100,8 @@ namespace replace
   // starting point of initial place is center.
   void InitialPlace::placeInstsCenter()
   {
-    const int centerX = pb_->die().coreCx();
-    const int centerY = pb_->die().coreCy();
+    const int centerX = pb_->die()->coreCx();
+    const int centerY = pb_->die()->coreCy();
 
     for (auto &inst : pb_->placeInsts())
     {

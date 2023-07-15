@@ -192,15 +192,10 @@ namespace replace
       rbest->pushCell(cell);
       rbest->placeRow();
     }
+    
     LOG_TRACE("finish row assignment");
-#ifdef ENABLE_CIMG_LIB
-    LOG_TRACE("save cell BeforeLegalization to ./plot/cell/before_lg");
-    PlotEnv pe;
-    pe.setPlacerBase(pb_);
-    pe.Init();
-    pe.SaveCellPlotAsJPEG(std::string("BeforeLegalization"),
-        false, std::string("./plot/cell/before_lg"));
-#endif
+
+    Plot::plot(pb_.get(), "./plot/cell", "before_lg");
 
     int64_t hpwlBeforeLG = pb_->hpwl();
     LOG_INFO("hpwl Before AbacusLegalization: {}", hpwlBeforeLG);
@@ -213,10 +208,7 @@ namespace replace
     int64_t hpwlAfterLG = pb_->hpwl();
     LOG_INFO("hpwl After AbacusLegalization: {}", hpwlAfterLG);
 
-#ifdef ENABLE_CIMG_LIB
-    pe.SaveCellPlotAsJPEG(std::string("AfterLegalization"),
-                          false, std::string("./plot/cell/after_lg"));
-#endif
+    Plot::plot(pb_.get(), "./plot/cell", "after_lg");
   }
 
   void AbacusLegalizer::generateCells()
@@ -252,13 +244,13 @@ namespace replace
   {
     // TODO: If a row is blocked by macros or fixed instances, we should split it
 
-    rowStor_.reserve(pb_->die().rowRepeatCount());
-    for(int i = 0; i < pb_->die().rowRepeatCount(); i++)
+    rowStor_.reserve(pb_->die()->rowRepeatCount());
+    for(int i = 0; i < pb_->die()->rowRepeatCount(); i++)
     {
-      rowStor_.emplace_back(static_cast<float>(pb_->die().rowStartX()),
-                            static_cast<float>(pb_->die().rowStartY() + i * pb_->die().rowHeight()),
-                            static_cast<float>(pb_->die().rowWidth()),
-                            static_cast<float>(pb_->die().rowHeight()));
+      rowStor_.emplace_back(static_cast<float>(pb_->die()->rowStartX()),
+                            static_cast<float>(pb_->die()->rowStartY() + i * pb_->die()->rowHeight()),
+                            static_cast<float>(pb_->die()->rowWidth()),
+                            static_cast<float>(pb_->die()->rowHeight()));
       rows_.push_back(&rowStor_.back());
     }
   }

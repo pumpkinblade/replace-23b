@@ -500,135 +500,91 @@ Bin::setElectroPhi(float phi) {
 // BinGrid
 
 BinGrid::BinGrid()
-  : lx_(0), ly_(0), ux_(0), uy_(0),
-  binCntX_(0), binCntY_(0),
-  binSizeX_(0), binSizeY_(0),
-  targetDensity_(0), 
-  overflowArea_(0),
-  isSetBinCntX_(0), isSetBinCntY_(0) {}
-
-BinGrid::BinGrid(Die* die) : BinGrid() {
-  setCoordi(die);
+    : die_(nullptr),
+      lx_(0), ly_(0), ux_(0), uy_(0),
+      binCntX_(0), binCntY_(0),
+      binSizeX_(0), binSizeY_(0),
+      targetDensity_(0), overflowArea_(0),
+      isSetBinCntX_(0), isSetBinCntY_(0)
+{
 }
 
-BinGrid::~BinGrid() {
-  binStor_.clear();
-  bins_.clear();
-  binCntX_ = binCntY_ = 0;
-  binSizeX_ = binSizeY_ = 0;
-  isSetBinCntX_ = isSetBinCntY_ = 0;
-  overflowArea_ = 0;
+BinGrid::BinGrid(Die* die)
+   : BinGrid()
+{
+  setDie(die);
 }
 
-void
-BinGrid::setCoordi(Die* die) {
+BinGrid::BinGrid(BinGrid&& other)
+{
+  *this = std::move(other);
+}
+
+BinGrid& BinGrid::operator=(BinGrid&& other)
+{
+  std::swap(binStor_, other.binStor_);
+  std::swap(bins_, other.bins_);
+  std::swap(lx_, other.lx_);
+  std::swap(ly_, other.ly_);
+  std::swap(ux_, other.ux_);
+  std::swap(uy_, other.uy_);
+  std::swap(binCntX_, other.binCntX_);
+  std::swap(binCntY_, other.binCntY_);
+  std::swap(binSizeX_, other.binSizeX_);
+  std::swap(binSizeY_, other.binSizeY_);
+  std::swap(targetDensity_, other.targetDensity_);
+  std::swap(overflowArea_, other.overflowArea_);
+  std::swap(isSetBinCntX_, other.isSetBinCntX_);
+  std::swap(isSetBinCntY_, other.isSetBinCntY_);
+  std::swap(sumPhi_, other.sumPhi_);
+  std::swap(ly_, other.ly_);
+  std::swap(die_, other.die_);
+  std::swap(gCells_, other.gCells_);
+  std::swap(fft_, other.fft_);
+
+  return *this;
+}
+
+void BinGrid::setDie(Die* die)
+{
+  die_ = die;
   lx_ = die->coreLx();
   ly_ = die->coreLy();
   ux_ = die->coreUx();
   uy_ = die->coreUy();
 }
 
-void
-BinGrid::setPlacerBase(std::shared_ptr<PlacerBase> pb) {
-  pb_ = pb;
-}
-
-void
-BinGrid::setTargetDensity(float density) {
+void BinGrid::setTargetDensity(float density)
+{
   targetDensity_ = density;
 }
 
-void
-BinGrid::setBinCnt(int binCntX, int binCntY) {
-  setBinCntX(binCntX);
-  setBinCntY(binCntY);
-}
-
-void
-BinGrid::setBinCntX(int binCntX) {
-  isSetBinCntX_ = 1;
+void BinGrid::setBinCntX(int binCntX)
+{
+  isSetBinCntX_ = true;
   binCntX_ = binCntX;
 }
 
-void
-BinGrid::setBinCntY(int binCntY) {
-  isSetBinCntY_ = 1;
+void BinGrid::setBinCntY(int binCntY)
+{
+  isSetBinCntY_ = true;
   binCntY_ = binCntY;
 }
 
-int
-BinGrid::lx() const {
-  return lx_;
-}
-int
-BinGrid::ly() const { 
-  return ly_;
-}
-
-int
-BinGrid::ux() const { 
-  return ux_;
-}
-
-int
-BinGrid::uy() const { 
-  return uy_;
-}
-
-int
-BinGrid::cx() const { 
-  return (ux_ + lx_)/2;
-}
-
-int
-BinGrid::cy() const { 
-  return (uy_ + ly_)/2;
-}
-
-int
-BinGrid::dx() const { 
-  return (ux_ - lx_);
-} 
-int
-BinGrid::dy() const { 
-  return (uy_ - ly_);
-}
-int
-BinGrid::binCntX() const {
-  return binCntX_;
-}
-
-int
-BinGrid::binCntY() const {
-  return binCntY_;
-}
-
-int
-BinGrid::binSizeX() const {
-  return binSizeX_;
-}
-
-int
-BinGrid::binSizeY() const {
-  return binSizeY_;
-}
-
-int64_t 
-BinGrid::overflowArea() const {
-  return overflowArea_;
-}
-
-
-
-void
-BinGrid::initBins() {
-
+void BinGrid::initBins()
+{
   int64_t totalBinArea 
     = static_cast<int64_t>(ux_ - lx_) 
     * static_cast<int64_t>(uy_ - ly_);
 
-  int64_t averagePlaceInstArea 
-    = pb_->placeInstsArea() / pb_->placeInsts().size();
+  // assume no fixed instance
+  int64_t averagePlaceInstArea = 0;
+  for(Instance* inst : die_->placeInsts())
+  {
+    int64_t area = (int64_t)inst->dx() * inst->dy();
+    averagePlaceInstArea += area;
+  }
+  averagePlaceInstArea /= die_->placeInsts().size();
 
   int64_t idealBinArea = 
     std::round(static_cast<float>(averagePlaceInstArea) / targetDensity_);
@@ -706,27 +662,35 @@ BinGrid::initBins() {
 
   // only initialized once
   updateBinsNonPlaceArea();
+
+  // initialize fft structrue based on bins
+  std::unique_ptr<FFT> fft(new FFT(binCntX_, binCntY_, binSizeX_, binSizeY_));
+  fft_ = std::move(fft);
 }
 
-void
-BinGrid::updateBinsNonPlaceArea() {
-  for(auto& bin : bins_) {
+void BinGrid::updateBinsNonPlaceArea()
+{
+  for(auto& bin : bins_)
+  {
     bin->setNonPlaceArea(0);
   }
 
-  for(auto& inst : pb_->nonPlaceInsts()) {
+  for(Instance* inst : die_->fixedInsts())
+  {
     std::pair<int, int> pairX = getMinMaxIdxX(inst);
     std::pair<int, int> pairY = getMinMaxIdxY(inst);
-    for(int i = pairX.first; i < pairX.second; i++) {
-      for(int j = pairY.first; j < pairY.second; j++) {
+    for(int i = pairX.first; i < pairX.second; i++)
+    {
+      for(int j = pairY.first; j < pairY.second; j++)
+      {
         Bin* bin = bins_[ j * binCntX_ + i ];
 
         // Note that nonPlaceArea should have scale-down with
         // target density. 
         // See MS-replace paper
         //
-        bin->addNonPlaceArea( getOverlapArea(bin, inst) 
-           * bin->targetDensity() );
+        bin->addNonPlaceArea(
+          getOverlapArea(bin, inst) * bin->targetDensity());
       }
     }
   }
@@ -734,16 +698,15 @@ BinGrid::updateBinsNonPlaceArea() {
 
 
 // Core Part
-void
-BinGrid::updateBinsGCellDensityArea(
-    std::vector<GCell*>& cells) {
+void BinGrid::updateBinsGCellDensityArea()
+{
   // clear the Bin-area info
   for(auto& bin : bins_) {
     bin->setInstPlacedArea(0);
     bin->setFillerArea(0);
   }
 
-  for(auto& cell : cells) {
+  for(auto& cell : gCells_) {
     std::pair<int, int> pairX 
       = getDensityMinMaxIdxX(cell);
     std::pair<int, int> pairY 
@@ -859,7 +822,76 @@ BinGrid::getMinMaxIdxY(Instance* inst) {
       std::min(upperIdx, binCntY_));
 }
 
+void BinGrid::addGCell(GCell* gc)
+{
+  gCells_.push_back(gc);
+}
 
+void BinGrid::updateDensityForceBin()
+{
+  // copy density to utilize FFT
+  for(Bin* bin : bins_)
+  {
+    fft_->updateDensity(
+      bin->x(), bin->y(), bin->density());  
+  }
+
+  // do FFT
+  fft_->doFFT();
+
+  // update electroPhi and electroForce
+  // update sumPhi_ for nesterov loop
+  sumPhi_ = 0;
+  for(Bin* bin : bins_)
+  {
+    auto eForcePair = fft_->getElectroForce(bin->x(), bin->y());
+    bin->setElectroForce(eForcePair.first, eForcePair.second);
+
+    float electroPhi = fft_->getElectroPhi(bin->x(), bin->y());
+    bin->setElectroPhi(electroPhi);
+
+    sumPhi_ += electroPhi 
+      * static_cast<float>(bin->nonPlaceArea() 
+          + bin->instPlacedArea() + bin->fillerArea());
+  }
+}
+
+void BinGrid::updateGCellDensityScaleAndSize()
+{
+  // update densitySize and densityScale in each gCell
+  for(auto& gCell : gCells_)
+  {
+    float scaleX = 0, scaleY = 0;
+    float densitySizeX = 0, densitySizeY = 0;
+    if(gCell->dx() < REPLACE_SQRT2 * binSizeX_)
+    {
+      scaleX = static_cast<float>(gCell->dx()) 
+        / static_cast<float>(REPLACE_SQRT2 * binSizeX_);
+      densitySizeX = REPLACE_SQRT2 
+        * static_cast<float>(binSizeX_);
+    }
+    else
+    {
+      scaleX = 1.0f;
+      densitySizeX = gCell->dx();
+    }
+
+    if(gCell->dy() < REPLACE_SQRT2 * binSizeY_)
+    {
+      scaleY = static_cast<float>(gCell->dy()) 
+               / static_cast<float>(REPLACE_SQRT2 * binSizeY_);
+      densitySizeY = REPLACE_SQRT2 * static_cast<float>(binSizeY_);
+    }
+    else
+    {
+      scaleY = 1.0f;
+      densitySizeY = gCell->dy();
+    }
+
+    gCell->setDensitySize(densitySizeX, densitySizeY);
+    gCell->setDensityScale(scaleX * scaleY);
+  }
+}
 
 
 ////////////////////////////////////////////////
@@ -903,20 +935,22 @@ NesterovBase::~NesterovBase() {
   pb_ = nullptr;
 }
 
-void
-NesterovBase::init() {
+void NesterovBase::init()
+{
   // gCellStor init
   gCellStor_.reserve(pb_->placeInsts().size());
-  for(auto& inst: pb_->placeInsts()) {
-    GCell myGCell(inst); 
-    // Check whether the given instance is
-    // macro or not
-    if( inst->dy() > pb_->siteSizeY() * 6 ) {
+  for(Instance* inst : pb_->placeInsts())
+  {
+    GCell myGCell(inst);
+    // Check whether the given instance is macro or not
+    if(inst->isMacro())
+    {
       myGCell.setMacroInstance();
     }
-    else {
+    else
+    {
       myGCell.setStdInstance();
-    } 
+    }
     gCellStor_.push_back(myGCell);
   }
 
@@ -926,57 +960,74 @@ NesterovBase::init() {
 
   // gPinStor init
   gPinStor_.reserve(pb_->pins().size());
-  for(auto& pin : pb_->pins()) {
+  for(auto& pin : pb_->pins())
+  {
     GPin myGPin(pin);
     gPinStor_.push_back(myGPin);
   }
 
   // gNetStor init
   gNetStor_.reserve(pb_->nets().size());
-  for(auto& net : pb_->nets()) {
+  for(auto& net : pb_->nets())
+  {
     GNet myGNet(net);
     gNetStor_.push_back(myGNet);
   }
 
-  // update gFillerCells
-  initFillerGCells();
+  // create filler for each die
+  std::unordered_map<Die*, std::pair<int, int>> fillerIdxMap;
+  for(Die* die : pb_->dies())
+  {
+    int startIdx = static_cast<int>(gCellStor_.size());
+    initFillerGCells(die);
+    int endIdx = static_cast<int>(gCellStor_.size());
+    fillerIdxMap.emplace(die, std::make_pair(startIdx, endIdx));
+  }
 
   // gCell ptr init
   gCells_.reserve(gCellStor_.size());
-  for(auto& gCell : gCellStor_) {
+  for(auto& gCell : gCellStor_)
+  {
     gCells_.push_back(&gCell);
-    if( gCell.isInstance() ) {
+    if(gCell.isInstance())
+    {
       gCellMap_[gCell.instance()] = &gCell;
     }
   }
-  
-  // gPin ptr init
+
+// gPin ptr init
   gPins_.reserve(gPinStor_.size());
-  for(auto& gPin : gPinStor_) {
+  for(auto& gPin : gPinStor_)
+  {
     gPins_.push_back(&gPin);
     gPinMap_[gPin.pin()] = &gPin;
   }
 
   // gNet ptr init
   gNets_.reserve(gNetStor_.size());
-  for(auto& gNet : gNetStor_) {
+  for(auto& gNet : gNetStor_)
+  {
     gNets_.push_back(&gNet);
     gNetMap_[gNet.net()] = &gNet;
   }
 
   // gCellStor_'s pins_ fill
-  for(auto& gCell : gCellStor_) {
-    if( gCell.isFiller()) {
+  for(auto& gCell : gCellStor_)
+  {
+    if( gCell.isFiller())
+    {
       continue;
     }
 
-    for( auto& pin : gCell.instance()->pins() ) {
-      gCell.addGPin( placerToNesterov(pin) );
+    for(auto& pin : gCell.instance()->pins())
+    {
+      gCell.addGPin(placerToNesterov(pin));
     }
   }
 
   // gPinStor_' GNet and GCell fill
-  for(auto& gPin : gPinStor_) {
+  for(auto& gPin : gPinStor_)
+  {
     gPin.setGCell( 
         placerToNesterov(gPin.pin()->instance()));
     gPin.setGNet(
@@ -984,9 +1035,12 @@ NesterovBase::init() {
   } 
 
   // gNetStor_'s GPin fill
-  for(auto& gNet : gNetStor_) {
-    for(auto& pin : gNet.net()->pins()) {
-      gNet.addGPin( placerToNesterov(pin) );
+  for(auto& gNet : gNetStor_)
+  {
+    for(auto& pin : gNet.net()->pins())
+    {
+      // NOTE: What if a pin is on a fixed instances?
+      gNet.addGPin(placerToNesterov(pin));
     }
   }
 
@@ -994,75 +1048,72 @@ NesterovBase::init() {
   LOG_INFO("FillerInit: NumGNets: {}", gNets_.size());
   LOG_INFO("FillerInit: NumGPins: {}", gPins_.size());
 
-  // initialize bin grid structure
-  // send param into binGrid structure
-  if( nbVars_.isSetBinCntX ) {
-    bg_.setBinCntX(nbVars_.binCntX);
+  // create bin grid
+  binGridStor_.reserve(pb_->dies().size());
+  for(Die* die : pb_->dies())
+  {
+    // each die should own one bin grid
+    binGridStor_.emplace_back(die);
+
+    // send param into binGrid structure
+    if(nbVars_.isSetBinCntX)
+    {
+      binGridStor_.back().setBinCntX(nbVars_.binCntX);
+    }
+    if(nbVars_.isSetBinCntY)
+    {
+      binGridStor_.back().setBinCntY(nbVars_.binCntY);
+    }
+    binGridStor_.back().setTargetDensity(nbVars_.targetDensity);
+
+    // apply the bin setting
+    binGridStor_.back().initBins();
   }
-  
-  if( nbVars_.isSetBinCntY ) {
-    bg_.setBinCntY(nbVars_.binCntY);
+
+  // binGrid ptr init
+  binGrids_.reserve(binGridStor_.size());
+  for(auto& bg : binGridStor_)
+  {
+    binGrids_.push_back(&bg);
+    binGridMap_.emplace(bg.die(), &bg);
   }
 
-  bg_.setPlacerBase(pb_);
-  bg_.setCoordi(&(pb_->die()));
-  bg_.setTargetDensity(nbVars_.targetDensity);
-  
-  // update binGrid info
-  bg_.initBins();
-
-
-  // initialize fft structrue based on bins
-  std::unique_ptr<FFT> fft(new FFT(bg_.binCntX(), bg_.binCntY(), 
-        bg_.binSizeX(), bg_.binSizeY()));
-
-  fft_ = std::move(fft);
-
-
-  // update densitySize and densityScale in each gCell
-  for(auto& gCell : gCells_) {
-    float scaleX = 0, scaleY = 0;
-    float densitySizeX = 0, densitySizeY = 0;
-    if( gCell->dx() < REPLACE_SQRT2 * bg_.binSizeX() ) {
-      scaleX = static_cast<float>(gCell->dx()) 
-        / static_cast<float>( REPLACE_SQRT2 * bg_.binSizeX());
-      densitySizeX = REPLACE_SQRT2 
-        * static_cast<float>(bg_.binSizeX());
+  // binGrids_ gCell fill
+  for(BinGrid* bg : binGrids_)
+  {
+    // assign inst gCell to binGrid
+    for(Instance* inst : bg->die()->placeInsts())
+    {
+      GCell* gCell = placerToNesterov(inst);
+      bg->addGCell(gCell);
+      gCell->setBinGrid(bg);
     }
-    else {
-      scaleX = 1.0;
-      densitySizeX = gCell->dx();
+    // assign filler gCell to binGrid
+    auto idx = fillerIdxMap[bg->die()];
+    for(int i = idx.first; i < idx.second; i++)
+    {
+      bg->addGCell(&gCellStor_[i]);
+      gCellStor_[i].setBinGrid(bg);
     }
 
-    if( gCell->dy() < REPLACE_SQRT2 * bg_.binSizeY() ) {
-      scaleY = static_cast<float>(gCell->dy()) 
-        / static_cast<float>( REPLACE_SQRT2 * bg_.binSizeY());
-      densitySizeY = REPLACE_SQRT2 
-        * static_cast<float>(bg_.binSizeY());
-    }
-    else {
-      scaleY = 1.0;
-      densitySizeY = gCell->dy();
-    }
-
-    gCell->setDensitySize(densitySizeX, densitySizeY);
-    gCell->setDensityScale(scaleX * scaleY);
-  } 
+    // update densitySize and densityScale in each gCell
+    bg->updateGCellDensityScaleAndSize();
+  }
 }
 
 
 // virtual filler GCells
-void
-NesterovBase::initFillerGCells() {
+void NesterovBase::initFillerGCells(Die* die)
+{
   // extract average dx/dy in range (10%, 90%)
   vector<int> dxStor;
   vector<int> dyStor;
-
-  dxStor.reserve(pb_->placeInsts().size());
-  dyStor.reserve(pb_->placeInsts().size());
-  for(auto& placeInst : pb_->placeInsts()) {
-    dxStor.push_back(placeInst->dx());
-    dyStor.push_back(placeInst->dy());
+  dxStor.reserve(die->placeInsts().size());
+  dyStor.reserve(die->placeInsts().size());
+  for(Instance* inst : die->placeInsts())
+  {
+    dxStor.push_back(inst->dx());
+    dyStor.push_back(inst->dy());
   }
   
   // sort
@@ -1071,10 +1122,10 @@ NesterovBase::initFillerGCells() {
 
   // average from (10 - 90%) .
   int64_t dxSum = 0, dySum = 0;
-
-  int minIdx = dxStor.size()*0.05;
-  int maxIdx = dxStor.size()*0.95;
-  for(int i=minIdx; i<maxIdx; i++) {
+  int minIdx = static_cast<int>(dxStor.size()*0.05);
+  int maxIdx = static_cast<int>(dxStor.size()*0.95);
+  for(int i=minIdx; i<maxIdx; i++)
+  {
     dxSum += dxStor[i];
     dySum += dyStor[i];
   }
@@ -1084,34 +1135,26 @@ NesterovBase::initFillerGCells() {
   int avgDx = static_cast<int>(dxSum / (maxIdx - minIdx));
   int avgDy = static_cast<int>(dySum / (maxIdx - minIdx));
 
-
-  int64_t coreArea = 
-    static_cast<int64_t>(pb_->die().coreDx()) *
-    static_cast<int64_t>(pb_->die().coreDy()); 
+  int64_t coreArea = (int64_t)die->coreDx() * die->coreDy();
 
   // nonPlaceInstsArea should not have targetDensity downscaling!!! 
-  int64_t whiteSpaceArea = coreArea - 
-    static_cast<int64_t>(pb_->nonPlaceInstsArea());
+  int64_t whiteSpaceArea = coreArea - die->fixedInstsArea();
 
   // TODO density screening
-  int64_t movableArea = whiteSpaceArea 
-    * nbVars_.targetDensity;
+  int64_t movableArea = static_cast<int64_t>(whiteSpaceArea * nbVars_.targetDensity);
   
   int64_t totalFillerArea = movableArea 
-    - static_cast<int64_t>(pb_->stdInstsArea())
-    - static_cast<int64_t>(pb_->macroInstsArea() * nbVars_.targetDensity);
+    - static_cast<int64_t>(die->placeStdcellsArea())
+    - static_cast<int64_t>(die->placeMacrosArea() * nbVars_.targetDensity);
 
-
-  if( totalFillerArea < 0 ) {
-    string msg = "Filler area is negative!!\n";
-    msg += "       Please put higher target density or \n";
-    msg += "       Re-floorplan to have enough coreArea\n";
-    LOG_ERROR("{}", msg);
+  if(totalFillerArea < 0)
+  {
+    LOG_ERROR("Filler area is negative!!\n"
+              "\tPlease put higher target density or\n"
+              "\tRe-floorplan to have enough coreArea");
   }
 
-  int fillerCnt = 
-    static_cast<int>(totalFillerArea 
-        / static_cast<int64_t>(avgDx * avgDy));
+  int fillerCnt = static_cast<int>(totalFillerArea / ((int64_t)avgDx * avgDy));
 
   LOG_INFO("FillerInit: CoreArea: {}", coreArea);
   LOG_INFO("FillerInit: WhiteSpaceArea: {}", whiteSpaceArea);
@@ -1126,7 +1169,7 @@ NesterovBase::initFillerGCells() {
   // rand()'s RAND_MAX is only 32767.
   //
   mt19937 randVal(0);
-  for(int i=0; i<fillerCnt; i++) {
+  for(int i = 0; i < fillerCnt; i++) {
 
     // instability problem between g++ and clang++!
     auto randX = randVal();
@@ -1135,151 +1178,150 @@ NesterovBase::initFillerGCells() {
     // place filler cells on random coordi and
     // set size as avgDx and avgDy
     GCell myGCell(
-        randX % pb_->die().coreDx() + pb_->die().coreLx(), 
-        randY % pb_->die().coreDy() + pb_->die().coreLy(),
-        avgDx, avgDy );
-
+        randX % die->coreDx() + die->coreLx(), 
+        randY % die->coreDy() + die->coreLy(),
+        avgDx, avgDy);
     gCellStor_.push_back(myGCell);
   }
 }
 
-GCell*
-NesterovBase::placerToNesterov(Instance* inst) {
+GCell* NesterovBase::placerToNesterov(Instance* inst)
+{
   auto gcPtr = gCellMap_.find(inst);
-  return (gcPtr == gCellMap_.end())?
-    nullptr : gcPtr->second;
+  return (gcPtr == gCellMap_.end()) ? nullptr : gcPtr->second;
 }
 
-GNet*
-NesterovBase::placerToNesterov(Net* net) {
+GNet* NesterovBase::placerToNesterov(Net* net)
+{
   auto gnPtr = gNetMap_.find(net);
-  return (gnPtr == gNetMap_.end())?
-    nullptr : gnPtr->second;
+  return (gnPtr == gNetMap_.end()) ? nullptr : gnPtr->second;
 }
 
-GPin*
-NesterovBase::placerToNesterov(Pin* pin) {
+GPin* NesterovBase::placerToNesterov(Pin* pin)
+{
   auto gpPtr = gPinMap_.find(pin);
-  return (gpPtr == gPinMap_.end())?
-    nullptr : gpPtr->second;
+  return (gpPtr == gPinMap_.end()) ? nullptr : gpPtr->second;
+}
+
+BinGrid* NesterovBase::placerToNesterov(Die* die)
+{
+  auto bgPtr = binGridMap_.find(die);
+  return (bgPtr == binGridMap_.end()) ? nullptr : bgPtr->second;
 }
 
 // gcell update
-void
-NesterovBase::updateGCellLocation(
-    std::vector<FloatPoint>& coordis) {
-  for(auto& coordi : coordis) {
+void NesterovBase::updateGCellLocation(
+  std::vector<FloatPoint>& coordis)
+{
+  for(auto& coordi : coordis)
+  {
     int idx = &coordi - &coordis[0];
     gCells_[idx]->setLocation( coordi.x, coordi.y );
   }
 }
 
 // gcell update
-void
-NesterovBase::updateGCellCenterLocation(
-    std::vector<FloatPoint>& coordis) {
-  for(auto& coordi : coordis) {
+void NesterovBase::updateGCellCenterLocation(
+    std::vector<FloatPoint>& coordis)
+{
+  for(auto& coordi : coordis)
+  {
     int idx = &coordi - &coordis[0];
     gCells_[idx]->setCenterLocation( coordi.x, coordi.y );
   }
 }
 
-void
-NesterovBase::updateGCellDensityCenterLocation(
-    std::vector<FloatPoint>& coordis) {
-  for(auto& coordi : coordis) {
+void NesterovBase::updateGCellDensityCenterLocation(
+    std::vector<FloatPoint>& coordis)
+{
+  for(auto& coordi : coordis)
+  {
     int idx = &coordi - &coordis[0];
     gCells_[idx]->setDensityCenterLocation( 
         coordi.x, coordi.y );
   }
-  bg_.updateBinsGCellDensityArea( gCells_ );
+  for(BinGrid* bg : binGrids_)
+  {
+    bg->updateBinsGCellDensityArea();
+  }
 }
 
-int
-NesterovBase::binCntX() const {
-  return bg_.binCntX(); 
+int64_t  NesterovBase::overflowArea() const {
+  int64_t area = 0;
+  for(BinGrid* bg : binGrids_)
+  {
+    area += bg->overflowArea();
+  }
+  return area;
 }
 
-int
-NesterovBase::binCntY() const {
-  return bg_.binCntY();
-}
-
-int
-NesterovBase::binSizeX() const {
-  return bg_.binSizeX();
-}
-
-int
-NesterovBase::binSizeY() const {
-  return bg_.binSizeY();
-}
-
-
-int64_t 
-NesterovBase::overflowArea() const {
-  return bg_.overflowArea(); 
-}
-
-float
-NesterovBase::sumPhi() const {
+float NesterovBase::sumPhi() const
+{
   return sumPhi_;
 }
 
-float
-NesterovBase::targetDensity() const {
+float NesterovBase::targetDensity() const
+{
   return nbVars_.targetDensity;
 }
 
-void 
-NesterovBase::updateDensityCoordiLayoutInside(
-    GCell* gCell) {
-
+void  NesterovBase::updateDensityCoordiLayoutInside(GCell* gCell)
+{
   float targetLx = gCell->dLx();
   float targetLy = gCell->dLy();
 
-  if( targetLx < bg_.lx() ) {
-    targetLx = bg_.lx();
+  BinGrid* bg = gCell->binGrid();
+  if( targetLx < bg->lx() )
+  {
+    targetLx = bg->lx();
   }
-
-  if( targetLy < bg_.ly() ) {
-    targetLy = bg_.ly();
+  if(targetLy < bg->ly())
+  {
+    targetLy = bg->ly();
   }
-
-  if( targetLx + gCell->dDx() > bg_.ux() ) {
-    targetLx = bg_.ux() - gCell->dDx();
+  if(targetLx + gCell->dDx() > bg->ux())
+  {
+    targetLx = bg->ux() - gCell->dDx();
   }
-
-  if( targetLy + gCell->dDy() > bg_.uy() ) {
-    targetLy = bg_.uy() - gCell->dDy();
+  if(targetLy + gCell->dDy() > bg->uy())
+  {
+    targetLy = bg->uy() - gCell->dDy();
   }
   gCell->setDensityLocation(targetLx, targetLy);
 }
 
-float
-NesterovBase::getDensityCoordiLayoutInsideX(GCell* gCell, float cx) {
+float NesterovBase::getDensityCoordiLayoutInsideX(
+  GCell* gCell, float cx)
+{
   float adjVal = cx;
-  //TODO will change base on each assigned binGrids.
-  //
-  if( cx - gCell->dDx()/2 < bg_.lx() ) {
-    adjVal = bg_.lx() + gCell->dDx()/2;
+  // TODO will change base on each assigned binGrids.
+  // 
+  BinGrid* bg = gCell->binGrid();
+  if(cx - gCell->dDx()/2 < bg->lx())
+  {
+    adjVal = bg->lx() + gCell->dDx() / 2;
   }
-  if( cx + gCell->dDx()/2 > bg_.ux() ) {
-    adjVal = bg_.ux() - gCell->dDx()/2; 
+  if(cx + gCell->dDx()/2 > bg->ux())
+  {
+    adjVal = bg->ux() - gCell->dDx() / 2;
   }
   return adjVal;
 }
 
-float
-NesterovBase::getDensityCoordiLayoutInsideY(GCell* gCell, float cy) {
+float NesterovBase::getDensityCoordiLayoutInsideY(
+  GCell* gCell, float cy)
+{
   float adjVal = cy;
-  //TODO will change base on each assigned binGrids.
-  //
-  if( cy - gCell->dDy()/2 < bg_.ly() ) {
-    adjVal = bg_.ly() + gCell->dDy()/2;
+  // TODO will change base on each assigned binGrids.
+  // 
+  BinGrid* bg = gCell->binGrid();
+  if(cy - gCell->dDy()/2 < bg->ly())
+  {
+    adjVal = bg->ly() + gCell->dDy()/2;
   }
-  if( cy + gCell->dDy()/2 > bg_.uy() ) {
-    adjVal = bg_.uy() - gCell->dDy()/2; 
+  if(cy + gCell->dDy()/2 > bg->uy())
+  {
+    adjVal = bg->uy() - gCell->dDy()/2; 
   }
 
   return adjVal;
@@ -1290,10 +1332,9 @@ NesterovBase::getDensityCoordiLayoutInsideY(GCell* gCell, float cy) {
 //
 // * Note that wlCoeffX and wlCoeffY is 1/gamma 
 // in ePlace paper.
-void
-NesterovBase::updateWireLengthForceWA(
-    float wlCoeffX, float wlCoeffY) {
-
+void NesterovBase::updateWireLengthForceWA(
+    float wlCoeffX, float wlCoeffY)
+{
   // clear all WA variables.
   for(auto& gNet : gNets_) {
     gNet->clearWaVars();
@@ -1428,14 +1469,15 @@ NesterovBase::getWireLengthGradientPinWA(GPin* gPin, float wlCoeffX, float wlCoe
       gradientMinY - gradientMaxY);
 }
 
-FloatPoint
-NesterovBase::getWireLengthPreconditioner(GCell* gCell) {
-  return FloatPoint( gCell->gPins().size(), 
-     gCell->gPins().size() );
+
+FloatPoint NesterovBase::getWireLengthPreconditioner(GCell* gCell)
+{
+  return FloatPoint(gCell->gPins().size(),
+     gCell->gPins().size());
 }
 
-FloatPoint
-NesterovBase::getDensityPreconditioner(GCell* gCell) {
+FloatPoint NesterovBase::getDensityPreconditioner(GCell* gCell)
+{
   float areaVal = static_cast<float>(gCell->dx()) 
     * static_cast<float>(gCell->dy());
 
@@ -1444,18 +1486,21 @@ NesterovBase::getDensityPreconditioner(GCell* gCell) {
 
 // get GCells' electroForcePair
 // i.e. get DensityGradient with given GCell
-FloatPoint 
-NesterovBase::getDensityGradient(GCell* gCell) {
-  std::pair<int, int> pairX 
-    = bg_.getDensityMinMaxIdxX(gCell);
-  std::pair<int, int> pairY 
-    = bg_.getDensityMinMaxIdxY(gCell);
+FloatPoint NesterovBase::getDensityGradient(GCell* gCell)
+{
+  // find 
+  BinGrid* bg = gCell->binGrid();
+
+  auto pairX = bg->getDensityMinMaxIdxX(gCell);
+  auto pairY = bg->getDensityMinMaxIdxY(gCell);
   
   FloatPoint electroForce;
 
-  for(int i = pairX.first; i < pairX.second; i++) {
-    for(int j = pairY.first; j < pairY.second; j++) {
-      Bin* bin = bg_.bins()[ j * binCntX() + i ];
+  for(int i = pairX.first; i < pairX.second; i++)
+  {
+    for(int j = pairY.first; j < pairY.second; j++)
+    {
+      Bin* bin = bg->bins()[j * bg->binCntX() + i];
       float overlapArea 
         = getOverlapDensityArea(bin, gCell) * gCell->densityScale();
 
@@ -1467,45 +1512,29 @@ NesterovBase::getDensityGradient(GCell* gCell) {
 }
 
 // Density force cals
-void
-NesterovBase::updateDensityForceBin() {
-  // copy density to utilize FFT
-  for(auto& bin : bg_.bins()) {
-    fft_->updateDensity(bin->x(), bin->y(), 
-        bin->density());  
-  }
-
-  // do FFT
-  fft_->doFFT();
-
-  // update electroPhi and electroForce
-  // update sumPhi_ for nesterov loop
-  sumPhi_ = 0;
-  for(auto& bin : bg_.bins()) {
-    auto eForcePair = fft_->getElectroForce(bin->x(), bin->y());
-    bin->setElectroForce(eForcePair.first, eForcePair.second);
-
-    float electroPhi = fft_->getElectroPhi(bin->x(), bin->y());
-    bin->setElectroPhi(electroPhi);
-
-    sumPhi_ += electroPhi 
-      * static_cast<float>(bin->nonPlaceArea() 
-          + bin->instPlacedArea() + bin->fillerArea());
+void NesterovBase::updateDensityForceBin()
+{
+  sumPhi_ = 0.0f;
+  for(BinGrid* bg : binGrids_)
+  {
+    bg->updateDensityForceBin();
+    sumPhi_ += bg->sumPhi();
   }
 }
 
-int64_t
-NesterovBase::getHpwl() {
+int64_t NesterovBase::getHpwl()
+{
   int64_t hpwl = 0;
-  for(auto& gNet : gNets_) {
+  for(auto& gNet : gNets_)
+  {
     gNet->updateBox();
     hpwl += gNet->hpwl();
   }
   return hpwl;
 }
 
-void
-NesterovBase::reset() { 
+void NesterovBase::reset()
+{ 
   pb_ = nullptr;
   nbVars_.reset();
 }

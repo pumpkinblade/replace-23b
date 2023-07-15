@@ -27,7 +27,6 @@ namespace replace
 
     void doInitialPlace();
     void doNesterovPlace();
-    void applyGlobalPlacement();
     void doAbacusLegalization();
 
     // Initial Place param settings

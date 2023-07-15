@@ -5,7 +5,7 @@ project(replace)
 # CIMG is a header only package
 option(USE_CIMG "use cimg" OFF)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -34,8 +34,8 @@ add_subdirectory(${LEFLIB_HOME})
 
 if(USE_CIMG)
     find_package(JPEG REQUIRED)
-    find_package(X11 REQUIRED)
     find_package(Threads REQUIRED)
+    #find_package(Cimg CONFIG REQUIRED)
 endif()
 
 set(PLACE_HEADER
@@ -90,7 +90,6 @@ target_link_libraries(replace PRIVATE lef)
 if(USE_CIMG)
     # target_link_libraries(replace PRIVATE CImg::CImg)
     target_link_libraries(replace PRIVATE ${JPEG_LIBRARIES})
-    target_link_libraries(replace PRIVATE ${X11_LIBRARIES})
     target_link_libraries(replace PRIVATE Threads::Threads)
     target_compile_options(replace PRIVATE -DENABLE_CIMG_LIB)
     target_compile_options(replace PRIVATE -Dcimg_use_jpeg)
