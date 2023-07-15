@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <vector>
+#include <cassert>
 
 namespace replace
 {
@@ -69,7 +70,9 @@ namespace replace
     float qc() const { return qc_; }
     float ec() const { return ec_; }
 
-    void setXc(float x) { xc_ = x; }
+    void setXc(float x) { 
+      xc_ = x; 
+    }
   private:
     std::vector<AbacusCell *> cells_;
     float xc_;

@@ -5,13 +5,15 @@
 #include "nesterovBase.h"
 #include "abacusLegalizer.h"
 #include <iostream>
+#include <memory>
+#include "log.h"
 
 namespace replace
 {
 
   using namespace std;
 
-  Replace::Replace()
+  Replace::Replace(float targetDensity)
       : pb_(nullptr), nb_(nullptr),
         ip_(nullptr), np_(nullptr), alg_(nullptr),
         initialPlaceMaxIter_(20),
@@ -21,7 +23,7 @@ namespace replace
         initialPlaceNetWeightScale_(800),
         nesterovPlaceMaxIter_(2000),
         binGridCntX_(0), binGridCntY_(0),
-        overflow_(0.1), density_(1.0),
+        overflow_(0.1), density_(targetDensity),
         initDensityPenalityFactor_(0.00008),
         initWireLengthCoef_(0.25),
         minPhiCoef_(0.95), maxPhiCoef_(1.05),
@@ -119,12 +121,15 @@ namespace replace
 
   void Replace::doAbacusLegalization()
   {
+    LOG_TRACE("start Replace::doAbacusLegalization");
     AbacusLegalizerVars algVars;
     algVars.weightOpt = AbacusLegalizerVars::One;
 
-    AbacusLegalizer* alg = new AbacusLegalizer(algVars, pb_);
-    alg_.reset(alg);
+    // make_unique is C++14 std
+    // alg_ = std::make_unique<AbacusLegalizer>(algVars, pb_);
+    alg_.reset(new AbacusLegalizer(algVars, pb_));
     alg_->doLegalization();
+    LOG_TRACE("end Replace::doAbacusLegalization");
   }
 
   void

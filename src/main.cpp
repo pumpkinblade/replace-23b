@@ -26,6 +26,7 @@ int main(int argc, const char *argv[])
   string defFilename;
   string mode;
   string txtFilename;
+  float  targetDensity;
 
   // Wrap everything in a try block.  Do this every time, because exceptions will be thrown for problems.
   try
@@ -37,11 +38,13 @@ int main(int argc, const char *argv[])
     ValueArg<string> defArg("d", "def", "path to def file", false, "none", "string");
     ValueArg<string> modeArg("m", "mode", "lefdef/23b", false, "lefdef", "string");
     ValueArg<string> txtArg("b", "txt23b", "path to 23b text file", false, "none", "string");
+    ValueArg<float> densityArg("D", "density", "target density", false, 1.0, "float");
 
     cmd.add(lefArg);
     cmd.add(defArg);
     cmd.add(modeArg);
     cmd.add(txtArg);
+    cmd.add(densityArg);
 
     // Parse the args.
     cmd.parse(argc, argv);
@@ -51,6 +54,7 @@ int main(int argc, const char *argv[])
     defFilename = defArg.getValue();
     mode = modeArg.getValue();
     txtFilename = txtArg.getValue();
+    targetDensity = densityArg.getValue();
   }
   catch (ArgException &e) // catch any exceptions
   {
@@ -58,20 +62,20 @@ int main(int argc, const char *argv[])
     return 1;
   }
 
-  if(mode == "lefdef")
+  if (mode == "lefdef")
   {
     LOG_TRACE("Parse Lef/Def Begin");
     std::shared_ptr<PlacerBase> pb = Parser::LefDefToPlacerBase(lefFilename, defFilename);
     LOG_TRACE("Parse Lef/Def End");
     pb->printInfo();
 
-    Replace rp;
+    Replace rp(targetDensity);
     rp.setPlacerBase(pb);
     rp.doInitialPlace();
     rp.doNesterovPlace();
     rp.doAbacusLegalization();
   }
-  else if(mode == "23b")
+  else if (mode == "23b")
   {
     LOG_TRACE("Parse 23b Text File Begin");
     std::shared_ptr<Placer23b> pb = Parser::TxtToPlacer23b(txtFilename);

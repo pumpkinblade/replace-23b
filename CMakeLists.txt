@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.12)
 
 project(replace)
 
+# CIMG is a header only package
 option(USE_CIMG "use cimg" OFF)
 
 set(CMAKE_CXX_STANDARD 11)
@@ -24,13 +25,17 @@ set(TCLAP_HOME
 set(EIGEN_HOME
     ${PROJECT_SOURCE_DIR}/module/eigen
 )
+set(CIMG_HOME
+    ${PROJECT_SOURCE_DIR}/module/CImg
+)
 
 add_subdirectory(${DEFLIB_HOME})
 add_subdirectory(${LEFLIB_HOME})
 
 if(USE_CIMG)
     find_package(JPEG REQUIRED)
-    find_package(Cimg CONFIG REQUIRED)
+    find_package(Threads REQUIRED)
+    #find_package(Cimg CONFIG REQUIRED)
 endif()
 
 set(PLACE_HEADER
@@ -75,13 +80,17 @@ add_executable(replace ${PLACE_SRC} ${PLACE_HEADER})
 target_include_directories(replace PRIVATE ${SPDLOG_HOME}/include)
 target_include_directories(replace PRIVATE ${TCLAP_HOME}/include)
 target_include_directories(replace PRIVATE ${EIGEN_HOME}/include)
+if(USE_CIMG)
+    target_include_directories(replace PRIVATE ${CIMG_HOME})
+endif()
 
 target_link_libraries(replace PRIVATE def)
 target_link_libraries(replace PRIVATE lef)
 
 if(USE_CIMG)
-    target_link_libraries(replace PRIVATE CImg::CImg)
+    # target_link_libraries(replace PRIVATE CImg::CImg)
     target_link_libraries(replace PRIVATE ${JPEG_LIBRARIES})
+    target_link_libraries(replace PRIVATE Threads::Threads)
     target_compile_options(replace PRIVATE -DENABLE_CIMG_LIB)
     target_compile_options(replace PRIVATE -Dcimg_use_jpeg)
 endif()
