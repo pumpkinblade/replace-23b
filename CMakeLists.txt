@@ -82,6 +82,7 @@ target_include_directories(replace PRIVATE ${TCLAP_HOME}/include)
 target_include_directories(replace PRIVATE ${EIGEN_HOME}/include)
 if(USE_CIMG)
     target_include_directories(replace PRIVATE ${CIMG_HOME})
+    target_include_directories(replace PRIVATE ${JPEG_INCLUDE_DIRS})
 endif()
 
 target_link_libraries(replace PRIVATE def)
