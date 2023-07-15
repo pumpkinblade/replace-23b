@@ -137,14 +137,9 @@ namespace replace
   // Die
 
   Die::Die() : dieLx_(0), dieLy_(0), dieUx_(0), dieUy_(0),
-               coreLx_(0), coreLy_(0), coreUx_(0), coreUy_(0)
+               coreLx_(0), coreLy_(0), coreUx_(0), coreUy_(0),
+               fixedInstsArea_(0), placeStdcellsArea_(0), placeMacrosArea_(0)
   {
-  }
-
-  Die::~Die()
-  {
-    dieLx_ = dieLy_ = dieUx_ = dieUy_ = 0;
-    coreLx_ = coreLy_ = coreUx_ = coreUy_ = 0;
   }
 
   void Die::setDieBox(int lx, int ly, int ux, int uy)
@@ -167,6 +162,34 @@ namespace replace
     coreLy_ = rowStartY_;
     coreUx_ = rowStartX_ + rowWidth_;
     coreUy_ = rowStartY_ + rowHeight_ * rowRepeatCount_;
+  }
+
+  void Die::addInstance(Instance *inst)
+  {
+    insts_.push_back(inst);
+    if (inst->isFixed())
+    {
+      fixedInsts_.push_back(inst);
+    }
+    else
+    {
+      placeInsts_.push_back(inst);
+    }
+
+    int64_t area = static_cast<int64_t>(inst->dx()) *
+                   static_cast<int64_t>(inst->dy());
+    if(inst->isFixed())
+    {
+      fixedInstsArea_ += area;
+    }
+    else if(inst->isMacro())
+    {
+      placeMacrosArea_ += area;
+    }
+    else
+    {
+      placeStdcellsArea_ += area;
+    }
   }
 
   ////////////////////////////////////////////////////////
@@ -230,7 +253,7 @@ namespace replace
     LOG_INFO("MaxFanout: {}", maxFanout);
     LOG_INFO("AvgFanout: {}", sumFanout / (float)nets_.size());
 
-    Die* die = dies_.front();
+    Die *die = dies_.front();
     LOG_INFO("DieAreaLxLy: ({}, {})", die->dieLx(), die->dieLy());
     LOG_INFO("DieAreaUxUy: ({}, {})", die->dieUx(), die->dieUy());
     LOG_INFO("CoreAreaLxLy: ({}, {})", die->coreLx(), die->coreLy());
@@ -241,11 +264,55 @@ namespace replace
         static_cast<int64_t>(die->coreUy() - die->coreLy());
 
     LOG_INFO("CoreArea: {}", coreArea);
-    LOG_INFO("PlaceInstArea: {}", placeStdcellsArea_ + placeMacrosArea_);
-    LOG_INFO("PlaceStdcellsArea: {}", placeStdcellsArea_);
-    LOG_INFO("PlaceMacrosArea: {}", placeMacrosArea_);
-    LOG_INFO("FixedInstArea: {}", fixedStdcellsArea_ + fixedMacrosArea_);
-    LOG_INFO("FixedStdcellsArea: {}", fixedStdcellsArea_);
-    LOG_INFO("FixedMacrosArea: {}", fixedMacrosArea_);
+    int dieIdx = 0;
+    for (const Die *die : dies_)
+    {
+      LOG_INFO("Die {}", dieIdx);
+      LOG_INFO("PlaceInstArea: {}", die->placeInstsArea());
+      LOG_INFO("PlaceStdcellsArea: {}", die->placeStdcellsArea());
+      LOG_INFO("PlaceMacrosArea: {}", die->placeMacrosArea());
+      LOG_INFO("FixedInstArea: {}", die->fixedInstsArea());
+      dieIdx++;
+    }
+  }
+
+  int64_t PlacerBase::placeInstsArea() const
+  {
+    int64_t area = 0;
+    for (const Die *die : dies_)
+    {
+      area += die->placeInstsArea();
+    }
+    return area;
+  }
+
+  int64_t PlacerBase::placeStdcellsArea() const
+  {
+    int64_t area = 0;
+    for (const Die *die : dies_)
+    {
+      area += die->placeStdcellsArea();
+    }
+    return area;
+  }
+
+  int64_t PlacerBase::placeMacrosArea() const
+  {
+    int64_t area = 0;
+    for (const Die *die : dies_)
+    {
+      area += die->placeMacrosArea();
+    }
+    return area;
+  }
+
+  int64_t PlacerBase::fixedInstsArea() const
+  {
+    int64_t area = 0;
+    for (const Die *die : dies_)
+    {
+      area += die->fixedInstsArea();
+    }
+    return area;
   }
 }

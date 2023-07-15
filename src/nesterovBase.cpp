@@ -579,12 +579,12 @@ void BinGrid::initBins()
 
   // assume no fixed instance
   int64_t averagePlaceInstArea = 0;
-  for(Instance* inst : die_->instances())
+  for(Instance* inst : die_->placeInsts())
   {
     int64_t area = (int64_t)inst->dx() * inst->dy();
     averagePlaceInstArea += area;
   }
-  averagePlaceInstArea /= die_->instances().size();
+  averagePlaceInstArea /= die_->placeInsts().size();
 
   int64_t idealBinArea = 
     std::round(static_cast<float>(averagePlaceInstArea) / targetDensity_);
@@ -675,25 +675,22 @@ void BinGrid::updateBinsNonPlaceArea()
     bin->setNonPlaceArea(0);
   }
 
-  for(Instance* inst : die_->instances())
+  for(Instance* inst : die_->fixedInsts())
   {
-    if(inst->isFixed())
+    std::pair<int, int> pairX = getMinMaxIdxX(inst);
+    std::pair<int, int> pairY = getMinMaxIdxY(inst);
+    for(int i = pairX.first; i < pairX.second; i++)
     {
-      std::pair<int, int> pairX = getMinMaxIdxX(inst);
-      std::pair<int, int> pairY = getMinMaxIdxY(inst);
-      for(int i = pairX.first; i < pairX.second; i++)
+      for(int j = pairY.first; j < pairY.second; j++)
       {
-        for(int j = pairY.first; j < pairY.second; j++)
-        {
-          Bin* bin = bins_[ j * binCntX_ + i ];
+        Bin* bin = bins_[ j * binCntX_ + i ];
 
-          // Note that nonPlaceArea should have scale-down with
-          // target density. 
-          // See MS-replace paper
-          //
-          bin->addNonPlaceArea(
-            getOverlapArea(bin, inst) * bin->targetDensity());
-        }
+        // Note that nonPlaceArea should have scale-down with
+        // target density. 
+        // See MS-replace paper
+        //
+        bin->addNonPlaceArea(
+          getOverlapArea(bin, inst) * bin->targetDensity());
       }
     }
   }
@@ -869,25 +866,25 @@ void BinGrid::updateGCellDensityScaleAndSize()
     if(gCell->dx() < REPLACE_SQRT2 * binSizeX_)
     {
       scaleX = static_cast<float>(gCell->dx()) 
-        / static_cast<float>( REPLACE_SQRT2 * binSizeX_);
+        / static_cast<float>(REPLACE_SQRT2 * binSizeX_);
       densitySizeX = REPLACE_SQRT2 
         * static_cast<float>(binSizeX_);
     }
     else
     {
-      scaleX = 1.0;
+      scaleX = 1.0f;
       densitySizeX = gCell->dx();
     }
 
     if(gCell->dy() < REPLACE_SQRT2 * binSizeY_)
     {
       scaleY = static_cast<float>(gCell->dy()) 
-               / static_cast<float>( REPLACE_SQRT2 * binSizeY_);
+               / static_cast<float>(REPLACE_SQRT2 * binSizeY_);
       densitySizeY = REPLACE_SQRT2 * static_cast<float>(binSizeY_);
     }
     else
     {
-      scaleY = 1.0;
+      scaleY = 1.0f;
       densitySizeY = gCell->dy();
     }
 
@@ -944,19 +941,37 @@ void NesterovBase::init()
   gCellStor_.reserve(pb_->placeInsts().size());
   for(Instance* inst : pb_->placeInsts())
   {
-    if(!inst->isFixed())
+    GCell myGCell(inst);
+    // Check whether the given instance is macro or not
+    if(inst->isMacro())
     {
-      gCellStor_.emplace_back(inst);
-      // Check whether the given instance is macro or not
-      if(inst->isMacro())
-      {
-        gCellStor_.back().setMacroInstance();
-      }
-      else
-      {
-        gCellStor_.back().setStdInstance();
-      }
+      myGCell.setMacroInstance();
     }
+    else
+    {
+      myGCell.setStdInstance();
+    }
+    gCellStor_.push_back(myGCell);
+  }
+
+  // TODO: 
+  // at this moment, GNet and GPin is equal to
+  // Net and Pin
+
+  // gPinStor init
+  gPinStor_.reserve(pb_->pins().size());
+  for(auto& pin : pb_->pins())
+  {
+    GPin myGPin(pin);
+    gPinStor_.push_back(myGPin);
+  }
+
+  // gNetStor init
+  gNetStor_.reserve(pb_->nets().size());
+  for(auto& net : pb_->nets())
+  {
+    GNet myGNet(net);
+    gNetStor_.push_back(myGNet);
   }
 
   // create filler for each die
@@ -980,80 +995,7 @@ void NesterovBase::init()
     }
   }
 
-  // create bin grid
-  binGridStor_.reserve(pb_->dies().size());
-  for(Die* die : pb_->dies())
-  {
-    // each die should own one bin grid
-    binGridStor_.emplace_back(die);
-
-    // send param into binGrid structure
-    if(nbVars_.isSetBinCntX)
-    {
-      binGridStor_.back().setBinCntX(nbVars_.binCntX);
-    }
-    if(nbVars_.isSetBinCntY)
-    {
-      binGridStor_.back().setBinCntY(nbVars_.binCntY);
-    }
-    binGridStor_.back().setTargetDensity(nbVars_.targetDensity);
-  }
-
-  // binGrid ptr init
-  binGrids_.reserve(binGridStor_.size());
-  for(auto& bg : binGridStor_)
-  {
-    binGrids_.push_back(&bg);
-    binGridMap_.emplace(bg.die(), &bg);
-  }
-
-  // initialize bin grid
-  for(BinGrid* bg : binGrids_)
-  {
-    // assign gCell to binGrid
-    // instances
-    for(Instance* inst : bg->die()->instances())
-    {
-      GCell* gCell = placerToNesterov(inst);
-      bg->addGCell(gCell);
-      gCell->setBinGrid(bg);
-    }
-    // fillers
-    auto idx = fillerIdxMap[bg->die()];
-    for(int i = idx.first; i < idx.second; i++)
-    {
-      bg->addGCell(gCells_[i]);
-      gCells_[i]->setBinGrid(bg);
-    }
-
-    // update binGrid info
-    bg->initBins();
-
-    // update densitySize and densityScale in each gCell
-    bg->updateGCellDensityScaleAndSize();
-  }
-
-  // TODO: 
-  // at this moment, GNet and GPin is equal to
-  // Net and Pin
-
-  // gPinStor init
-  gPinStor_.reserve(pb_->pins().size());
-  for(auto& pin : pb_->pins())
-  {
-    GPin myGPin(pin);
-    gPinStor_.push_back(myGPin);
-  }
-
-  // gNetStor init
-  gNetStor_.reserve(pb_->nets().size());
-  for(auto& net : pb_->nets())
-  {
-    GNet myGNet(net);
-    gNetStor_.push_back(myGNet);
-  }
-  
-  // gPin ptr init
+// gPin ptr init
   gPins_.reserve(gPinStor_.size());
   for(auto& gPin : gPinStor_)
   {
@@ -1097,6 +1039,7 @@ void NesterovBase::init()
   {
     for(auto& pin : gNet.net()->pins())
     {
+      // NOTE: What if a pin is on a fixed instances?
       gNet.addGPin(placerToNesterov(pin));
     }
   }
@@ -1104,6 +1047,58 @@ void NesterovBase::init()
   LOG_INFO("FillerInit: NumGCells: {}", gCells_.size());
   LOG_INFO("FillerInit: NumGNets: {}", gNets_.size());
   LOG_INFO("FillerInit: NumGPins: {}", gPins_.size());
+
+  // create bin grid
+  binGridStor_.reserve(pb_->dies().size());
+  for(Die* die : pb_->dies())
+  {
+    // each die should own one bin grid
+    binGridStor_.emplace_back(die);
+
+    // send param into binGrid structure
+    if(nbVars_.isSetBinCntX)
+    {
+      binGridStor_.back().setBinCntX(nbVars_.binCntX);
+    }
+    if(nbVars_.isSetBinCntY)
+    {
+      binGridStor_.back().setBinCntY(nbVars_.binCntY);
+    }
+    binGridStor_.back().setTargetDensity(nbVars_.targetDensity);
+
+    // apply the bin setting
+    binGridStor_.back().initBins();
+  }
+
+  // binGrid ptr init
+  binGrids_.reserve(binGridStor_.size());
+  for(auto& bg : binGridStor_)
+  {
+    binGrids_.push_back(&bg);
+    binGridMap_.emplace(bg.die(), &bg);
+  }
+
+  // binGrids_ gCell fill
+  for(BinGrid* bg : binGrids_)
+  {
+    // assign inst gCell to binGrid
+    for(Instance* inst : bg->die()->placeInsts())
+    {
+      GCell* gCell = placerToNesterov(inst);
+      bg->addGCell(gCell);
+      gCell->setBinGrid(bg);
+    }
+    // assign filler gCell to binGrid
+    auto idx = fillerIdxMap[bg->die()];
+    for(int i = idx.first; i < idx.second; i++)
+    {
+      bg->addGCell(&gCellStor_[i]);
+      gCellStor_[i].setBinGrid(bg);
+    }
+
+    // update densitySize and densityScale in each gCell
+    bg->updateGCellDensityScaleAndSize();
+  }
 }
 
 
@@ -1113,9 +1108,9 @@ void NesterovBase::initFillerGCells(Die* die)
   // extract average dx/dy in range (10%, 90%)
   vector<int> dxStor;
   vector<int> dyStor;
-  dxStor.reserve(die->instances().size());
-  dyStor.reserve(die->instances().size());
-  for(Instance* inst : die->instances())
+  dxStor.reserve(die->placeInsts().size());
+  dyStor.reserve(die->placeInsts().size());
+  for(Instance* inst : die->placeInsts())
   {
     dxStor.push_back(inst->dx());
     dyStor.push_back(inst->dy());
@@ -1143,14 +1138,14 @@ void NesterovBase::initFillerGCells(Die* die)
   int64_t coreArea = (int64_t)die->coreDx() * die->coreDy();
 
   // nonPlaceInstsArea should not have targetDensity downscaling!!! 
-  int64_t whiteSpaceArea = coreArea - pb_->fixedInstsArea();
+  int64_t whiteSpaceArea = coreArea - die->fixedInstsArea();
 
   // TODO density screening
   int64_t movableArea = static_cast<int64_t>(whiteSpaceArea * nbVars_.targetDensity);
   
   int64_t totalFillerArea = movableArea 
-    - static_cast<int64_t>(pb_->placeStdcellsArea())
-    - static_cast<int64_t>(pb_->placeMacrosArea() * nbVars_.targetDensity);
+    - static_cast<int64_t>(die->placeStdcellsArea())
+    - static_cast<int64_t>(die->placeMacrosArea() * nbVars_.targetDensity);
 
   if(totalFillerArea < 0)
   {
@@ -1340,7 +1335,6 @@ float NesterovBase::getDensityCoordiLayoutInsideY(
 void NesterovBase::updateWireLengthForceWA(
     float wlCoeffX, float wlCoeffY)
 {
-
   // clear all WA variables.
   for(auto& gNet : gNets_) {
     gNet->clearWaVars();
@@ -1396,9 +1390,8 @@ void NesterovBase::updateWireLengthForceWA(
 }
 
 // get x,y WA Gradient values with given GCell
-FloatPoint NesterovBase::getWireLengthGradientWA(
-  GCell* gCell, float wlCoeffX, float wlCoeffY)
-{
+FloatPoint
+NesterovBase::getWireLengthGradientWA(GCell* gCell, float wlCoeffX, float wlCoeffY) {
   FloatPoint gradientPair;
 
   for(auto& gPin : gCell->gPins()) {
@@ -1417,66 +1410,65 @@ FloatPoint NesterovBase::getWireLengthGradientWA(
 //
 // You can't understand the following function
 // unless you read the (4.13) formula
-FloatPoint NesterovBase::getWireLengthGradientPinWA(
-  GPin* gPin, float wlCoeffX, float wlCoeffY)
-{
+FloatPoint
+NesterovBase::getWireLengthGradientPinWA(GPin* gPin, float wlCoeffX, float wlCoeffY) {
 
   float gradientMinX = 0, gradientMinY = 0;
   float gradientMaxX = 0, gradientMaxY = 0;
 
   // min x
-  if(gPin->hasMinExpSumX())
-  {
+  if( gPin->hasMinExpSumX() ) {
     // from Net.
     float waExpMinSumX = gPin->gNet()->waExpMinSumX();
     float waXExpMinSumX = gPin->gNet()->waXExpMinSumX();
 
     gradientMinX = 
-      (waExpMinSumX * gPin->minExpSumX() * (1.0 - wlCoeffX * gPin->cx())
-          + wlCoeffX * gPin->minExpSumX() * waXExpMinSumX)
-        / (waExpMinSumX * waExpMinSumX);
+      ( waExpMinSumX * ( gPin->minExpSumX() * ( 1.0 - wlCoeffX * gPin->cx()) ) 
+          + wlCoeffX * gPin->minExpSumX() * waXExpMinSumX )
+        / ( waExpMinSumX * waExpMinSumX );
   }
   
   // max x
-  if(gPin->hasMaxExpSumX())
-  {
+  if( gPin->hasMaxExpSumX() ) {
+    
     float waExpMaxSumX = gPin->gNet()->waExpMaxSumX();
     float waXExpMaxSumX = gPin->gNet()->waXExpMaxSumX();
     
     gradientMaxX = 
-      (waExpMaxSumX * gPin->maxExpSumX() * ( 1.0 + wlCoeffX * gPin->cx())
-          - wlCoeffX * gPin->maxExpSumX() * waXExpMaxSumX)
-        / (waExpMaxSumX * waExpMaxSumX);
+      ( waExpMaxSumX * ( gPin->maxExpSumX() * ( 1.0 + wlCoeffX * gPin->cx()) ) 
+          - wlCoeffX * gPin->maxExpSumX() * waXExpMaxSumX )
+        / ( waExpMaxSumX * waExpMaxSumX );
 
   }
 
   // min y
-  if(gPin->hasMinExpSumY())
-  {
+  if( gPin->hasMinExpSumY() ) {
+    
     float waExpMinSumY = gPin->gNet()->waExpMinSumY();
     float waYExpMinSumY = gPin->gNet()->waYExpMinSumY();
 
     gradientMinY = 
-      (waExpMinSumY *  gPin->minExpSumY() * (1.0 - wlCoeffY * gPin->cy())
-          + wlCoeffY * gPin->minExpSumY() * waYExpMinSumY)
-        / (waExpMinSumY * waExpMinSumY);
+      ( waExpMinSumY * ( gPin->minExpSumY() * ( 1.0 - wlCoeffY * gPin->cy()) ) 
+          + wlCoeffY * gPin->minExpSumY() * waYExpMinSumY )
+        / ( waExpMinSumY * waExpMinSumY );
   }
   
   // max y
-  if( gPin->hasMaxExpSumY() )
-  {
+  if( gPin->hasMaxExpSumY() ) {
+    
     float waExpMaxSumY = gPin->gNet()->waExpMaxSumY();
     float waYExpMaxSumY = gPin->gNet()->waYExpMaxSumY();
     
     gradientMaxY = 
-      (waExpMaxSumY * gPin->maxExpSumY() * ( 1.0 + wlCoeffY * gPin->cy()) 
-          - wlCoeffY * gPin->maxExpSumY() * waYExpMaxSumY)
-        / (waExpMaxSumY * waExpMaxSumY);
+      ( waExpMaxSumY * ( gPin->maxExpSumY() * ( 1.0 + wlCoeffY * gPin->cy()) ) 
+          - wlCoeffY * gPin->maxExpSumY() * waYExpMaxSumY )
+        / ( waExpMaxSumY * waExpMaxSumY );
   }
 
-  return FloatPoint(gradientMinX - gradientMaxX,
+  return FloatPoint(gradientMinX - gradientMaxX, 
       gradientMinY - gradientMaxY);
 }
+
 
 FloatPoint NesterovBase::getWireLengthPreconditioner(GCell* gCell)
 {

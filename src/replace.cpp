@@ -122,7 +122,8 @@ namespace replace
     AbacusLegalizerVars algVars;
     algVars.weightOpt = AbacusLegalizerVars::One;
 
-    alg_ = std::make_unique<AbacusLegalizer>(algVars, pb_);
+    AbacusLegalizer* alg = new AbacusLegalizer(algVars, pb_);
+    alg_.reset(alg);
     alg_->doLegalization();
   }
 

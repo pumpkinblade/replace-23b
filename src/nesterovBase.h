@@ -9,7 +9,6 @@
 
 namespace replace
 {
-
   class Instance;
   class Die;
   class PlacerBase;
@@ -493,12 +492,6 @@ namespace replace
 
     void updateGCellDensityCenterLocation(
         std::vector<FloatPoint> &points);
-
-    int binCntX() const { return binGrids_.front()->binCntX(); }
-    int binCntY() const { return binGrids_.front()->binCntY(); }
-    int binSizeX() const { return binGrids_.front()->binSizeX(); }
-    int binSizeY() const { return binGrids_.front()->binSizeY(); }
-    const std::vector<Bin *> &const bins() { return binGrids_.front()->bins(); }
 
     int64_t overflowArea() const;
     float sumPhi() const;

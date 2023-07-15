@@ -15,7 +15,11 @@ namespace replace
   constexpr Color g_red = {255, 0, 0};
   constexpr Color g_green = {0, 255, 0};
   constexpr Color g_blue = {0, 0, 255};
+  constexpr Color g_pink = {255, 0, 255};
+  constexpr Color g_cyron = {0, 255, 255};
+  constexpr Color g_yellow = {255, 255, 0};
   constexpr Color g_black = {0, 0, 0};
+  constexpr Color g_white = {255, 255, 255};
 
 #ifdef ENABLE_CIMG_LIB
   using namespace cimg_library;
@@ -199,14 +203,21 @@ namespace replace
 
   void Plotter::drawInstances(const Die *die, float opacity)
   {
-    for (const Instance *inst : die->instances())
+    for (const Instance *inst : die->insts())
     {
       int x1 = getImageX(inst->lx());
       int y1 = getImageY(inst->ly());
       int x3 = getImageX(inst->ux());
       int y3 = getImageY(inst->uy());
 
-      img_->draw_rectangle(x1, y1, x3, y3, g_red.data(), opacity);
+      if(inst->isFixed())
+      {
+        img_->draw_rectangle(x1, y1, x3, y3, g_cyron.data(), opacity);
+      }
+      else
+      {
+        img_->draw_rectangle(x1, y1, x3, y3, g_red.data(), opacity);
+      }
     }
   }
 
@@ -233,9 +244,9 @@ namespace replace
     for (const Bin *bin : bg->bins())
     {
       int x1 = getImageX(bin->lx());
-      int y1 = getImageX(bin->ly());
+      int y1 = getImageY(bin->ly());
       int x2 = getImageX(bin->ux());
-      int y2 = getImageX(bin->uy());
+      int y2 = getImageY(bin->uy());
 
       int color = static_cast<int>(bin->density() * 50 + 20);
       color = 255 - std::max(std::min(color, 255), 20);
@@ -397,6 +408,8 @@ namespace replace
   }
 
 #else
+  class Plotter {};
+
   ////////////////////////////////////////////
   // Plot
 

@@ -144,7 +144,7 @@ namespace replace
   {
   public:
     Die();
-    ~Die();
+    ~Die() = default;
 
     void setDieBox(int lx, int ly, int ux, int uy);
 
@@ -174,8 +174,15 @@ namespace replace
     int rowHeight() const { return rowHeight_; }
     int rowRepeatCount() const { return rowRepeatCount_; }
 
-    const std::vector<Instance*>& instances() const { return insts_; }
-    void addInstance(Instance* inst) { insts_.push_back(inst); }
+    const std::vector<Instance*>& insts() const { return insts_; }
+    const std::vector<Instance*>& placeInsts() const { return placeInsts_; }
+    const std::vector<Instance*>& fixedInsts() const { return fixedInsts_; }
+    void addInstance(Instance* inst);
+
+    int64_t placeInstsArea() const { return placeStdcellsArea_ + placeMacrosArea_; }
+    int64_t placeStdcellsArea() const { return placeStdcellsArea_; }
+    int64_t placeMacrosArea() const { return placeMacrosArea_; }
+    int64_t fixedInstsArea() const { return fixedInstsArea_; }
 
   private:
     int dieLx_;
@@ -195,6 +202,14 @@ namespace replace
     int rowRepeatCount_;
 
     std::vector<Instance*> insts_;
+    std::vector<Instance*> placeInsts_;
+    std::vector<Instance*> fixedInsts_;
+
+    // placeInstsArea_ = placeStdcellArea_ + placeMacroArea_
+    int64_t placeStdcellsArea_;
+    int64_t placeMacrosArea_;
+    // fixedInstsArea_ = fixedStdcellArea_ + fixedMacroArea_
+    int64_t fixedInstsArea_;
   };
 
   class PlacerBase
@@ -223,12 +238,10 @@ namespace replace
     int64_t hpwl() const;
     void printInfo() const;
 
-    int64_t placeInstsArea() const { return placeStdcellsArea_ + placeMacrosArea_; }
-    int64_t placeStdcellsArea() const { return placeStdcellsArea_; }
-    int64_t placeMacrosArea() const { return placeMacrosArea_; }
-    int64_t fixedInstsArea() const { return fixedStdcellsArea_ + fixedMacrosArea_; }
-    int64_t fixedStdcellsArea() const { return fixedStdcellsArea_; }
-    int64_t fixedMacrosArea() const { return fixedMacrosArea_; }
+    int64_t placeInstsArea() const;
+    int64_t placeStdcellsArea() const;
+    int64_t placeMacrosArea() const;
+    int64_t fixedInstsArea() const;
 
   private:
     std::vector<Die> dieStor_;
@@ -243,13 +256,6 @@ namespace replace
 
     std::vector<Instance *> placeInsts_;
     std::vector<Instance *> fixedInsts_;
-
-    // placeInstsArea_ = placeStdcellArea_ + placeMacroArea_
-    int64_t placeStdcellsArea_;
-    int64_t placeMacrosArea_;
-    // fixedInstsArea_ = fixedStdcellArea_ + fixedMacroArea_
-    int64_t fixedStdcellsArea_;
-    int64_t fixedMacrosArea_;
 
     void reset();
   };

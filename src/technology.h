@@ -2,6 +2,7 @@
 #define __REPLACE_TECHNOLOGY__
 
 #include <string>
+#include <vector>
 #include <unordered_map>
 
 namespace replace

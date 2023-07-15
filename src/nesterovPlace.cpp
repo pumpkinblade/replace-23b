@@ -96,9 +96,16 @@ void NesterovPlace::init() {
   // FFT update
   nb_->updateDensityForceBin();
 
-  baseWireLengthCoef_ 
-    = npVars_.initWireLengthCoef 
-    / (static_cast<float>(nb_->binSizeX() + nb_->binSizeY()) * 0.5);
+  float avgBinSizeX = 0.f; 
+  float avgBinSizeY = 0.f;
+  for(BinGrid* bg : nb_->binGrids())
+  {
+    avgBinSizeX += static_cast<float>(bg->binSizeX());
+    avgBinSizeY += static_cast<float>(bg->binSizeY());
+  }
+  avgBinSizeX /= static_cast<float>(nb_->binGrids().size());
+  avgBinSizeY /= static_cast<float>(nb_->binGrids().size());
+  baseWireLengthCoef_  = npVars_.initWireLengthCoef / (0.5f * (avgBinSizeX + avgBinSizeY));
 
   LOG_INFO("BaseWireLengthCoef: {}", baseWireLengthCoef_);
   
@@ -111,7 +118,7 @@ void NesterovPlace::init() {
 
   updateWireLengthCoef(sumOverflow_);
 
-  LOG_INFO("WireLengthCoef: {}", wireLengthCoefX_);
+  LOG_INFO("WireLengthCoef: {}, {}", wireLengthCoefX_, wireLengthCoefY_);
 
   // WL update
   nb_->updateWireLengthForceWA(wireLengthCoefX_, wireLengthCoefY_);

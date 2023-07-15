@@ -376,10 +376,10 @@ namespace replace
       pb->netStor_.back().updateBox();
     }
 
-    pb->placeMacrosArea_ = 0;
-    pb->placeStdcellsArea_ = 0;
-    pb->fixedMacrosArea_ = 0;
-    pb->fixedStdcellsArea_ = 0;
+    // pb->placeMacrosArea_ = 0;
+    // pb->placeStdcellsArea_ = 0;
+    // pb->fixedMacrosArea_ = 0;
+    // pb->fixedStdcellsArea_ = 0;
     for(auto& inst : pb->instStor_)
     {
       int64_t instArea = static_cast<int64_t>(inst.dx()) * static_cast<int64_t>(inst.dy());
@@ -389,18 +389,10 @@ namespace replace
       if(inst.isFixed())
       {
         pb->fixedInsts_.push_back(&inst);
-        if(inst.isMacro())
-          pb->fixedMacrosArea_ += instArea;
-        else
-          pb->fixedStdcellsArea_ += instArea;
       }
       else
       {
         pb->placeInsts_.push_back(&inst);
-        if(inst.isMacro())
-          pb->placeMacrosArea_ += instArea;
-        else
-          pb->placeStdcellsArea_ += instArea;
       }
     }
 
