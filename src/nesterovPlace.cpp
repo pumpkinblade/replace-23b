@@ -1,7 +1,6 @@
 #include "placerBase.h"
 #include "nesterovBase.h"
 #include "nesterovPlace.h"
-// #include "opendb/db.h"
 #include "log.h"
 #include <iostream>
 using namespace std;
@@ -54,10 +53,6 @@ NesterovPlace::NesterovPlace(
 NesterovPlace::~NesterovPlace() {
   reset();
 }
-
-#ifdef ENABLE_CIMG_LIB
-static PlotEnv pe;
-#endif
 
 void NesterovPlace::init() {
   LOG_TRACE("NesterovInit Begin");
@@ -280,18 +275,9 @@ NesterovPlace::doNesterovPlace() {
     return;
   }
 
-#ifdef ENABLE_CIMG_LIB  
-  pe.setPlacerBase(pb_);
-  pe.setNesterovBase(nb_);
-  pe.Init();
-      
-  pe.SaveCellPlotAsJPEG("Nesterov - BeforeStart", true,
-     "./plot/cell/cell_0");
-  pe.SaveBinPlotAsJPEG("Nesterov - BeforeStart",
-     "./plot/bin/bin_0");
-  pe.SaveArrowPlotAsJPEG("Nesterov - BeforeStart",
-     "./plot/arrow/arrow_0");
-#endif
+  Plot::plot(nb_.get(), PlotNesterovType::GCell, "./plot/cell", "cell_0");
+  Plot::plot(nb_.get(), PlotNesterovType::Bin, "./plot/bin", "bin_0");
+  Plot::plot(nb_.get(), PlotNesterovType::Arrow, "./plot/arrow", "arrow_0");
 
 
   // backTracking variable.
@@ -417,17 +403,9 @@ NesterovPlace::doNesterovPlace() {
 
     if( i == 0 || (i+1) % 100 == 0 ) {
       LOG_INFO("[NesterovSolve] Iter: {} overflow: {} HPWL: {}", i+1, sumOverflow_, prevHpwl_);
-#ifdef ENABLE_CIMG_LIB
-      pe.SaveCellPlotAsJPEG(string("Nesterov - Iter: " + std::to_string(i+1)), true,
-          string("./plot/cell/cell_") +
-          std::to_string (i+1));
-      pe.SaveBinPlotAsJPEG(string("Nesterov - Iter: " + std::to_string(i+1)),
-          string("./plot/bin/bin_") +
-          std::to_string(i+1));
-      pe.SaveArrowPlotAsJPEG(string("Nesterov - Iter: " + std::to_string(i+1)),
-          string("./plot/arrow/arrow_") +
-          std::to_string(i+1));
-#endif
+      Plot::plot(nb_.get(), PlotNesterovType::GCell, "./plot/cell", "cell_" + std::to_string(i+1));
+      Plot::plot(nb_.get(), PlotNesterovType::Bin, "./plot/bin", "bin_" + std::to_string(i+1));
+      Plot::plot(nb_.get(), PlotNesterovType::Arrow, "./plot/arrow", "arrow_" + std::to_string(i+1));
     }
 
     if( minSumOverflow > sumOverflow_ ) {

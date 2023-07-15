@@ -473,6 +473,7 @@ namespace replace
 
     const std::vector<GNet *> &gNets() const { return gNets_; }
     const std::vector<GPin *> &gPins() const { return gPins_; }
+    const std::vector<BinGrid *> &binGrids() const { return binGrids_; }
 
     //
     // placerBase To NesterovBase functions

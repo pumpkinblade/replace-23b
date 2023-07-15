@@ -188,13 +188,7 @@ namespace replace
       rbest->placeRow();
     }
 
-#ifdef ENABLE_CIMG_LIB
-    PlotEnv pe;
-    pe.setPlacerBase(pb_);
-    pe.Init();
-    pe.SaveCellPlotAsJPEG(std::string("BeforeLegalization"),
-        false, std::string("./plot/cell/before_lg"));
-#endif
+    Plot::plot(pb_.get(), "./plot/cell", "before_lg");
 
     int64_t hpwlBeforeLG = pb_->hpwl();
     LOG_INFO("hpwl Before AbacusLegalization: {}", hpwlBeforeLG);
@@ -207,10 +201,7 @@ namespace replace
     int64_t hpwlAfterLG = pb_->hpwl();
     LOG_INFO("hpwl After AbacusLegalization: {}", hpwlAfterLG);
 
-#ifdef ENABLE_CIMG_LIB
-    pe.SaveCellPlotAsJPEG(std::string("AfterLegalization"),
-                          false, std::string("./plot/cell/after_lg"));
-#endif
+    Plot::plot(pb_.get(), "./plot/cell", "after_lg");
   }
 
   void AbacusLegalizer::generateCells()

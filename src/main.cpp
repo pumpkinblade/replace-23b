@@ -6,6 +6,7 @@
 #include "parser.h"
 #include "log.h"
 #include "replace.h"
+#include "plot.h"
 
 using namespace replace;
 using namespace TCLAP;
@@ -14,6 +15,12 @@ using namespace std;
 int main(int argc, const char *argv[])
 {
   Log::Init();
+
+  PlotVars vars;
+  vars.minLength = 1000;
+  vars.xMargin = 30;
+  vars.yMargin = 30;
+  Plot::init(vars);
 
   string lefFilename;
   string defFilename;
