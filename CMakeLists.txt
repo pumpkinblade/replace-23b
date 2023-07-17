@@ -26,7 +26,7 @@ set(EIGEN_HOME
     ${PROJECT_SOURCE_DIR}/module/eigen
 )
 set(CIMG_HOME
-    ${PROJECT_SOURCE_DIR}/module/CImg
+    ${PROJECT_SOURCE_DIR}/module/cimg
 )
 
 add_subdirectory(${DEFLIB_HOME})
@@ -34,8 +34,6 @@ add_subdirectory(${LEFLIB_HOME})
 
 if(USE_CIMG)
     find_package(JPEG REQUIRED)
-    find_package(Threads REQUIRED)
-    #find_package(Cimg CONFIG REQUIRED)
 endif()
 
 set(PLACE_HEADER
@@ -89,9 +87,7 @@ target_link_libraries(replace PRIVATE def)
 target_link_libraries(replace PRIVATE lef)
 
 if(USE_CIMG)
-    # target_link_libraries(replace PRIVATE CImg::CImg)
     target_link_libraries(replace PRIVATE ${JPEG_LIBRARIES})
-    target_link_libraries(replace PRIVATE Threads::Threads)
     target_compile_options(replace PRIVATE -DENABLE_CIMG_LIB)
     target_compile_options(replace PRIVATE -Dcimg_use_jpeg)
 endif()
