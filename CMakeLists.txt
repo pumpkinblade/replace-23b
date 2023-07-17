@@ -2,39 +2,35 @@ cmake_minimum_required(VERSION 3.12)
 
 project(replace)
 
-# CIMG is a header only package
-option(USE_CIMG "use cimg" OFF)
-
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(REPLACE_HOME ${PROJECT_SOURCE_DIR} )
 set(DEFLIB_HOME
-    ${PROJECT_SOURCE_DIR}/module/def
+  ${PROJECT_SOURCE_DIR}/module/def
 )
 set(LEFLIB_HOME
-    ${PROJECT_SOURCE_DIR}/module/lef
+  ${PROJECT_SOURCE_DIR}/module/lef
 )
 set(SPDLOG_HOME
-    ${PROJECT_SOURCE_DIR}/module/spdlog
+  ${PROJECT_SOURCE_DIR}/module/spdlog
 )
 set(TCLAP_HOME
-    ${PROJECT_SOURCE_DIR}/module/tclap
+  ${PROJECT_SOURCE_DIR}/module/tclap
 )
 set(EIGEN_HOME
-    ${PROJECT_SOURCE_DIR}/module/eigen
+  ${PROJECT_SOURCE_DIR}/module/eigen
 )
 set(CIMG_HOME
-    ${PROJECT_SOURCE_DIR}/module/cimg
+  ${PROJECT_SOURCE_DIR}/module/cimg
+)
+set(STB_HOME
+    ${PROJECT_SOURCE_DIR}/module/stb
 )
 
 add_subdirectory(${DEFLIB_HOME})
 add_subdirectory(${LEFLIB_HOME})
-
-if(USE_CIMG)
-    find_package(JPEG REQUIRED)
-endif()
 
 set(PLACE_HEADER
   src/log.h
@@ -78,16 +74,10 @@ add_executable(replace ${PLACE_SRC} ${PLACE_HEADER})
 target_include_directories(replace PRIVATE ${SPDLOG_HOME}/include)
 target_include_directories(replace PRIVATE ${TCLAP_HOME}/include)
 target_include_directories(replace PRIVATE ${EIGEN_HOME}/include)
-if(USE_CIMG)
-    target_include_directories(replace PRIVATE ${CIMG_HOME})
-    target_include_directories(replace PRIVATE ${JPEG_INCLUDE_DIRS})
-endif()
+target_include_directories(replace PRIVATE ${STB_HOME})
+target_include_directories(replace PRIVATE ${CIMG_HOME})
 
 target_link_libraries(replace PRIVATE def)
 target_link_libraries(replace PRIVATE lef)
 
-if(USE_CIMG)
-    target_link_libraries(replace PRIVATE ${JPEG_LIBRARIES})
-    target_compile_options(replace PRIVATE -DENABLE_CIMG_LIB)
-    target_compile_options(replace PRIVATE -Dcimg_use_jpeg)
-endif()
+target_compile_definitions(replace PRIVATE -Dcimg_display=0)

@@ -4,10 +4,9 @@
 #include "log.h"
 #include <array>
 #include <vector>
-
-#ifdef ENABLE_CIMG_LIB
 #include <CImg.h>
-#endif
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <stb_image_write.h>
 
 namespace replace
 {
@@ -21,7 +20,6 @@ namespace replace
   constexpr Color g_black = {0, 0, 0};
   constexpr Color g_white = {255, 255, 255};
 
-#ifdef ENABLE_CIMG_LIB
   using namespace cimg_library;
   using CImgObj = CImg<unsigned char>;
 
@@ -52,6 +50,7 @@ namespace replace
     void drawArrows(const BinGrid *bg, float opacity);
 
     void cimgDrawArrow(int x1, int y1, int x3, int y3, float thick, const Color &color, float opacity);
+    void cimgWriteJpeg(const std::string& name, unsigned int quality);
 
   private:
     int minLength_;
@@ -100,7 +99,8 @@ namespace replace
       img_->draw_text(0, 0, title.c_str(), g_black.data(), NULL, 1, 30);
 
       std::string saveName = imgDir + "/" + title + ".jpg";
-      img_->save_jpeg(saveName.c_str(), 70);
+      // img_->save_jpeg(saveName.c_str(), 70);
+      cimgWriteJpeg(saveName, 70);
 
       LOG_TRACE("{} has been saved.", saveName);
 
@@ -138,7 +138,8 @@ namespace replace
       img_->draw_text(0, 0, title.c_str(), g_black.data(), NULL, 1, 30);
 
       std::string saveName = imgDir + "/" + title + ".jpg";
-      img_->save_jpeg(saveName.c_str(), 70);
+      // img_->save_jpeg(saveName.c_str(), 70);
+      cimgWriteJpeg(saveName, 70);
 
       LOG_TRACE("{} has been saved.", saveName);
 
@@ -228,9 +229,9 @@ namespace replace
       int cx = cell->dCx();
       int cy = cell->dCy();
       int x1 = getImageX(cx - cell->dx() / 2);
-      int y1 = getImageY(cx - cell->dy() / 2);
+      int y1 = getImageY(cy - cell->dy() / 2);
       int x2 = getImageX(cx + cell->dx() / 2);
-      int y2 = getImageY(cx + cell->dy() / 2);
+      int y2 = getImageY(cy + cell->dy() / 2);
 
       if (cell->isInstance())
       {
@@ -367,6 +368,15 @@ namespace replace
     img_->draw_polygon(headPoints, color.data());
   }
 
+  void Plotter::cimgWriteJpeg(const std::string& name, unsigned int quality)
+  {
+    int w = img_->width();
+    int h = img_->height();
+    img_->permute_axes("cxyz");
+    stbi_write_jpg(name.c_str(), w, h, 3, img_->data(), 70);
+    img_->permute_axes("yzcx");
+  }
+
   ////////////////////////////////////////////
   // Plot
 
@@ -406,35 +416,4 @@ namespace replace
       splotter_->plot(nb, type, imgDir, prefix);
     }
   }
-
-#else
-  class Plotter {};
-
-  ////////////////////////////////////////////
-  // Plot
-
-  std::unique_ptr<Plotter> Plot::splotter_;
-
-  void Plot::init(const PlotVars &vars)
-  {
-    LOG_WARN("Couldn't find suitable plotter. This process will be skipped.");
-  }
-
-  void Plot::plot(const PlacerBase *pb,
-                  const std::string &imgDir,
-                  const std::string &prefix)
-  {
-    LOG_WARN("Couldn't find suitable plotter. This process will be skipped.");
-  }
-
-  void Plot::plot(const NesterovBase *nb,
-                  PlotNesterovType type,
-                  const std::string &imgDir,
-                  const std::string &prefix)
-  {
-    LOG_WARN("Couldn't find suitable plotter. This process will be skipped.");
-  }
-
-#endif
-
 }
