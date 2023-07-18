@@ -7,6 +7,7 @@
 #include "log.h"
 #include "replace.h"
 #include "plot.h"
+#include "partitioner.h"
 
 using namespace replace;
 using namespace TCLAP;
@@ -38,7 +39,7 @@ int main(int argc, const char *argv[])
     ValueArg<string> defArg("d", "def", "path to def file", false, "none", "string");
     ValueArg<string> modeArg("m", "mode", "lefdef/23b", false, "lefdef", "string");
     ValueArg<string> txtArg("b", "txt23b", "path to 23b text file", false, "none", "string");
-    ValueArg<float> densityArg("D", "density", "target density", false, 1.0, "float");
+    ValueArg<float> densityArg("D", "density", "target density", false, 1.5, "float");
 
     cmd.add(lefArg);
     cmd.add(defArg);
@@ -81,6 +82,15 @@ int main(int argc, const char *argv[])
     std::shared_ptr<Placer23b> pb = Parser::TxtToPlacer23b(txtFilename);
     pb->printInfo();
     LOG_TRACE("Parse 23b Text File End");
+  }
+  else if (mode == "partition"){
+    LOG_TRACE("Parse Lef/Def Begin");
+    std::shared_ptr<PlacerBase> pb = Parser::LefDefToPlacerBase(lefFilename, defFilename);
+    LOG_TRACE("Parse Lef/Def End");
+    pb->printInfo();
+
+    Partitioner partitioner(targetDensity);
+    partitioner.partitioning(pb);
   }
 
   return 0;

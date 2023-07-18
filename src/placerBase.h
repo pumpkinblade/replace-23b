@@ -215,6 +215,7 @@ namespace replace
   class PlacerBase
   {
     friend class Parser;
+    friend class P23bToBaseConverter;
 
   public:
     PlacerBase();
