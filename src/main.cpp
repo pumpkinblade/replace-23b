@@ -65,7 +65,7 @@ int main(int argc, const char *argv[])
   if (mode == "lefdef")
   {
     LOG_TRACE("Parse Lef/Def Begin");
-    std::shared_ptr<PlacerBase> pb = Parser::LefDefToPlacerBase(lefFilename, defFilename);
+    std::shared_ptr<PlacerBase> pb = Parser::lefdefToPlacerBase(lefFilename, defFilename);
     LOG_TRACE("Parse Lef/Def End");
     pb->printInfo();
 
@@ -78,9 +78,14 @@ int main(int argc, const char *argv[])
   else if (mode == "23b")
   {
     LOG_TRACE("Parse 23b Text File Begin");
-    std::shared_ptr<Placer23b> pb = Parser::TxtToPlacer23b(txtFilename);
+    std::shared_ptr<PlacerBase> pb = Parser::txtToPlacerBase(txtFilename);
     pb->printInfo();
     LOG_TRACE("Parse 23b Text File End");
+
+    Replace rp(targetDensity);
+    rp.setPlacerBase(pb);
+    rp.doInitialPlace();
+    rp.doNesterovPlace();
   }
 
   return 0;

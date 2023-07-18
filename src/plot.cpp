@@ -159,12 +159,12 @@ namespace replace
     // Set minimum length of picture as minLength
     if (origWidth_ < origHeight_)
     {
-      newHeight = origHeight_ / (origWidth_ / minLength_);
+      newHeight = static_cast<int>(origHeight_ / (origWidth_ / (float)minLength_));
       newWidth = minLength_;
     }
     else
     {
-      newWidth = origWidth_ / (origHeight_ / minLength_);
+      newWidth = static_cast<int>(origWidth_ / (origHeight_ / (float)minLength_));
       newHeight = minLength_;
     }
 
@@ -211,9 +211,9 @@ namespace replace
       int x3 = getImageX(inst->ux());
       int y3 = getImageY(inst->uy());
 
-      if(inst->isFixed())
+      if(inst->isMacro())
       {
-        img_->draw_rectangle(x1, y1, x3, y3, g_cyron.data(), opacity);
+        img_->draw_rectangle(x1, y1, x3, y3, g_cyron.data(), opacity / 2.f);
       }
       else
       {

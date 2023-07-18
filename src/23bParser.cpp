@@ -1,6 +1,7 @@
 #include "parser.h"
 #include "log.h"
 #include <fstream>
+#include <memory>
 
 namespace replace
 {
@@ -64,18 +65,18 @@ namespace replace
     int termCost;
   };
 
-  void ParseTxt(const std::string& txtFilename, PLACER_23B_DESC* desc)
+  void txtToDesc(const std::string &txtFilename, PLACER_23B_DESC *desc)
   {
     std::ifstream in(txtFilename);
     std::string token;
 
-    while(!(in >> token).eof())
+    while (!(in >> token).eof())
     {
-      if(token == "NumTechnologies")
+      if (token == "NumTechnologies")
       {
-        TECH_DESC* currTech;
-        LIBCELL_DESC* currCell;
-        LIBPIN_DESC* currLibPin;
+        TECH_DESC *currTech;
+        LIBCELL_DESC *currCell;
+        LIBPIN_DESC *currLibPin;
         size_t numTechs;
         size_t numCells;
         size_t numPins;
@@ -83,19 +84,18 @@ namespace replace
 
         in >> numTechs;
         desc->techs.resize(numTechs);
-        for(size_t i = 0; i < numTechs; i++)
+        for (size_t i = 0; i < numTechs; i++)
         {
           currTech = &desc->techs[i];
           in >> token >> currTech->name >> numCells;
           currTech->cells.resize(numCells);
-          for(size_t j = 0; j < numCells; j++)
+          for (size_t j = 0; j < numCells; j++)
           {
             currCell = &currTech->cells[j];
-            in >> token >> isMacro >> currCell->name 
-               >> currCell->sizeX >> currCell->sizeY >> numPins;
+            in >> token >> isMacro >> currCell->name >> currCell->sizeX >> currCell->sizeY >> numPins;
             currCell->isMacro = isMacro == 'Y';
             currCell->pins.resize(numPins);
-            for(size_t k = 0; k < numPins; k++)
+            for (size_t k = 0; k < numPins; k++)
             {
               currLibPin = &currCell->pins[k];
               in >> token >> currLibPin->name >> currLibPin->x >> currLibPin->y;
@@ -103,7 +103,7 @@ namespace replace
           }
         }
       }
-      else if(token == "DieSize")
+      else if (token == "DieSize")
       {
         int lx, ly, ux, uy;
         in >> lx >> ly >> ux >> uy;
@@ -112,76 +112,72 @@ namespace replace
         desc->bottomDieDesc.ux = desc->topDieDesc.ux = ux;
         desc->bottomDieDesc.uy = desc->topDieDesc.uy = uy;
       }
-      else if(token == "TopDieMaxUtil")
+      else if (token == "TopDieMaxUtil")
       {
         in >> desc->topDieDesc.maxUtil;
       }
-      else if(token == "BottomDieMaxUtil")
+      else if (token == "BottomDieMaxUtil")
       {
         in >> desc->bottomDieDesc.maxUtil;
       }
-      else if(token == "TopDieRows")
+      else if (token == "TopDieRows")
       {
-        in >> desc->topDieDesc.rowStartX >> desc->topDieDesc.rowStartY
-           >> desc->topDieDesc.rowSizeX >> desc->topDieDesc.rowSizeY
-           >> desc->topDieDesc.repeatCount;
+        in >> desc->topDieDesc.rowStartX >> desc->topDieDesc.rowStartY >> desc->topDieDesc.rowSizeX >> desc->topDieDesc.rowSizeY >> desc->topDieDesc.repeatCount;
       }
-      else if(token == "BottomDieRows")
+      else if (token == "BottomDieRows")
       {
-        in >> desc->bottomDieDesc.rowStartX >> desc->bottomDieDesc.rowStartY
-           >> desc->bottomDieDesc.rowSizeX >> desc->bottomDieDesc.rowSizeY
-           >> desc->bottomDieDesc.repeatCount;
+        in >> desc->bottomDieDesc.rowStartX >> desc->bottomDieDesc.rowStartY >> desc->bottomDieDesc.rowSizeX >> desc->bottomDieDesc.rowSizeY >> desc->bottomDieDesc.repeatCount;
       }
-      else if(token == "TopDieTech")
+      else if (token == "TopDieTech")
       {
         in >> desc->topDieDesc.techName;
       }
-      else if(token == "BottomDieTech")
+      else if (token == "BottomDieTech")
       {
         in >> desc->bottomDieDesc.techName;
       }
-      else if(token == "TerminalSize")
+      else if (token == "TerminalSize")
       {
         in >> desc->termSizeX >> desc->termSizeY;
       }
-      else if(token == "TerminalSpacing")
+      else if (token == "TerminalSpacing")
       {
         in >> desc->termSpace;
       }
-      else if(token == "TerminalCost")
+      else if (token == "TerminalCost")
       {
         in >> desc->termCost;
       }
-      else if(token == "NumInstances")
+      else if (token == "NumInstances")
       {
         size_t numInsts;
-        INST_DESC* currInst;
+        INST_DESC *currInst;
 
         in >> numInsts;
         desc->insts.resize(numInsts);
-        for(size_t i = 0; i < numInsts; i++)
+        for (size_t i = 0; i < numInsts; i++)
         {
           currInst = &desc->insts[i];
           in >> token >> currInst->name >> currInst->cellName;
         }
       }
-      else if(token == "NumNets")
+      else if (token == "NumNets")
       {
         size_t numNets;
         size_t numPins;
         size_t pos;
-        NET_DESC* currNet;
-        PIN_DESC* currPin;
+        NET_DESC *currNet;
+        PIN_DESC *currPin;
         std::string pindesc;
 
         in >> numNets;
         desc->nets.resize(numNets);
-        for(size_t i = 0; i < numNets; i++)
+        for (size_t i = 0; i < numNets; i++)
         {
           currNet = &desc->nets[i];
           in >> token >> currNet->name >> numPins;
           currNet->pins.resize(numPins);
-          for(size_t j = 0; j < numPins; j++)
+          for (size_t j = 0; j < numPins; j++)
           {
             currPin = &currNet->pins[j];
             in >> token >> pindesc;
@@ -194,7 +190,7 @@ namespace replace
     }
   }
 
-  void PrintInfo(PLACER_23B_DESC* desc)
+  void printInfo(const PLACER_23B_DESC *desc)
   {
     size_t numTechs = desc->techs.size();
     size_t numCells;
@@ -202,26 +198,26 @@ namespace replace
     size_t numInsts;
     size_t numNets;
     size_t numPins;
-    TECH_DESC* currTech;
-    LIBCELL_DESC* currCell;
-    LIBPIN_DESC* currLibPin;
-    INST_DESC* currInst;
-    PIN_DESC* currPin;
-    NET_DESC* currNet;
+    const TECH_DESC *currTech;
+    const LIBCELL_DESC *currCell;
+    const LIBPIN_DESC *currLibPin;
+    const INST_DESC *currInst;
+    const PIN_DESC *currPin;
+    const NET_DESC *currNet;
 
     LOG_INFO("NumTechnologies {}", numTechs);
-    for(size_t i = 0; i < numTechs; i++)
+    for (size_t i = 0; i < numTechs; i++)
     {
       currTech = &desc->techs[i];
       numCells = currTech->cells.size();
       LOG_INFO("Tech {} {}", currTech->name, numCells);
-      for(size_t j = 0; j < numCells; j++)
+      for (size_t j = 0; j < numCells; j++)
       {
         currCell = &currTech->cells[j];
         numLibPins = currCell->pins.size();
         LOG_INFO("LibCell {} {} {} {} {}", currCell->isMacro, currCell->name,
                  currCell->sizeX, currCell->sizeY, numLibPins);
-        for(size_t k = 0; k < numLibPins; k++)
+        for (size_t k = 0; k < numLibPins; k++)
         {
           currLibPin = &currCell->pins[k];
           LOG_INFO("Pin {} {} {}", currLibPin->name, currLibPin->x, currLibPin->y);
@@ -245,7 +241,7 @@ namespace replace
 
     numInsts = desc->insts.size();
     LOG_INFO("NumInstances {}", numInsts);
-    for(size_t i = 0; i < numInsts; i++)
+    for (size_t i = 0; i < numInsts; i++)
     {
       currInst = &desc->insts[i];
       LOG_INFO("Inst {} {}", currInst->name, currInst->cellName);
@@ -253,12 +249,12 @@ namespace replace
 
     numNets = desc->nets.size();
     LOG_INFO("NumNets {}", numNets);
-    for(size_t i = 0; i < numNets; i++)
+    for (size_t i = 0; i < numNets; i++)
     {
       currNet = &desc->nets[i];
       numPins = currNet->pins.size();
       LOG_INFO("Net {} {}", currNet->name, numPins);
-      for(size_t j = 0; j < numPins; j++)
+      for (size_t j = 0; j < numPins; j++)
       {
         currPin = &currNet->pins[j];
         LOG_INFO("Pin {}/{}", currPin->instName, currPin->pinName);
@@ -266,69 +262,86 @@ namespace replace
     }
   }
 
-  std::shared_ptr<Placer23b> Parser::TxtToPlacer23b(const std::string& txtFilename)
+  std::shared_ptr<PlacerBase> Parser::txtToPlacerBase(const std::string &txtFilename)
   {
-    auto pb = std::make_shared<Placer23b>();
+    // auto pb = std::make_shared<Placer23b>();
+    auto pb = std::make_shared<PlacerBase>();
 
     PLACER_23B_DESC desc;
     LOG_TRACE("Parse txt file begin");
-    ParseTxt(txtFilename, &desc);
+    txtToDesc(txtFilename, &desc);
     LOG_TRACE("Parse txt file end");
 
     // Process technology
     pb->techStor_.reserve(desc.techs.size());
-    for(size_t i = 0; i < desc.techs.size(); i++)
+    for (size_t i = 0; i < desc.techs.size(); i++)
     {
-      pb->techStor_.emplace_back();
-      Technology* tech = &pb->techStor_.back();
-      TECH_DESC* techDesc = &desc.techs[i];
+      auto tech = std::make_shared<Technology>(desc.techs[i].name);
+      TECH_DESC *techDesc = &desc.techs[i];
       size_t numPins = 0;
       size_t numCells = techDesc->cells.size();
-      for(const auto& cell : desc.techs[i].cells)
+      for (const auto &cell : desc.techs[i].cells)
         numPins += cell.pins.size();
-      pb->techStor_[i].cellStor_.reserve(numCells);
-      pb->techStor_[i].pinStor_.reserve(numPins);
-      pb->techNameMap_.emplace(techDesc->name, tech);
+      tech->cellStor_.reserve(numCells);
+      tech->pinStor_.reserve(numPins);
 
-      for(size_t j = 0; j < numCells; j++)
+      for (size_t j = 0; j < numCells; j++)
       {
-        LIBCELL_DESC* cellDesc = &techDesc->cells[j];
-        tech->cellStor_.emplace_back(cellDesc->sizeX, cellDesc->sizeY, cellDesc->isMacro);
-        LibCell* cell = &tech->cellStor_.back();
+        LIBCELL_DESC *cellDesc = &techDesc->cells[j];
+        tech->cellStor_.emplace_back(cellDesc->name, cellDesc->sizeX, cellDesc->sizeY, cellDesc->isMacro);
+        LibCell *cell = &tech->cellStor_.back();
 
-        tech->cellNameMap_.emplace(cellDesc->name, cell);
+        tech->cellNameMap_.emplace(cell->name(), cell);
         tech->cells_.push_back(cell);
-        if(cell->isMacro())
-          tech->macros_.push_back(cell);
-        else
-          tech->stdCells_.push_back(cell);
         tech->siteSizeX_ = tech->siteSizeY_ = 0;
 
-        for(size_t k = 0; k < cellDesc->pins.size(); k++)
+        for (const auto &pinDesc : cellDesc->pins)
         {
-          tech->pinStor_.emplace_back(cellDesc->pins[k].x, cellDesc->pins[k].y);
-          cell->addPin(cellDesc->pins[k].name, &tech->pinStor_.back());
+          tech->pinStor_.emplace_back(pinDesc.name, pinDesc.x, pinDesc.y);
+          cell->addLibPin(&tech->pinStor_.back());
         }
       }
+
+      pb->techStor_.push_back(tech);
+      pb->techs_.push_back(tech.get());
+      pb->techNameMap_.emplace(tech->name(), tech.get());
     }
 
-    // Process die
-    pb->topDie_.setDieBox(desc.topDieDesc.lx, desc.topDieDesc.ly,
-                          desc.topDieDesc.ux, desc.topDieDesc.uy);
-    pb->bottomDie_.setDieBox(desc.bottomDieDesc.lx, desc.bottomDieDesc.ly,
-                             desc.bottomDieDesc.ux, desc.bottomDieDesc.uy);
-    pb->topDie_.setRowParams(desc.topDieDesc.rowSizeX, desc.topDieDesc.rowSizeY,
-                             desc.topDieDesc.rowSizeX, desc.topDieDesc.rowSizeY,
-                             desc.topDieDesc.repeatCount);
-    pb->bottomDie_.setRowParams(desc.bottomDieDesc.rowSizeX, desc.bottomDieDesc.rowSizeY,
-                                desc.bottomDieDesc.rowSizeX, desc.bottomDieDesc.rowSizeY,
-                                desc.bottomDieDesc.repeatCount);
-    pb->topUtil_ = desc.topDieDesc.maxUtil / 100.f;
-    pb->bottomUtil_ = desc.bottomDieDesc.maxUtil / 100.f;
-    pb->topTech_ = pb->techNameMap_.at(desc.topDieDesc.techName);
-    pb->bottomTech_ = pb->techNameMap_.at(desc.bottomDieDesc.techName);
+    // Process dies
+    pb->dieStor_.reserve(3);
+    // top die
+    pb->dieStor_.emplace_back();
+    pb->dieStor_.back().setName("top");
+    pb->dieStor_.back().setDieBox(desc.topDieDesc.lx, desc.topDieDesc.ly,
+                                  desc.topDieDesc.ux, desc.topDieDesc.uy);
+    pb->dieStor_.back().setRowParams(desc.topDieDesc.rowStartX, desc.topDieDesc.rowStartY,
+                                     desc.topDieDesc.rowSizeX, desc.topDieDesc.rowSizeY,
+                                     desc.topDieDesc.repeatCount);
+    pb->dieStor_.back().setMaxUtil(desc.topDieDesc.maxUtil / 100.f);
+    pb->dieStor_.back().setTech(pb->tech(desc.topDieDesc.techName));
+    pb->dieNameMap_.emplace("top", &pb->dieStor_.back());
+    // bottom die
+    pb->dieStor_.emplace_back();
+    pb->dieStor_.back().setName("bottom");
+    pb->dieStor_.back().setDieBox(desc.bottomDieDesc.lx, desc.bottomDieDesc.ly,
+                                  desc.bottomDieDesc.ux, desc.bottomDieDesc.uy);
+    pb->dieStor_.back().setRowParams(desc.bottomDieDesc.rowStartX, desc.bottomDieDesc.rowStartY,
+                                     desc.bottomDieDesc.rowSizeX, desc.bottomDieDesc.rowSizeY,
+                                     desc.bottomDieDesc.repeatCount);
+    pb->dieStor_.back().setMaxUtil(desc.bottomDieDesc.maxUtil / 100.f);
+    pb->dieStor_.back().setTech(pb->tech(desc.bottomDieDesc.techName));
+    pb->dieNameMap_.emplace("bottom", &pb->dieStor_.back());
+    // terminal die
+    pb->dieStor_.emplace_back();
+    pb->dieStor_.back().setName("terminal");
+    pb->dieStor_.back().setCoreBox(desc.topDieDesc.lx, desc.topDieDesc.ly,
+                                   desc.topDieDesc.ux, desc.topDieDesc.uy);
+    pb->dieNameMap_.emplace("terminal", &pb->dieStor_.back());
+    // Note that if a die is in pb->dies_, then it will participate in global placement
+    // therefore, we only push top die into pb->dies_
+    pb->dies_.push_back(pb->die("top"));
 
-    // Process term
+    // Process terminal
     pb->termSizeX_ = desc.termSizeX;
     pb->termSizeY_ = desc.termSizeY;
     pb->termSpace_ = desc.termSpace;
@@ -336,31 +349,70 @@ namespace replace
 
     // Process netlist
     pb->instStor_.reserve(desc.insts.size());
+    pb->insts_.reserve(desc.insts.size());
+    pb->placeInsts_.reserve(desc.insts.size());
     pb->netStor_.reserve(desc.nets.size());
+    pb->nets_.reserve(desc.nets.size());
     size_t numPins = 0;
-    for(const auto& n : desc.nets)
-      numPins += n.pins.size();
-    pb->pinStor_.reserve(numPins);
-    // Process inst
-    for(size_t i = 0; i < desc.insts.size(); i++)
+    for(const auto& netDesc : desc.nets)
     {
-      pb->instStor_.emplace_back(desc.insts[i].cellName);
-      pb->instNameMap_.emplace(desc.insts[i].name, &pb->instStor_.back());
-      pb->insts_.push_back(&pb->instStor_.back());
+      numPins += netDesc.pins.size();
     }
-    // Process net and pin
-    for(size_t i = 0; i < desc.nets.size(); i++)
+    pb->pinStor_.reserve(numPins);
+    pb->pins_.reserve(numPins);
+
+    // Process inst
+    for (const auto& instDesc : desc.insts)
+    {
+      pb->instStor_.emplace_back();
+      // find libcell
+      // assume than all insts are on top die
+      LibCell* libcell = pb->die("top")->tech()->libCell(instDesc.cellName);
+
+      // inst init
+      pb->instStor_.back().setName(instDesc.name);
+      pb->instStor_.back().setLibCellName(instDesc.cellName);
+      pb->instStor_.back().setFixed(false);
+      pb->instStor_.back().setMacro(libcell->isMacro());
+      int lx = pb->die("top")->coreLx();
+      int ly = pb->die("top")->coreLy();
+      pb->instStor_.back().setBox(lx, ly, lx + libcell->sizeX(), ly + libcell->sizeY());
+
+      pb->instNameMap_.emplace(instDesc.name, &pb->instStor_.back());
+      pb->insts_.push_back(&pb->instStor_.back());
+      pb->placeInsts_.push_back(&pb->instStor_.back());
+      pb->die("top")->addInstance(&pb->instStor_.back());
+    }
+    
+    // Process net
+    pb->netStor_.reserve(desc.nets.size());
+    for (const auto& netDesc : desc.nets)
     {
       pb->netStor_.emplace_back();
-      pb->netNameMap_.emplace(desc.nets[i].name, &pb->netStor_.back());
+      pb->netStor_.back().setName(netDesc.name);
+      pb->netNameMap_.emplace(netDesc.name, &pb->netStor_.back());
       pb->nets_.push_back(&pb->netStor_.back());
-      for(size_t j = 0; j < desc.nets[i].pins.size(); j++)
+      for (const auto& pinDesc : netDesc.pins)
       {
-        pb->pinStor_.emplace_back(desc.nets[i].pins[j].instName,
-                                  desc.nets[i].pins[j].pinName);
+        // find instance
+        Instance* inst = pb->inst(pinDesc.instName);
+        // find libcell & libpin
+        LibCell* libcell = pb->die("top")->tech()->libCell(inst->libCellName());
+        LibPin* libpin = libcell->libPin(pinDesc.pinName);
+
+        // add pin
+        pb->pinStor_.emplace_back();
+        pb->pinStor_.back().setName(pinDesc.pinName);
+        pb->pinStor_.back().setInstance(inst);
+        pb->pinStor_.back().setNet(&pb->netStor_.back());
+        pb->pinStor_.back().updateLocation(inst, libpin->x(), libpin->y());
         pb->pins_.push_back(&pb->pinStor_.back());
+
+        // assign inst & net
         pb->netStor_.back().addPin(&pb->pinStor_.back());
+        inst->addPin(&pb->pinStor_.back());
       }
+      pb->netStor_.back().updateBox();
     }
 
     return pb;

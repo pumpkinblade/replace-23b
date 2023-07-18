@@ -65,6 +65,8 @@ namespace replace
       placeInstsCenter();
     }
 
+    Plot::plot(pb_.get(), "./plot/cell", "before_ip");
+
     // set ExtId for idx reference // easy recovery
     setPlaceInstExtId();
     for (int i = 1; i <= ipVars_.maxIter; i++)
@@ -88,7 +90,7 @@ namespace replace
 
       Plot::plot(pb_.get(), "./plot/cell", "ip_" + to_string(i));
 
-      if (max(errorX, errorY) <= 1e-5 && i >= 5)
+      if (max(errorX, errorY) <= 1e-7 && i >= 5)
       {
         break;
       }

@@ -11,40 +11,48 @@ namespace replace
   class LibPin
   {
   public:
-    LibPin() : x_(0), y_(0) {}
-    LibPin(int x, int y) : x_(x), y_(y) {}
+    LibPin();
+    LibPin(const std::string& name, int x, int y);
     ~LibPin() = default;
+
+    const std::string& name() const { return name_; }
+    void setName(const std::string& name) { name_ = name; }
 
     void setLocation(int x, int y) { x_ = x; y_ = y; }
     int x() const { return x_; }
     int y() const { return y_; }
 
   private:
+    std::string name_;
     int x_, y_;
   };
 
   class LibCell
   {
   public:
-    LibCell() : sizeX_(0), sizeY_(0), isMacro_(false) {}
-    LibCell(int w, int h, bool macro) : sizeX_(w), sizeY_(h), isMacro_(macro) {}
+    LibCell();
+    LibCell(const std::string& name, int sizeX, int sizeY, bool isMacro = false);
     ~LibCell() = default;
 
+    const std::string& name() const { return name_; }
+    void setName(const std::string& name) { name_ = name; }
+
     void setMacro(bool on) { isMacro_ = on; }
-    void setSize(int w, int h) { sizeX_ = w; sizeY_ = h; }
     bool isMacro() const { return isMacro_; }
+
+    void setSize(int w, int h) { sizeX_ = w; sizeY_ = h; }
     int sizeX() const { return sizeX_; }
     int sizeY() const { return sizeY_; }
 
-    void addPin(const std::string& pinName, LibPin* pin) { pinNameMap_.emplace(pinName, pin); }
-    LibPin* pin(const std::string& pinName) { return pinNameMap_.at(pinName); }
-    const LibPin* pin(const std::string& pinName) const { return pinNameMap_.at(pinName); }
-    size_t numPins() const { return pinNameMap_.size(); }
-    int64_t area() const { return (int64_t)sizeX_ * sizeY_; }
+    const std::vector<LibPin*>& libPins() const { return pins_; }
+    LibPin* libPin(const std::string& name) const;
+    void addLibPin(LibPin* pin);
 
   private:
+    std::string name_;
     int sizeX_, sizeY_;
     bool isMacro_;
+    std::vector<LibPin*> pins_;
     std::unordered_map<std::string, LibPin*> pinNameMap_;
   };
 
@@ -52,26 +60,28 @@ namespace replace
   {
     friend class Parser;
   public:
-    Technology() = default;
+    Technology();
+    Technology(const std::string& name);
     ~Technology() = default;
 
+    const std::string& name() const { return name_; }
+    void setName(const std::string& name) { name_ = name; }
+
     const std::vector<LibCell*>& libCells() const { return cells_; }
-    const std::vector<LibCell*>& libStdCells() const { return stdCells_; }
-    const std::vector<LibCell*>& libMacros() const { return macros_; }
+    LibCell* libCell(const std::string& name) const;
+
     int siteSizeX() const { return siteSizeX_; }
     int siteSizeY() const { return siteSizeY_; }
-
-    const LibCell* cell(const std::string& name) { return cellNameMap_.at(name); }
 
     void printInfo() const;
 
   private:
+    std::string name_;
+
     std::vector<LibPin> pinStor_;
     std::vector<LibCell> cellStor_;
 
     std::vector<LibCell*> cells_;
-    std::vector<LibCell*> stdCells_;
-    std::vector<LibCell*> macros_;
     std::unordered_map<std::string, LibCell*> cellNameMap_;
 
     // For lef/def parser

@@ -44,7 +44,7 @@ set(PLACE_HEADER
   src/point.h
   src/plot.h
   src/technology.h
-  src/placer23b.h
+  # src/placer23b.h
   src/abacusLegalizer.h
 )
 
@@ -64,7 +64,7 @@ set(PLACE_SRC
   src/point.cpp
   src/plot.cpp
   src/technology.cpp
-  src/placer23b.cpp
+  # src/placer23b.cpp
   src/23bParser.cpp
   src/abacusLegalizer.cpp
 )
