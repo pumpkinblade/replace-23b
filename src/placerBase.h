@@ -4,6 +4,7 @@
 #include <vector>
 #include <unordered_map>
 #include <memory>
+#include "technology.h"
 
 namespace replace
 {
@@ -14,7 +15,7 @@ namespace replace
   {
   public:
     Instance();
-    ~Instance();
+    ~Instance() = default;
 
     // a cell that no need to be moved.
     bool isFixed() const { return isFixed_; }
@@ -42,6 +43,12 @@ namespace replace
 
     void addPin(Pin *pin);
     const std::vector<Pin *> &pins() const { return pins_; }
+    Pin* pin(const std::string& name) const;
+
+    const std::string &name() const { return name_; }
+    void setName(const std::string &name) { name_ = name; }
+    const std::string &libCellName() const { return libCellName_; }
+    void setLibCellName(const std::string& libCellName) { libCellName_ = libCellName; }
 
   private:
     std::vector<Pin *> pins_;
@@ -54,13 +61,18 @@ namespace replace
 
     // For initialPlace
     int extId_;
+
+    // For 23b
+    std::string name_;
+    std::string libCellName_;
+    std::unordered_map<std::string, Pin*> pinNameMap_;
   };
 
   class Pin
   {
   public:
     Pin();
-    ~Pin();
+    ~Pin() = default;
 
     bool isMinPinX() const { return minPinX_; }
     bool isMaxPinX() const { return maxPinX_; }
@@ -87,6 +99,9 @@ namespace replace
     Instance *instance() const { return inst_; }
     Net *net() const { return net_; }
 
+    const std::string &name() const { return name_; }
+    void setName(const std::string &name) { name_ = name; }
+
   private:
     Instance *inst_;
     Net *net_;
@@ -108,6 +123,9 @@ namespace replace
     bool minPinY_;
     bool maxPinX_;
     bool maxPinY_;
+
+    // For 23b
+    std::string name_;
   };
 
   class Net
@@ -132,12 +150,18 @@ namespace replace
 
     void addPin(Pin *pin);
 
+    const std::string &name() const { return name_; }
+    void setName(const std::string &name) { name_ = name; }
+
   private:
     std::vector<Pin *> pins_;
     int lx_;
     int ly_;
     int ux_;
     int uy_;
+
+    // for 23b
+    std::string name_;
   };
 
   class Die
@@ -147,6 +171,7 @@ namespace replace
     ~Die() = default;
 
     void setDieBox(int lx, int ly, int ux, int uy);
+    void setCoreBox(int lx, int ly, int ux, int uy);
 
     int dieLx() const { return dieLx_; }
     int dieLy() const { return dieLy_; }
@@ -174,15 +199,23 @@ namespace replace
     int rowHeight() const { return rowHeight_; }
     int rowRepeatCount() const { return rowRepeatCount_; }
 
-    const std::vector<Instance*>& insts() const { return insts_; }
-    const std::vector<Instance*>& placeInsts() const { return placeInsts_; }
-    const std::vector<Instance*>& fixedInsts() const { return fixedInsts_; }
-    void addInstance(Instance* inst);
+    const std::vector<Instance *> &insts() const { return insts_; }
+    const std::vector<Instance *> &placeInsts() const { return placeInsts_; }
+    const std::vector<Instance *> &fixedInsts() const { return fixedInsts_; }
+    void addInstance(Instance *inst);
+    void removeInstance(Instance *inst);
 
     int64_t placeInstsArea() const { return placeStdcellsArea_ + placeMacrosArea_; }
     int64_t placeStdcellsArea() const { return placeStdcellsArea_; }
     int64_t placeMacrosArea() const { return placeMacrosArea_; }
     int64_t fixedInstsArea() const { return fixedInstsArea_; }
+
+    const std::string &name() const { return name_; }
+    void setName(const std::string &name) { name_ = name; }
+    Technology* tech() const { return tech_; }
+    void setTech(Technology* tech) { tech_ = tech; }
+    float maxUtil() const { return maxUtil_; }
+    void setMaxUtil(float util) { maxUtil_ = util; }
 
   private:
     int dieLx_;
@@ -201,21 +234,25 @@ namespace replace
     int rowHeight_;
     int rowRepeatCount_;
 
-    std::vector<Instance*> insts_;
-    std::vector<Instance*> placeInsts_;
-    std::vector<Instance*> fixedInsts_;
+    std::vector<Instance *> insts_;
+    std::vector<Instance *> placeInsts_;
+    std::vector<Instance *> fixedInsts_;
 
     // placeInstsArea_ = placeStdcellArea_ + placeMacroArea_
     int64_t placeStdcellsArea_;
     int64_t placeMacrosArea_;
     // fixedInstsArea_ = fixedStdcellArea_ + fixedMacroArea_
     int64_t fixedInstsArea_;
+
+    // For 23b
+    std::string name_;
+    Technology* tech_;
+    float maxUtil_;
   };
 
   class PlacerBase
   {
     friend class Parser;
-    friend class P23bToBaseConverter;
 
   public:
     PlacerBase();
@@ -224,6 +261,8 @@ namespace replace
     const std::vector<Instance *> &insts() const { return insts_; }
     const std::vector<Pin *> &pins() const { return pins_; }
     const std::vector<Net *> &nets() const { return nets_; }
+    const std::vector<Die *> &dies() const { return dies_; }
+    const std::vector<Technology *>& techs() const { return techs_; }
 
     //
     // placeInsts : a real instance that need to be placed
@@ -233,8 +272,8 @@ namespace replace
     const std::vector<Instance *> &fixedInsts() const { return fixedInsts_; }
 
     // Note: each die should have the same size
-    Die* die() { return dies_.front(); }
-    const std::vector<Die*>& dies() const { return dies_; }
+    // this function will be removed in the future
+    Die *die() { return dies_.front(); }
 
     int64_t hpwl() const;
     void printInfo() const;
@@ -243,6 +282,21 @@ namespace replace
     int64_t placeStdcellsArea() const;
     int64_t placeMacrosArea() const;
     int64_t fixedInstsArea() const;
+
+    // query object by name
+    Instance* inst(const std::string& name) const;
+    Die* die(const std::string& name) const;
+    Net* net(const std::string& name) const;
+    Technology* tech(const std::string& name) const;
+
+    // terminal params
+    int terminalSizeX() const { return termSizeX_; }
+    int terminalSizeY() const { return termSizeY_; }
+    int terminalSpacing() const { return termSpace_; }
+    int terminalCost() const { return termCost_; }
+
+  private:
+    void reset();
 
   private:
     std::vector<Die> dieStor_;
@@ -258,7 +312,19 @@ namespace replace
     std::vector<Instance *> placeInsts_;
     std::vector<Instance *> fixedInsts_;
 
-    void reset();
+    // For 23b
+    std::vector<std::shared_ptr<Technology>> techStor_;
+    std::vector<Technology *> techs_;
+
+    std::unordered_map<std::string, Instance *> instNameMap_;
+    std::unordered_map<std::string, Die *> dieNameMap_;
+    std::unordered_map<std::string, Net *> netNameMap_;
+    std::unordered_map<std::string, Technology *> techNameMap_;
+
+    int termSizeX_;
+    int termSizeY_;
+    int termSpace_;
+    int termCost_;
   };
 
 }

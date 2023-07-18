@@ -65,6 +65,8 @@ namespace replace
       placeInstsCenter();
     }
 
+    Plot::plot(pb_.get(), "./plot/cell", "before_ip");
+
     // set ExtId for idx reference // easy recovery
     setPlaceInstExtId();
     for (int i = 1; i <= ipVars_.maxIter; i++)
@@ -86,13 +88,9 @@ namespace replace
       LOG_INFO("[InitialPlace] Iter {} CG Error: {} HPWL: {}", i, max(errorX, errorY), pb_->hpwl());
       updateCoordi();
 
-#ifdef ENABLE_CIMG_LIB
-      pe.SaveCellPlotAsJPEG(
-          string("InitPlace ") + to_string(i), false,
-          string("./plot/initPlace/ip_") + to_string(i));
-#endif
+      Plot::plot(pb_.get(), "./plot/cell", "ip_" + to_string(i));
 
-      if (max(errorX, errorY) <= 1e-5 && i >= 5)
+      if (max(errorX, errorY) <= 1e-7 && i >= 5)
       {
         break;
       }

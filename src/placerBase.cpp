@@ -16,13 +16,6 @@ namespace replace
   {
   }
 
-  Instance::~Instance()
-  {
-    lx_ = ly_ = 0;
-    ux_ = uy_ = 0;
-    pins_.clear();
-  }
-
   void Instance::setLocation(int x, int y)
   {
     setBox(x, y, x + (ux_ - lx_), y + (uy_ - ly_));
@@ -56,6 +49,13 @@ namespace replace
   void Instance::addPin(Pin *pin)
   {
     pins_.push_back(pin);
+    pinNameMap_.emplace(pin->name(), pin);
+  }
+
+  Pin* Instance::pin(const std::string& name) const
+  {
+    auto it = pinNameMap_.find(name);
+    return it == pinNameMap_.end() ? nullptr : it->second;
   }
 
   ////////////////////////////////////////////////////////
@@ -64,9 +64,7 @@ namespace replace
   Pin::Pin()
       : inst_(nullptr), net_(nullptr),
         cx_(0), cy_(0),
-        offsetCx_(0), offsetCy_(0),
-        minPinX_(false), minPinY_(false),
-        maxPinX_(false), maxPinY_(false)
+        offsetCx_(0), offsetCy_(0)
   {
   }
 
@@ -92,12 +90,6 @@ namespace replace
   void Pin::setNet(Net *net)
   {
     net_ = net;
-  }
-
-  Pin::~Pin()
-  {
-    inst_ = nullptr;
-    net_ = nullptr;
   }
 
   ////////////////////////////////////////////////////////
@@ -136,9 +128,10 @@ namespace replace
   ////////////////////////////////////////////////////////
   // Die
 
-  Die::Die() : dieLx_(0), dieLy_(0), dieUx_(0), dieUy_(0),
-               coreLx_(0), coreLy_(0), coreUx_(0), coreUy_(0),
-               fixedInstsArea_(0), placeStdcellsArea_(0), placeMacrosArea_(0)
+  Die::Die() 
+      : dieLx_(0), dieLy_(0), dieUx_(0), dieUy_(0),
+        coreLx_(0), coreLy_(0), coreUx_(0), coreUy_(0),
+        fixedInstsArea_(0), placeStdcellsArea_(0), placeMacrosArea_(0)
   {
   }
 
@@ -148,6 +141,14 @@ namespace replace
     dieLy_ = ly;
     dieUx_ = ux;
     dieUy_ = uy;
+  }
+
+  void Die::setCoreBox(int lx, int ly, int ux, int uy)
+  {
+    coreLx_ = lx;
+    coreLy_ = ly;
+    coreUx_ = ux;
+    coreUy_ = uy;
   }
 
   void Die::setRowParams(int startX, int startY, int width, int height, int repeatCount)
@@ -178,11 +179,11 @@ namespace replace
 
     int64_t area = static_cast<int64_t>(inst->dx()) *
                    static_cast<int64_t>(inst->dy());
-    if(inst->isFixed())
+    if (inst->isFixed())
     {
       fixedInstsArea_ += area;
     }
-    else if(inst->isMacro())
+    else if (inst->isMacro())
     {
       placeMacrosArea_ += area;
     }
@@ -236,6 +237,12 @@ namespace replace
 
   void PlacerBase::printInfo() const
   {
+    for (Technology* tech : techs_)
+    {
+      LOG_INFO("Technology {}", tech->name());
+      tech->printInfo();
+    }
+
     LOG_INFO("NumInstances: {}", instStor_.size());
     LOG_INFO("NumPlaceInstances: {}", placeInsts_.size());
     LOG_INFO("NumFixedInstances: {}", fixedInsts_.size());
@@ -254,8 +261,6 @@ namespace replace
     LOG_INFO("AvgFanout: {}", sumFanout / (float)nets_.size());
 
     Die *die = dies_.front();
-    LOG_INFO("DieAreaLxLy: ({}, {})", die->dieLx(), die->dieLy());
-    LOG_INFO("DieAreaUxUy: ({}, {})", die->dieUx(), die->dieUy());
     LOG_INFO("CoreAreaLxLy: ({}, {})", die->coreLx(), die->coreLy());
     LOG_INFO("CoreAreaUxUy: ({}, {})", die->coreUx(), die->coreUy());
 
@@ -272,6 +277,18 @@ namespace replace
       LOG_INFO("PlaceStdcellsArea: {}", die->placeStdcellsArea());
       LOG_INFO("PlaceMacrosArea: {}", die->placeMacrosArea());
       LOG_INFO("FixedInstArea: {}", die->fixedInstsArea());
+
+      int numStdCell = 0, numMacro = 0;
+      for (Instance* inst : die->insts())
+      {
+        if (inst->isMacro())
+          numMacro++;
+        else
+          numStdCell++;
+      }
+      LOG_INFO("NumStdCells: {}", numStdCell);
+      LOG_INFO("NumMacros: {}", numMacro);
+
       dieIdx++;
     }
   }
@@ -314,5 +331,29 @@ namespace replace
       area += die->fixedInstsArea();
     }
     return area;
+  }
+
+  Instance *PlacerBase::inst(const std::string &name) const
+  {
+    auto it = instNameMap_.find(name);
+    return it == instNameMap_.end() ? nullptr : it->second;
+  }
+
+  Die *PlacerBase::die(const std::string &name) const
+  {
+    auto it = dieNameMap_.find(name);
+    return it == dieNameMap_.end() ? nullptr : it->second;
+  }
+
+  Net *PlacerBase::net(const std::string &name) const
+  {
+    auto it = netNameMap_.find(name);
+    return it == netNameMap_.end() ? nullptr : it->second;
+  }
+
+  Technology *PlacerBase::tech(const std::string &name) const
+  {
+    auto it = techNameMap_.find(name);
+    return it == techNameMap_.end() ? nullptr : it->second;
   }
 }

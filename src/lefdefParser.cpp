@@ -16,14 +16,14 @@ namespace replace
     std::vector<std::vector<lefiPin>> lefMacroPins;
   };
 
-  static int LefUnitCallback(lefrCallbackType_e typ, lefiUnits *unit, lefiUserData data)
+  static int lefUnitCallback(lefrCallbackType_e typ, lefiUnits *unit, lefiUserData data)
   {
     LEF_DATABASE *db = reinterpret_cast<LEF_DATABASE *>(data);
     db->lefUnit = unit->databaseNumber();
     return 0;
   }
 
-  static int LefSiteCallback(lefrCallbackType_e typ, lefiSite *site, lefiUserData data)
+  static int lefSiteCallback(lefrCallbackType_e typ, lefiSite *site, lefiUserData data)
   {
     LEF_DATABASE *db = reinterpret_cast<LEF_DATABASE *>(data);
     if(std::strcmp(site->name(), "CoreSite") == 0)
@@ -31,14 +31,14 @@ namespace replace
     return 0;
   }
 
-  static int LefMacroCallback(lefrCallbackType_e typ, lefiMacro *macro, lefiUserData data)
+  static int lefMacroCallback(lefrCallbackType_e typ, lefiMacro *macro, lefiUserData data)
   {
     LEF_DATABASE *db = reinterpret_cast<LEF_DATABASE *>(data);
     db->lefMacroMap.emplace(macro->name(), *macro);
     return 0;
   }
 
-  static int LefMacroBeginCallback(lefrCallbackType_e typ, const char *name, lefiUserData data)
+  static int lefMacroBeginCallback(lefrCallbackType_e typ, const char *name, lefiUserData data)
   {
     LEF_DATABASE *db = reinterpret_cast<LEF_DATABASE *>(data);
     db->lefMacroPinIdxMap.emplace(name, db->lefMacroPins.size());
@@ -46,22 +46,22 @@ namespace replace
     return 0;
   }
 
-  static int LefPinCallback(lefrCallbackType_e typ, lefiPin *pin, lefiUserData data)
+  static int lefPinCallback(lefrCallbackType_e typ, lefiPin *pin, lefiUserData data)
   {
     LEF_DATABASE *db = reinterpret_cast<LEF_DATABASE *>(data);
     db->lefMacroPins.back().push_back(*pin);
     return 0;
   }
 
-  void ParseLef(const std::string &lefFilename, LEF_DATABASE *lefdb)
+  void parseLef(const std::string &lefFilename, LEF_DATABASE *lefdb)
   {
     // init lef reader and set callback
     lefrInit();
-    lefrSetUnitsCbk(LefUnitCallback);
-    lefrSetSiteCbk(LefSiteCallback);
-    lefrSetMacroBeginCbk(LefMacroBeginCallback);
-    lefrSetMacroCbk(LefMacroCallback);
-    lefrSetPinCbk(LefPinCallback);
+    lefrSetUnitsCbk(lefUnitCallback);
+    lefrSetSiteCbk(lefSiteCallback);
+    lefrSetMacroBeginCbk(lefMacroBeginCallback);
+    lefrSetMacroCbk(lefMacroCallback);
+    lefrSetPinCbk(lefPinCallback);
 
     // open the lef file
     FILE *lefFile = nullptr;
@@ -81,7 +81,7 @@ namespace replace
     }
   }
 
-  std::pair<double, double> GetPinLocation(const lefiPin &pin)
+  std::pair<double, double> getPinLocation(const lefiPin &pin)
   {
     double lx = INT_MAX;
     double ux = INT_MIN;
@@ -104,13 +104,13 @@ namespace replace
     return std::make_pair((lx + ux) / 2, (ly + uy) / 2);
   }
 
-  std::shared_ptr<Technology> Parser::LefToTechnology(const std::string& lefFilename)
+  std::shared_ptr<Technology> Parser::lefToTechnology(const std::string& lefFilename)
   {
-    auto tech = std::make_shared<Technology>();
+    auto tech = std::make_shared<Technology>("lef");
 
     LEF_DATABASE lefdb;
     LOG_TRACE("Parse LEF Begin");
-    ParseLef(lefFilename, &lefdb);
+    parseLef(lefFilename, &lefdb);
     LOG_TRACE("Parse LEF End");
 
     LOG_TRACE("Process lef site");
@@ -131,24 +131,20 @@ namespace replace
     {
       int w = static_cast<int>(it.second.sizeX() * lefdb.lefUnit);
       int h = static_cast<int>(it.second.sizeY() * lefdb.lefUnit);
-      bool isMacro = h > siteY * 6;
-      tech->cellStor_.emplace_back(w, h, isMacro);
-      tech->cellNameMap_.emplace(it.second.name(), &tech->cellStor_.back());
+      bool isMacro = h > siteY;
+      tech->cellStor_.emplace_back(it.first, w, h, isMacro);
+      tech->cellNameMap_.emplace(it.first, &tech->cellStor_.back());
       tech->cells_.push_back(&tech->cellStor_.back());
-      if(isMacro)
-        tech->macros_.push_back(&tech->cellStor_.back());
-      else
-        tech->stdCells_.push_back(&tech->cellStor_.back());
 
       int idx = lefdb.lefMacroPinIdxMap[it.first];
       const auto& pins = lefdb.lefMacroPins[idx];
       for (const auto &pin : pins)
       {
-        std::pair<double, double> offset = GetPinLocation(pin);
+        std::pair<double, double> offset = getPinLocation(pin);
         int x = static_cast<int>(offset.first * lefdb.lefUnit);
         int y = static_cast<int>(offset.second * lefdb.lefUnit);
-        tech->pinStor_.emplace_back(x, y);
-        tech->cellStor_.back().addPin(pin.name(), &tech->pinStor_.back());
+        tech->pinStor_.emplace_back(pin.name(), x, y);
+        tech->cellStor_.back().addLibPin(&tech->pinStor_.back());
       }
     }
     return tech;
@@ -161,38 +157,37 @@ namespace replace
     std::vector<defiRow> defRows;
     std::unordered_map<std::string, defiComponent> defComponentMap;
     std::vector<defiNet> defNets;
-    std::vector<defiPin> defPins;
   };
 
-  static int DefDieAreaCallback(defrCallbackType_e typ, defiBox *box, defiUserData data)
+  static int defDieAreaCallback(defrCallbackType_e typ, defiBox *box, defiUserData data)
   {
     DEF_DATABASE *db = reinterpret_cast<DEF_DATABASE *>(data);
     db->defDieArea = *box;
     return 0;
   }
 
-  static int DefUnitCallback(defrCallbackType_e typ, double unit, defiUserData data)
+  static int defUnitCallback(defrCallbackType_e typ, double unit, defiUserData data)
   {
     DEF_DATABASE *db = reinterpret_cast<DEF_DATABASE *>(data);
     db->defUnit = unit;
     return 0;
   }
 
-  static int DefRowCallback(defrCallbackType_e typ, defiRow *row, defiUserData data)
+  static int defRowCallback(defrCallbackType_e typ, defiRow *row, defiUserData data)
   {
     DEF_DATABASE *db = reinterpret_cast<DEF_DATABASE *>(data);
     db->defRows.push_back(*row);
     return 0;
   }
 
-  static int DefComponentCallback(defrCallbackType_e typ, defiComponent *component, defiUserData data)
+  static int defComponentCallback(defrCallbackType_e typ, defiComponent *component, defiUserData data)
   {
     DEF_DATABASE *db = reinterpret_cast<DEF_DATABASE *>(data);
     db->defComponentMap.emplace(component->id(), *component);
     return 0;
   }
 
-  static int DefNetCallback(defrCallbackType_e typ, defiNet *net, defiUserData data)
+  static int defNetCallback(defrCallbackType_e typ, defiNet *net, defiUserData data)
   {
     DEF_DATABASE *db = reinterpret_cast<DEF_DATABASE *>(data);
     // ignore io pin
@@ -205,23 +200,15 @@ namespace replace
     return 0;
   }
 
-  static int DefPinCallback(defrCallbackType_e typ, defiPin *pin, defiUserData data)
-  {
-    DEF_DATABASE *db = reinterpret_cast<DEF_DATABASE *>(data);
-    db->defPins.push_back(*pin);
-    return 0;
-  }
-
-  void ParseDef(const std::string &defFilename, DEF_DATABASE *defdb)
+  void parseDef(const std::string &defFilename, DEF_DATABASE *defdb)
   {
     // init def reader and set callback
     defrInit();
-    defrSetDieAreaCbk(DefDieAreaCallback);
-    defrSetUnitsCbk(DefUnitCallback);
-    defrSetRowCbk(DefRowCallback);
-    defrSetComponentCbk(DefComponentCallback);
-    defrSetNetCbk(DefNetCallback);
-    defrSetPinCbk(DefPinCallback);
+    defrSetDieAreaCbk(defDieAreaCallback);
+    defrSetUnitsCbk(defUnitCallback);
+    defrSetRowCbk(defRowCallback);
+    defrSetComponentCbk(defComponentCallback);
+    defrSetNetCbk(defNetCallback);
 
     // open the def file
     FILE *defFile = nullptr;
@@ -241,7 +228,7 @@ namespace replace
     }
   }
 
-  std::pair<int, int> GetOrientSize(int orient, int w, int h)
+  std::pair<int, int> getOrientSize(int orient, int w, int h)
   {
     switch (orient)
     {
@@ -261,7 +248,7 @@ namespace replace
     return std::make_pair(w, h);
   }
 
-  std::pair<int, int> GetOrientPoint(int orient, int x, int y, int w, int h)
+  std::pair<int, int> getOrientPoint(int orient, int x, int y, int w, int h)
   {
     switch (orient)
     {
@@ -287,19 +274,22 @@ namespace replace
     return std::make_pair(x, y);
   }
 
-  std::shared_ptr<PlacerBase> Parser::LefDefToPlacerBase(const std::string &lefFilename, const std::string &defFilename)
+  std::shared_ptr<PlacerBase> Parser::lefdefToPlacerBase(const std::string &lefFilename, const std::string &defFilename)
   {
     auto pb = std::make_shared<PlacerBase>();
 
-    auto tech = LefToTechnology(lefFilename);
+    auto tech = lefToTechnology(lefFilename);
     DEF_DATABASE defdb;
     LOG_TRACE("Parse DEF Begin");
-    ParseDef(defFilename, &defdb);
+    parseDef(defFilename, &defdb);
     LOG_TRACE("Parse DEF End");
 
+    pb->techStor_.push_back(tech);
+    pb->techs_.push_back(tech.get());
+    pb->techNameMap_.emplace(tech->name(), tech.get());
     pb->instStor_.reserve(defdb.defComponentMap.size());
     pb->netStor_.reserve(defdb.defNets.size());
-    int numPins = 0;
+    size_t numPins = 0;
     for(const auto& net: defdb.defNets)
     {
       numPins += net.numConnections();
@@ -311,9 +301,10 @@ namespace replace
     LOG_TRACE("Process die and rows");
     // Process die and rows
     pb->dieStor_.emplace_back();
-    pb->dies_.push_back(&pb->dieStor_.back());
-    pb->die()->setDieBox(defdb.defDieArea.xl(), defdb.defDieArea.yl(), defdb.defDieArea.xh(), defdb.defDieArea.yh());
-    pb->die()->setDieBox(defdb.defDieArea.xl(), defdb.defDieArea.yl(), defdb.defDieArea.xh(), defdb.defDieArea.yh());
+    pb->dieStor_.back().setName("def");
+    pb->dieStor_.back().setDieBox(defdb.defDieArea.xl(), defdb.defDieArea.yl(), defdb.defDieArea.xh(), defdb.defDieArea.yh());
+    pb->dieStor_.back().setMaxUtil(1.0f);
+    pb->dieStor_.back().setTech(tech.get());
     // assume all row has the same height and width
     int rowStartX = INT_MAX, rowStartY = INT_MAX;
     for (const auto &defRow : defdb.defRows)
@@ -326,28 +317,29 @@ namespace replace
     int rowWidth = static_cast<int>(defdb.defRows.front().xNum() * tech->siteSizeX());
     int rowHeight = tech->siteSizeY();
     int rowRepeatCount = static_cast<int>(defdb.defRows.size());
-    pb->die()->setRowParams(rowStartX, rowStartY, rowWidth, rowHeight, rowRepeatCount);
+    pb->dieStor_.back().setRowParams(rowStartX, rowStartY, rowWidth, rowHeight, rowRepeatCount);
+    pb->dies_.push_back(&pb->dieStor_.back());
+    pb->dieNameMap_.emplace("def", &pb->dieStor_.back());
 
     LOG_TRACE("Process def component");
     // Process def component
-    std::unordered_map<std::string, int> instExtIds;
     for (const auto &compIt : defdb.defComponentMap)
     {
       int instLx = compIt.second.placementX();
       int instLy = compIt.second.placementY();
-      const LibCell* libcell = tech->cell(compIt.second.name());
+      const LibCell* libcell = tech->libCell(compIt.second.name());
       int orient = compIt.second.placementOrient();
       int w = libcell->sizeX();
       int h = libcell->sizeY();
-      std::pair<int, int> instSize = GetOrientSize(orient, w, h);
+      std::pair<int, int> instSize = getOrientSize(orient, w, h);
 
-      Instance inst;
-      inst.setBox(instLx, instLy, instLx + instSize.first, instLy + instSize.second);
-      inst.setFixed(compIt.second.isFixed());
-      inst.setMacro(instSize.second > tech->siteSizeY());
-      pb->instStor_.push_back(inst);
-
-      instExtIds.emplace(compIt.second.id(), static_cast<int>(pb->instStor_.size() - 1));
+      pb->instStor_.emplace_back();
+      pb->instStor_.back().setBox(instLx, instLy, instLx + instSize.first, instLy + instSize.second);
+      pb->instStor_.back().setFixed(compIt.second.isFixed());
+      pb->instStor_.back().setMacro(libcell->isMacro());
+      pb->instStor_.back().setName(compIt.first);
+      pb->instStor_.back().setLibCellName(libcell->name());
+      pb->instNameMap_.emplace(compIt.first, &pb->instStor_.back());
     }
 
     LOG_TRACE("Process def net");
@@ -364,23 +356,26 @@ namespace replace
         const auto& compIt = defdb.defComponentMap.find(instName);
 
         // find libcell
-        const LibCell* libcell = tech->cell(compIt->second.name());
+        const LibCell* libcell = tech->libCell(compIt->second.name());
         int orient = compIt->second.placementOrient();
 
         // find pinOffset
-        const LibPin* libpin = libcell->pin(pinName);
-        auto pinLoc = GetOrientPoint(orient, libpin->x(), libpin->y(), libcell->sizeX(), libcell->sizeY());
+        const LibPin* libpin = libcell->libPin(pinName);
+        auto pinLoc = getOrientPoint(orient, libpin->x(), libpin->y(), libcell->sizeX(), libcell->sizeY());
 
-        // find instance extId
-        int extId = instExtIds[instName];
+        // find instance
+        Instance* inst = pb->inst(instName);
 
         // add pin
         pb->pinStor_.emplace_back();
-        pb->pinStor_.back().setInstance(&pb->instStor_[extId]);
+        pb->pinStor_.back().setName(pinName);
+        pb->pinStor_.back().setInstance(inst);
         pb->pinStor_.back().setNet(&pb->netStor_.back());
-        pb->pinStor_.back().updateLocation(&pb->instStor_[extId], pinLoc.first, pinLoc.second);
+        pb->pinStor_.back().updateLocation(inst, pinLoc.first, pinLoc.second);
+
+        // assign inst & net
         pb->netStor_.back().addPin(&pb->pinStor_.back());
-        pb->instStor_[extId].addPin(&pb->pinStor_.back());
+        inst->addPin(&pb->pinStor_.back());
       }
       pb->netStor_.back().updateBox();
     }
@@ -394,7 +389,7 @@ namespace replace
       int64_t instArea = static_cast<int64_t>(inst.dx()) * static_cast<int64_t>(inst.dy());
 
       pb->insts_.push_back(&inst);
-      pb->die()->addInstance(&inst);
+      pb->dieStor_.back().addInstance(&inst);
       if(inst.isFixed())
       {
         pb->fixedInsts_.push_back(&inst);

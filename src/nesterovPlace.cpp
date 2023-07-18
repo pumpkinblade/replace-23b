@@ -292,7 +292,7 @@ NesterovPlace::doNesterovPlace() {
 
   // divergence detection
   float minSumOverflow = 1e30;
-  float hpwlWithMinSumOverflow = 1e30; 
+  float hpwlWithMinSumOverflow = 1e30;
 
   // dynamic adjustment of max_phi_coef
   bool isMaxPhiCoefChanged = false;
