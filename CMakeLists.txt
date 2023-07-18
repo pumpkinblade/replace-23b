@@ -23,7 +23,7 @@ set(EIGEN_HOME
   ${PROJECT_SOURCE_DIR}/module/eigen
 )
 set(CIMG_HOME
-  ${PROJECT_SOURCE_DIR}/module/cimg
+  ${PROJECT_SOURCE_DIR}/module/CImg_library
 )
 set(STB_HOME
     ${PROJECT_SOURCE_DIR}/module/stb
