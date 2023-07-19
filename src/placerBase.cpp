@@ -2,6 +2,7 @@
 #include "log.h"
 
 #include <iostream>
+#include <algorithm>
 
 namespace replace
 {
@@ -151,6 +152,20 @@ namespace replace
     coreUy_ = uy;
   }
 
+  void Die::copyDieBoxAndRowParamsFrom(const Die & ano)
+  {
+    setDieBox(ano);
+    setRowParams(ano);
+  }
+
+  void replace::Die::setDieBox(const Die & ano)
+  {
+    dieLx_ = ano.dieLx();
+    dieLy_ = ano.dieLy();
+    dieUx_ = ano.dieUx();
+    dieUy_ = ano.dieUy();
+  }
+
   void Die::setRowParams(int startX, int startY, int width, int height, int repeatCount)
   {
     rowStartX_ = startX;
@@ -163,6 +178,20 @@ namespace replace
     coreLy_ = rowStartY_;
     coreUx_ = rowStartX_ + rowWidth_;
     coreUy_ = rowStartY_ + rowHeight_ * rowRepeatCount_;
+  }
+
+  void Die::setRowParams(const Die &ano)
+  {
+    rowStartX_      = ano.rowStartX()      ;
+    rowStartY_      = ano.rowStartY()      ;
+    rowWidth_       = ano.rowWidth()       ; 
+    rowHeight_      = ano.rowHeight()      ;
+    rowRepeatCount_ = ano.rowRepeatCount() ;
+
+    coreLx_         = ano.coreLx()         ;
+    coreLy_         = ano.coreLy()         ;
+    coreUy_         = ano.coreUy()         ;
+    coreUx_         = ano.coreUx()         ;
   }
 
   void Die::addInstance(Instance *inst)
@@ -191,6 +220,11 @@ namespace replace
     {
       placeStdcellsArea_ += area;
     }
+  }
+
+  void Die::removeInstance(Instance *inst)
+  {
+    insts_.erase(std::remove(insts_.begin(), insts_.end(), inst), insts_.end());
   }
 
   ////////////////////////////////////////////////////////
@@ -356,4 +390,31 @@ namespace replace
     auto it = techNameMap_.find(name);
     return it == techNameMap_.end() ? nullptr : it->second;
   }
+
+  void PlacerBase::deriveIPNs()
+  {
+    for (auto &inst : instStor_)
+    {
+      insts_.push_back(&inst);
+      if (inst.isFixed())
+      {
+        fixedInsts_.push_back(&inst);
+      }
+      else
+      {
+        placeInsts_.push_back(&inst);
+      }
+    }
+
+    for (auto &pin : pinStor_)
+    {
+      pins_.push_back(&pin);
+    }
+
+    for (auto &net : netStor_)
+    {
+      nets_.push_back(&net);
+    }
+  }
+
 }

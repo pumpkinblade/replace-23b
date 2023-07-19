@@ -56,10 +56,23 @@ namespace replace{
         replace_->setPlacerBase(pb_);
         replace_->doInitialPlace();
         replace_->doNesterovPlace();
+
+        // TODO: move cell to bottom only where exists overlap
+        LOG_TRACE("start partition");
+        srand(10086);
         // 对replace布局后的结果进行layer assignment
+        for (auto instance : pb_->insts()){
+            float roll = (float) rand()/RAND_MAX;
+            bool moveToBottom = roll >= 0.5 ? true : false;
+            if(moveToBottom){
+                pb_->die("top")->removeInstance(instance);
+                pb_->die("bottom")->addInstance(instance);
+            }
+        }
+
+        // TODO: add terminal instance to terminal die
 
 
+        LOG_TRACE("finish partition");
     }
-
-
 }

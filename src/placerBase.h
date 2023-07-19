@@ -11,6 +11,9 @@ namespace replace
   class Pin;
   class Net;
 
+  // Instance is either a cell or a macro related to a given technology node, 
+  // Instance can be fixed or not, has shape and location.
+  // It also contains a pin list
   class Instance
   {
   public:
@@ -26,6 +29,7 @@ namespace replace
 
     void setLocation(int x, int y);
     void setCenterLocation(int x, int y);
+    // w for x dimension, h for y dimension
     void setSize(int w, int h);
     void setBox(int lx, int ly, int ux, int uy);
 
@@ -35,7 +39,9 @@ namespace replace
     int uy() const { return uy_; }
     int cx() const { return (lx_ + ux_) / 2; }
     int cy() const { return (ly_ + uy_) / 2; }
+    // instance size in x dimension
     int dx() const { return ux_ - lx_; }
+    // instance size in y dimension
     int dy() const { return uy_ - ly_; }
 
     void setExtId(int extId) { extId_ = extId; }
@@ -164,14 +170,18 @@ namespace replace
     std::string name_;
   };
 
+  // Die class containes shape info, row params, instances placed on it
+  // and area statistics
   class Die
   {
   public:
     Die();
     ~Die() = default;
+    void copyDieBoxAndRowParamsFrom(const Die& ano);
 
     void setDieBox(int lx, int ly, int ux, int uy);
     void setCoreBox(int lx, int ly, int ux, int uy);
+    void setDieBox(const Die& ano);
 
     int dieLx() const { return dieLx_; }
     int dieLy() const { return dieLy_; }
@@ -193,6 +203,7 @@ namespace replace
     int coreDy() const { return coreUy_ - coreLy_; }
 
     void setRowParams(int startX, int startY, int width, int height, int repeatCount);
+    void setRowParams(const Die& ano);
     int rowStartX() const { return rowStartX_; }
     int rowStartY() const { return rowStartY_; }
     int rowWidth() const { return rowWidth_; }
@@ -250,9 +261,14 @@ namespace replace
     float maxUtil_;
   };
 
+  // PlacerBase is a class containing all data, including instance set, 
+  // pin set, net set, die set. Also hold statistics about area and hpwl.
+  // It lead out data by providing vector<T *> so T is writeable by 
+  // other classes. This class itself does not perform any placement.
   class PlacerBase
   {
     friend class Parser;
+    friend class RandomParititioner;
 
   public:
     PlacerBase();
@@ -304,6 +320,8 @@ namespace replace
     std::vector<Pin> pinStor_;
     std::vector<Net> netStor_;
 
+    // derive insts_, pins_ and nets_ from XXXStor_
+    void deriveIPNs();
     std::vector<Die *> dies_;
     std::vector<Instance *> insts_;
     std::vector<Pin *> pins_;

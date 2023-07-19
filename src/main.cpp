@@ -7,6 +7,7 @@
 #include "log.h"
 #include "replace.h"
 #include "plot.h"
+#include "partitioner.h"
 
 using namespace replace;
 using namespace TCLAP;
@@ -82,10 +83,15 @@ int main(int argc, const char *argv[])
     pb->printInfo();
     LOG_TRACE("Parse 23b Text File End");
 
-    Replace rp(targetDensity);
+    // then we do partition
+    Partitioner partitioner(targetDensity);
+    partitioner.partitioning(pb);
+    
+    // then we do optimization
+    Replace rp(1.0);
     rp.setPlacerBase(pb);
-    rp.doInitialPlace();
     rp.doNesterovPlace();
+    rp.doAbacusLegalization();
   }
 
   return 0;

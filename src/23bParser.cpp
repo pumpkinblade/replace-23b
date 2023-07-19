@@ -25,6 +25,7 @@ namespace replace
     std::vector<LIBCELL_DESC> cells;
   };
 
+  // INST_DESC include instance name and used cell name
   struct INST_DESC
   {
     std::string name;

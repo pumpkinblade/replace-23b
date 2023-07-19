@@ -40,4 +40,5 @@ lib
 *.jpg
 *.code-workspace
 core.[0-9]*
+module/CImg/.github
 

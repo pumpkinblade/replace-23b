@@ -306,6 +306,7 @@ namespace replace
     pb->dieStor_.back().setMaxUtil(1.0f);
     pb->dieStor_.back().setTech(tech.get());
     // assume all row has the same height and width
+
     int rowStartX = INT_MAX, rowStartY = INT_MAX;
     for (const auto &defRow : defdb.defRows)
     {
@@ -384,6 +385,8 @@ namespace replace
     // pb->placeStdcellsArea_ = 0;
     // pb->fixedMacrosArea_ = 0;
     // pb->fixedStdcellsArea_ = 0;
+
+    // record pointers of pin, net, insts to vector<T *>
     for(auto& inst : pb->instStor_)
     {
       int64_t instArea = static_cast<int64_t>(inst.dx()) * static_cast<int64_t>(inst.dy());
