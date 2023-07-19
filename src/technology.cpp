@@ -113,7 +113,9 @@ namespace replace
     LOG_INFO("MaxStdPin: {}", maxStdPin);
     LOG_INFO("AvgStdPin: {}", sumStdPin / numLibStdCell);
     LOG_INFO("MaxMacroPin: {}", maxMacroPin);
-    LOG_INFO("AvgMacroPin: {}", sumMacroPin / numLibMacro);
+    if(numLibMacro != 0){
+      LOG_INFO("AvgMacroPin: {}", sumMacroPin / numLibMacro);
+    }
   }
 
 }
