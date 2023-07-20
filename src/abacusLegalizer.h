@@ -71,9 +71,7 @@ namespace replace
     float qc() const { return qc_; }
     float ec() const { return ec_; }
 
-    void setXc(float x) { 
-      xc_ = x; 
-    }
+    void setXc(float x) { xc_ = x; }
   private:
     std::vector<AbacusCell *> cells_;
     float xc_;
@@ -136,9 +134,6 @@ namespace replace
 
     std::vector<AbacusRow> rowStor_;
     std::vector<AbacusCell> cellStor_;
-
-    std::vector<AbacusRow*> rows_;
-    std::vector<AbacusCell*> cells_;
   };
 
 }

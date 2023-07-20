@@ -228,6 +228,8 @@ namespace replace
     float maxUtil() const { return maxUtil_; }
     void setMaxUtil(float util) { maxUtil_ = util; }
 
+    bool isSetRow() { return isSetRow_; }
+
   private:
     int dieLx_;
     int dieLy_;
@@ -239,6 +241,7 @@ namespace replace
     int coreUx_;
     int coreUy_;
 
+    bool isSetRow_;
     int rowStartX_;
     int rowStartY_;
     int rowWidth_;

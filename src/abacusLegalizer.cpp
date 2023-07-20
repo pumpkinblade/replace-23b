@@ -116,7 +116,7 @@ namespace replace
 
     for (AbacusCluster& cluster : clusters_)
     {
-        cluster.place();
+      cluster.place();
     }
   }
 
@@ -162,47 +162,55 @@ namespace replace
 
     for(Die* die : pb_->dies())
     {
+      if(!die->isSetRow())
+        continue;
+
       reset(die);
-      std::sort(cells_.begin(), cells_.end(), [](const AbacusCell *left, const AbacusCell *right)
-                { return left->gpLx() < right->gpLx(); });
+      std::sort(cellStor_.begin(), cellStor_.end(), [](const AbacusCell& left, const AbacusCell& right)
+                { return left.gpLx() < right.gpLx(); });
       LOG_TRACE("finish sorting in AbacusLegalizer::doLegalization");
-      for(AbacusCell* cell : cells_)
+      for(AbacusCell& cell : cellStor_)
       {
         double cbest = std::numeric_limits<double>::infinity();
         AbacusRow* rbest = nullptr;
-        for(AbacusRow* row : rows_)
+        for(AbacusRow& row : rowStor_)
         {
-          double clowerBound = cell->gpLy() - row->ly();
+          double clowerBound = cell.gpLy() - row.ly();
           clowerBound *= clowerBound;
           if(clowerBound > cbest)
             continue;
-          if(row->usedWidth() + cell->width() > row->width())
+          if(row.usedWidth() + cell.width() > row.width())
             continue;
 
-          row->pushCell(cell);
-          row->placeRow();
-          double dx = cell->gpLx() - cell->lgLx();
-          double dy = cell->gpLy() - cell->lgLy();
+          row.pushCell(&cell);
+          row.placeRow();
+          double dx = cell.gpLx() - cell.lgLx();
+          double dy = cell.gpLy() - cell.lgLy();
           double c = dx * dx + dy * dy;
           if(c < cbest)
           {
             cbest = c;
-            rbest = row;
+            rbest = &row;
           }
           assert(rbest != nullptr);
-          row->popCell();
+          row.popCell();
         }
-        rbest->pushCell(cell);
+        if(rbest == nullptr)
+        {
+          LOG_ERROR("Lack of area. Can't do stdcell legalization on die `{}`", die->name());
+          break;
+        }
+        rbest->pushCell(&cell);
         rbest->placeRow();
       }
       LOG_TRACE("finish row assignment");
 
       LOG_TRACE("replace instance's location with its legalized location");
-      for(AbacusCell* cell : cells_)
+      for(AbacusCell& cell : cellStor_)
       {
-        int lx = static_cast<int>(cell->lgLx() + 0.5f);
-        int ly = static_cast<int>(cell->lgLy() + 0.5f);
-        cell->instance()->setLocation(lx, ly);
+        int lx = static_cast<int>(cell.lgLx() + 0.5f);
+        int ly = static_cast<int>(cell.lgLy() + 0.5f);
+        cell.instance()->setLocation(lx, ly);
       }
     }
 
@@ -234,26 +242,72 @@ namespace replace
         break;
       }
     }
-
-    cells_.resize(cellStor_.size());
-    for(size_t i = 0; i < cells_.size(); i++)
-    {
-      cells_[i] = &cellStor_[i];
-    }
   }
 
   void AbacusLegalizer::generateRows()
   {
     // TODO: If a row is blocked by macros or fixed instances, we should split it
+    std::vector<Instance*> obstacles;
+    for(Instance* inst : die_->insts())
+    {
+      if(inst->isFixed() || inst->isMacro())
+      {
+        obstacles.push_back(inst);
+      }
+    }
+    // sort obstacles by lx
+    std::sort(obstacles.begin(), obstacles.end(), [](const Instance* left, const Instance* right)
+              { return left->lx() < right->lx(); });
 
     rowStor_.reserve(die_->rowRepeatCount());
     for(int i = 0; i < die_->rowRepeatCount(); i++)
     {
-      rowStor_.emplace_back(static_cast<float>(die_->rowStartX()),
-                            static_cast<float>(die_->rowStartY() + i * die_->rowHeight()),
-                            static_cast<float>(die_->rowWidth()),
-                            static_cast<float>(die_->rowHeight()));
-      rows_.push_back(&rowStor_.back());
+      // rowStor_.emplace_back(static_cast<float>(die_->rowStartX()),
+      //                       static_cast<float>(die_->rowStartY() + i * die_->rowHeight()),
+      //                       static_cast<float>(die_->rowWidth()),
+      //                       static_cast<float>(die_->rowHeight()));
+      // rows_.push_back(&rowStor_.back());
+
+      int rowLx = die_->rowStartX();
+      int rowLy = die_->rowStartY() + i * die_->rowHeight();
+      int rowUx = die_->rowStartX() + die_->rowWidth();
+      int rowUy = die_->rowStartY() + (i + 1) * die_->rowHeight();
+
+      int currLx = rowLx;
+      for(Instance* obs : obstacles)
+      {
+        // find overlap
+        int lx = std::max(currLx, obs->lx());
+        int ly = std::max(rowLy, obs->ly());
+        int ux = std::min(rowUx, obs->ux());
+        int uy = std::min(rowUy, obs->uy());
+
+        // overlap exists
+        if(lx < ux && ly < uy)
+        {
+          // |        |        |******|     |
+          // ^        ^        ^      ^     ^
+          // rowLx    currLx   lx     ux    rowUx
+          if(currLx < lx)
+          {
+            // create subrow
+            rowStor_.emplace_back(static_cast<float>(currLx),
+                                  static_cast<float>(rowLy),
+                                  static_cast<float>(lx - currLx),
+                                  static_cast<float>(rowUy - rowLy));
+          }
+          // update currLx
+          currLx = ux;
+        }
+      }
+      
+      if(currLx < rowUx)
+      {
+        rowStor_.emplace_back(static_cast<float>(currLx),
+                              static_cast<float>(rowLy),
+                              static_cast<float>(rowUx - currLx),
+                              static_cast<float>(rowUy - rowLy));
+      }
     }
   }
 
@@ -261,8 +315,6 @@ namespace replace
   {
     rowStor_.clear();
     cellStor_.clear();
-    rows_.clear();
-    cells_.clear();
     die_ = die;
 
     generateCells();
