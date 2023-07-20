@@ -1,9 +1,9 @@
-# $1 : mode : lefdef or 23b, default to lefdef
+# $1 : mode : lefdef or 23b
 # $2 : case id : int
 
 # set default value
-mode=${1:-lefdef}
-testcase=${2:-1}
+mode=${1:-23b}
+testcase=${2:-2}
 
 # clean dumped core file
 rm -rf core.[0-9]*

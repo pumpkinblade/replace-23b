@@ -2,6 +2,8 @@
 #define __REPLACE_HEADER__
 
 #include <memory>
+#include <string>
+using std::string;
 
 namespace replace
 {
@@ -26,7 +28,9 @@ namespace replace
     void setPlacerBase(const std::shared_ptr<PlacerBase>& pb);
 
     void doInitialPlace();
-    void doNesterovPlace();
+    // placename is only used for LOG and plotted picture names to distinguish
+    // the placements before and after partition
+    void doNesterovPlace(string placename = "");
     void doAbacusLegalization();
 
     // Initial Place param settings

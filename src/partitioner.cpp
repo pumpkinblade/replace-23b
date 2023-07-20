@@ -55,7 +55,7 @@ namespace replace{
         // 先使用replace进行以此global placement
         replace_->setPlacerBase(pb_);
         replace_->doInitialPlace();
-        replace_->doNesterovPlace();
+        replace_->doNesterovPlace("pregp");
 
         // TODO: move cell to bottom only where exists overlap
         LOG_TRACE("start partition");

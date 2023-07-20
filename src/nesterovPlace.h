@@ -4,6 +4,8 @@
 #include "point.h"
 #include <memory>
 #include <vector>
+#include <string>
+using std::string;
 
 namespace replace
 {
@@ -35,7 +37,7 @@ public:
       std::shared_ptr<NesterovBase> nb);
   ~NesterovPlace();
 
-  void doNesterovPlace();
+  void doNesterovPlace(string placename = "");
 
   void updateCoordi(
       std::vector<FloatPoint>& coordi);

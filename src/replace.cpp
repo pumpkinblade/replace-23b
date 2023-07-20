@@ -84,7 +84,7 @@ namespace replace
     ip_->doBicgstabPlace();
   }
 
-  void Replace::doNesterovPlace()
+  void Replace::doNesterovPlace(string placename)
   {
     NesterovBaseVars nbVars;
     nbVars.targetDensity = density_;
@@ -116,7 +116,7 @@ namespace replace
     std::unique_ptr<NesterovPlace> np(new NesterovPlace(npVars, pb_, nb_));
     np_ = std::move(np);
 
-    np_->doNesterovPlace();
+    np_->doNesterovPlace(placename);
   }
 
   void Replace::doAbacusLegalization()

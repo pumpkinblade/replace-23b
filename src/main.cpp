@@ -91,7 +91,7 @@ int main(int argc, const char *argv[])
     // then we do optimization
     Replace rp(1.0);
     rp.setPlacerBase(pb);
-    rp.doNesterovPlace();
+    rp.doNesterovPlace("postgp");
     // we can't do stdcell legalization, because macros exist
     //rp.doAbacusLegalization();
     Plot::plot(pb.get(), "./plot/cell", "after_placement");
