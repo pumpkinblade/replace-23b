@@ -577,35 +577,37 @@ void BinGrid::initBins()
     = static_cast<int64_t>(ux_ - lx_) 
     * static_cast<int64_t>(uy_ - ly_);
 
-  // assume no fixed instance
-  int64_t averagePlaceInstArea = 0;
-  for(Instance* inst : die_->placeInsts())
-  {
-    int64_t area = (int64_t)inst->dx() * inst->dy();
-    averagePlaceInstArea += area;
-  }
-  averagePlaceInstArea /= die_->placeInsts().size();
-
-  int64_t idealBinArea = 
-    std::round(static_cast<float>(averagePlaceInstArea) / targetDensity_);
-  int idealBinCnt = totalBinArea / idealBinArea; 
-  
-  LOG_INFO("TargetDensity: {}", targetDensity_);
-  LOG_INFO("AveragePlaceInstArea: {}", averagePlaceInstArea);
-  LOG_INFO("IdealBinArea: {}", idealBinArea);
-  LOG_INFO("IdealBinCnt: {}", idealBinCnt);
-  LOG_INFO("TotalBinArea: {}", totalBinArea);
-
   int foundBinCnt = 2;
-  // find binCnt: 2, 4, 8, 16, 32, 64, ...
-  // s.t. binCnt^2 <= idealBinCnt <= (binCnt*2)^2.
-  for(foundBinCnt = 2; foundBinCnt <= 1024; foundBinCnt *= 2) {
-    if( foundBinCnt * foundBinCnt <= idealBinCnt 
-        && 4 * foundBinCnt * foundBinCnt > idealBinCnt ) {
-      break;
+  if (die_->placeInsts().size() != 0)
+  {
+    // assume no fixed instance
+    int64_t averagePlaceInstArea = 0;
+    for(Instance* inst : die_->placeInsts())
+    {
+      int64_t area = (int64_t)inst->dx() * inst->dy();
+      averagePlaceInstArea += area;
+    }
+    averagePlaceInstArea /= die_->placeInsts().size();
+
+    int64_t idealBinArea = 
+      std::round(static_cast<float>(averagePlaceInstArea) / targetDensity_);
+    int idealBinCnt = totalBinArea / idealBinArea; 
+    
+    LOG_INFO("TargetDensity: {}", targetDensity_);
+    LOG_INFO("AveragePlaceInstArea: {}", averagePlaceInstArea);
+    LOG_INFO("IdealBinArea: {}", idealBinArea);
+    LOG_INFO("IdealBinCnt: {}", idealBinCnt);
+    LOG_INFO("TotalBinArea: {}", totalBinArea);
+
+    // find binCnt: 2, 4, 8, 16, 32, 64, ...
+    // s.t. binCnt^2 <= idealBinCnt <= (binCnt*2)^2.
+    for(foundBinCnt = 2; foundBinCnt <= 1024; foundBinCnt *= 2) {
+      if( foundBinCnt * foundBinCnt <= idealBinCnt 
+          && 4 * foundBinCnt * foundBinCnt > idealBinCnt ) {
+        break;
+      }
     }
   }
-
   // setBinCntX_;
   if( !isSetBinCntX_ ) {
     binCntX_ = foundBinCnt;
@@ -1105,6 +1107,10 @@ void NesterovBase::init()
 // virtual filler GCells
 void NesterovBase::initFillerGCells(Die* die)
 {
+  // if die does have any instance, we will not create any filler.
+  if(die->placeInsts().size() == 0)
+    return;
+
   // extract average dx/dy in range (10%, 90%)
   vector<int> dxStor;
   vector<int> dyStor;

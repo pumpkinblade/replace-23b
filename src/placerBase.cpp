@@ -225,6 +225,29 @@ namespace replace
   void Die::removeInstance(Instance *inst)
   {
     insts_.erase(std::remove(insts_.begin(), insts_.end(), inst), insts_.end());
+    if (inst->isFixed())
+    {
+      fixedInsts_.erase(std::remove(fixedInsts_.begin(), fixedInsts_.end(), inst), fixedInsts_.end());
+    }
+    else
+    {
+      placeInsts_.erase(std::remove(placeInsts_.begin(), placeInsts_.end(), inst), placeInsts_.end());
+    }
+
+    int64_t area = static_cast<int64_t>(inst->dx()) *
+                   static_cast<int64_t>(inst->dy());
+    if (inst->isFixed())
+    {
+      fixedInstsArea_ -= area;
+    }
+    else if (inst->isMacro())
+    {
+      placeMacrosArea_ -= area;
+    }
+    else
+    {
+      placeStdcellsArea_ -= area;
+    }
   }
 
   ////////////////////////////////////////////////////////

@@ -335,12 +335,16 @@ namespace replace
     // terminal die
     pb->dieStor_.emplace_back();
     pb->dieStor_.back().setName("terminal");
+    pb->dieStor_.back().setDieBox(desc.topDieDesc.lx, desc.topDieDesc.ly,
+                                  desc.topDieDesc.ux, desc.topDieDesc.uy);
     pb->dieStor_.back().setCoreBox(desc.topDieDesc.lx, desc.topDieDesc.ly,
                                    desc.topDieDesc.ux, desc.topDieDesc.uy);
     pb->dieNameMap_.emplace("terminal", &pb->dieStor_.back());
     // Note that if a die is in pb->dies_, then it will participate in global placement
     // therefore, we only push top die into pb->dies_
     pb->dies_.push_back(pb->die("top"));
+    pb->dies_.push_back(pb->die("bottom"));
+    pb->dies_.push_back(pb->die("terminal"));
 
     // Process terminal
     pb->termSizeX_ = desc.termSizeX;

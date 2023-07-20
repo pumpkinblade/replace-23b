@@ -42,7 +42,7 @@ namespace replace{
         //         // pin.setInstance(pin23b->instName());
         //     }
         // }
-
+        return nullptr;
     }
 
     Partitioner::Partitioner(float targetDensity){
