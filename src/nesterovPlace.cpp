@@ -273,7 +273,7 @@ NesterovPlace::updateGradients(
 }
 
 void
-NesterovPlace::doNesterovPlace() {
+NesterovPlace::doNesterovPlace(string placename) {
 
   // if replace diverged in init() function, 
   // replace must be skipped.
@@ -282,9 +282,12 @@ NesterovPlace::doNesterovPlace() {
     return;
   }
 
-  Plot::plot(nb_.get(), PlotNesterovType::GCell, "./plot/cell", "cell_0");
-  Plot::plot(nb_.get(), PlotNesterovType::Bin, "./plot/bin", "bin_0");
-  Plot::plot(nb_.get(), PlotNesterovType::Arrow, "./plot/arrow", "arrow_0");
+  if(placename!="" && placename[placename.length() - 1] != '_'){ 
+    placename.push_back('_');
+  }
+  Plot::plot(nb_.get(), PlotNesterovType::GCell, "./plot/cell", placename + "cell_0");
+  Plot::plot(nb_.get(), PlotNesterovType::Bin, "./plot/bin", placename + "bin_0");
+  Plot::plot(nb_.get(), PlotNesterovType::Arrow, "./plot/arrow", placename + "arrow_0");
 
 
   // backTracking variable.
@@ -410,9 +413,9 @@ NesterovPlace::doNesterovPlace() {
 
     if( i == 0 || (i+1) % 100 == 0 ) {
       LOG_INFO("[NesterovSolve] Iter: {} overflow: {} HPWL: {}", i+1, sumOverflow_, prevHpwl_);
-      Plot::plot(nb_.get(), PlotNesterovType::GCell, "./plot/cell", "cell_" + std::to_string(i+1));
-      Plot::plot(nb_.get(), PlotNesterovType::Bin, "./plot/bin", "bin_" + std::to_string(i+1));
-      Plot::plot(nb_.get(), PlotNesterovType::Arrow, "./plot/arrow", "arrow_" + std::to_string(i+1));
+      Plot::plot(nb_.get(), PlotNesterovType::GCell, "./plot/cell", placename + "cell_" + std::to_string(i+1));
+      Plot::plot(nb_.get(), PlotNesterovType::Bin, "./plot/bin", placename + "bin_" + std::to_string(i+1));
+      Plot::plot(nb_.get(), PlotNesterovType::Arrow, "./plot/arrow", placename + "arrow_" + std::to_string(i+1));
     }
 
     if( minSumOverflow > sumOverflow_ ) {

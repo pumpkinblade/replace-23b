@@ -27,6 +27,7 @@ namespace replace
     int x_, y_;
   };
 
+  // LibCell can be macro or not, has shape, and named pins
   class LibCell
   {
   public:
@@ -56,6 +57,7 @@ namespace replace
     std::unordered_map<std::string, LibPin*> pinNameMap_;
   };
 
+  // Technology is primarily a cellname-to-cellclass map
   class Technology
   {
     friend class Parser;
