@@ -32,6 +32,7 @@ namespace replace{
             // std::shared_ptr<Technology> technology_;
             // std::shared_ptr<PlacerBase> placerBase_;
             std::shared_ptr<Replace> replace_;
+            // std::shared_ptr<> replace_;
 
 
     };

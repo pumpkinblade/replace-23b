@@ -87,6 +87,21 @@ int main(int argc, const char *argv[])
     rp.doInitialPlace();
     rp.doNesterovPlace();
   }
+    else if (mode == "latest")
+  {
+    LOG_TRACE("Parse 23b Text File Begin");
+    std::shared_ptr<PlacerBase> pb = Parser::txtToPlacerBase(txtFilename);
+    pb->printInfo();
+    LOG_TRACE("Parse 23b Text File End");
+
+    Replace rp(targetDensity);
+    rp.setPlacerBase(pb);
+    rp.doInitialPlace();
+    rp.doNesterovPlace();
+    rp.doLayerAssignment();
+
+  }
+
 
   return 0;
 }

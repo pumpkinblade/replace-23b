@@ -46,6 +46,7 @@ set(PLACE_HEADER
   src/technology.h
   # src/placer23b.h
   src/abacusLegalizer.h
+  src/layerAssignmenter.h
 )
 
 set(PLACE_SRC
@@ -67,6 +68,7 @@ set(PLACE_SRC
   # src/placer23b.cpp
   src/23bParser.cpp
   src/abacusLegalizer.cpp
+  src/layerAssignmenter.cpp
 )
 
 add_executable(replace ${PLACE_SRC} ${PLACE_HEADER})
