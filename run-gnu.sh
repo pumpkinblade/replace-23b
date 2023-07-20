@@ -1,7 +1,14 @@
 # $1 : mode : lefdef or 23b, default to lefdef
+# $2 : case id : int
 
+# set default value
 mode=${1:-lefdef}
+testcase=${2:-1}
 
+# clean dumped core file
+rm -rf core.[0-9]*
+
+# BUILD
 cmake -DCMAKE_BUILD_TYPE=Debug -B build
 cmake --build build
 # on build failure, exit
@@ -10,6 +17,7 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
+# RUN
 echo mode: $mode 
 rm -rf plot/*/*.jpg
 case $mode in 
@@ -18,7 +26,7 @@ lefdef)
                                     --def ./test/ispd18_test1.input.def
     ;;
 23b)
-    ./build/replace --mode ${mode} --txt23b test/ProblemB_case1.txt 
+    ./build/replace --mode ${mode} --txt23b test/ProblemB_case${testcase}.txt 
     ;;
 *)
     echo unknown mode $mode
