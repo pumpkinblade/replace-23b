@@ -143,7 +143,7 @@ namespace replace
 
       LOG_TRACE("{} has been saved.", saveName);
 
-      int dieIdx = 0;
+      dieIdx++;
     }
   }
 
@@ -213,7 +213,7 @@ namespace replace
 
       if(inst->isMacro())
       {
-        img_->draw_rectangle(x1, y1, x3, y3, g_cyron.data(), opacity / 2.f);
+        img_->draw_rectangle(x1, y1, x3, y3, g_red.data(), opacity);
       }
       else
       {
@@ -264,7 +264,8 @@ namespace replace
     int arrowSpacing = (binMaxX / 16 <= 0) ? 1 : binMaxX / 16;
 
     // below is essential for extracting e?Max
-    float exMax = -1e30f, eyMax = -1e30f, ezMax = -1e30f;
+    float exMax = std::numeric_limits<float>::epsilon();
+    float eyMax = std::numeric_limits<float>::epsilon();
     for (int i = 0; i < binMaxX; i += arrowSpacing)
     {
       for (int j = 0; j < binMaxY; j += arrowSpacing)
