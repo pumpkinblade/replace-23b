@@ -132,7 +132,9 @@ namespace replace
   Die::Die() 
       : dieLx_(0), dieLy_(0), dieUx_(0), dieUy_(0),
         coreLx_(0), coreLy_(0), coreUx_(0), coreUy_(0),
-        fixedInstsArea_(0), placeStdcellsArea_(0), placeMacrosArea_(0)
+        fixedInstsArea_(0), placeStdcellsArea_(0), placeMacrosArea_(0),
+        rowStartX_(0), rowStartY_(0), rowWidth_(0), rowHeight_(0),
+        rowRepeatCount_(0), isSetRow_(false)
   {
   }
 
@@ -173,6 +175,7 @@ namespace replace
     rowWidth_ = width;
     rowHeight_ = height;
     rowRepeatCount_ = repeatCount;
+    isSetRow_ = true;
 
     coreLx_ = rowStartX_;
     coreLy_ = rowStartY_;
@@ -187,6 +190,7 @@ namespace replace
     rowWidth_       = ano.rowWidth()       ; 
     rowHeight_      = ano.rowHeight()      ;
     rowRepeatCount_ = ano.rowRepeatCount() ;
+    isSetRow_       = ano.isSetRow_;
 
     coreLx_         = ano.coreLx()         ;
     coreLy_         = ano.coreLy()         ;
