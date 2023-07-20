@@ -6,6 +6,7 @@
 
 namespace replace
 {
+  // this class just hold name of cell used by this instance
   class Instance23b
   {
   public:
