@@ -8,6 +8,7 @@
 namespace replace
 {
   class Instance;
+  class Die;
   class PlacerBase;
 
   class AbacusLegalizerVars
@@ -125,9 +126,13 @@ namespace replace
     void generateCells();
     void generateRows();
 
+    void reset(Die* die);
+
   private:
     std::shared_ptr<PlacerBase> pb_;
     AbacusLegalizerVars lgVars_;
+
+    Die* die_;
 
     std::vector<AbacusRow> rowStor_;
     std::vector<AbacusCell> cellStor_;

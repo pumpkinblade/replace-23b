@@ -152,72 +152,73 @@ namespace replace
   {
     lgVars_ = lgVars;
     pb_ = pb;
-
-    generateCells();
-    generateRows();
   }
 
   void AbacusLegalizer::doLegalization()
   {
-    LOG_TRACE("start AbacusLegalizer::doLegalization");
-    std::sort(cells_.begin(), cells_.end(), [](const AbacusCell *left, const AbacusCell *right)
-              { return left->gpLx() < right->gpLx(); });
-    LOG_TRACE("finish sorting in AbacusLegalizer::doLegalization");
-    for(AbacusCell* cell : cells_)
-    {
-      double cbest = std::numeric_limits<double>::infinity();
-      AbacusRow* rbest = nullptr;
-      for(AbacusRow* row : rows_)
-      {
-        double clowerBound = cell->gpLy() - row->ly();
-        clowerBound *= clowerBound;
-        if(clowerBound > cbest)
-          continue;
-        if(row->usedWidth() + cell->width() > row->width())
-          continue;
-
-        row->pushCell(cell);
-        row->placeRow();
-        double dx = cell->gpLx() - cell->lgLx();
-        double dy = cell->gpLy() - cell->lgLy();
-        double c = dx * dx + dy * dy;
-        if(c < cbest)
-        {
-          cbest = c;
-          rbest = row;
-        }
-        assert(rbest != nullptr);
-        row->popCell();
-      }
-      rbest->pushCell(cell);
-      rbest->placeRow();
-    }
-    
-    LOG_TRACE("finish row assignment");
-
-    Plot::plot(pb_.get(), "./plot/cell", "before_lg");
-
     int64_t hpwlBeforeLG = pb_->hpwl();
     LOG_INFO("hpwl Before AbacusLegalization: {}", hpwlBeforeLG);
-    for(AbacusCell* cell : cells_)
+    Plot::plot(pb_.get(), "./plot/cell", "before_lg");
+
+    for(Die* die : pb_->dies())
     {
-      int lx = static_cast<int>(cell->lgLx() + 0.5f);
-      int ly = static_cast<int>(cell->lgLy() + 0.5f);
-      cell->instance()->setLocation(lx, ly);
+      reset(die);
+      std::sort(cells_.begin(), cells_.end(), [](const AbacusCell *left, const AbacusCell *right)
+                { return left->gpLx() < right->gpLx(); });
+      LOG_TRACE("finish sorting in AbacusLegalizer::doLegalization");
+      for(AbacusCell* cell : cells_)
+      {
+        double cbest = std::numeric_limits<double>::infinity();
+        AbacusRow* rbest = nullptr;
+        for(AbacusRow* row : rows_)
+        {
+          double clowerBound = cell->gpLy() - row->ly();
+          clowerBound *= clowerBound;
+          if(clowerBound > cbest)
+            continue;
+          if(row->usedWidth() + cell->width() > row->width())
+            continue;
+
+          row->pushCell(cell);
+          row->placeRow();
+          double dx = cell->gpLx() - cell->lgLx();
+          double dy = cell->gpLy() - cell->lgLy();
+          double c = dx * dx + dy * dy;
+          if(c < cbest)
+          {
+            cbest = c;
+            rbest = row;
+          }
+          assert(rbest != nullptr);
+          row->popCell();
+        }
+        rbest->pushCell(cell);
+        rbest->placeRow();
+      }
+      LOG_TRACE("finish row assignment");
+
+      LOG_TRACE("replace instance's location with its legalized location");
+      for(AbacusCell* cell : cells_)
+      {
+        int lx = static_cast<int>(cell->lgLx() + 0.5f);
+        int ly = static_cast<int>(cell->lgLy() + 0.5f);
+        cell->instance()->setLocation(lx, ly);
+      }
     }
+
     int64_t hpwlAfterLG = pb_->hpwl();
     LOG_INFO("hpwl After AbacusLegalization: {}", hpwlAfterLG);
-
     Plot::plot(pb_.get(), "./plot/cell", "after_lg");
   }
 
   void AbacusLegalizer::generateCells()
   {
-    // TODO: Macros and fixed instances should not be treated as AbacusCell
-
-    cellStor_.reserve(pb_->insts().size());
-    for(Instance* inst : pb_->insts())
+    // Macros and fixed instances should not be treated as AbacusCell
+    cellStor_.reserve(die_->placeInsts().size());
+    for(Instance* inst : die_->placeInsts())
     {
+      if(inst->isMacro())
+        continue;
       cellStor_.emplace_back(inst);
       switch (lgVars_.weightOpt)
       {
@@ -235,7 +236,8 @@ namespace replace
     }
 
     cells_.resize(cellStor_.size());
-    for(size_t i = 0; i < cells_.size(); i++){
+    for(size_t i = 0; i < cells_.size(); i++)
+    {
       cells_[i] = &cellStor_[i];
     }
   }
@@ -244,14 +246,26 @@ namespace replace
   {
     // TODO: If a row is blocked by macros or fixed instances, we should split it
 
-    rowStor_.reserve(pb_->die()->rowRepeatCount());
-    for(int i = 0; i < pb_->die()->rowRepeatCount(); i++)
+    rowStor_.reserve(die_->rowRepeatCount());
+    for(int i = 0; i < die_->rowRepeatCount(); i++)
     {
-      rowStor_.emplace_back(static_cast<float>(pb_->die()->rowStartX()),
-                            static_cast<float>(pb_->die()->rowStartY() + i * pb_->die()->rowHeight()),
-                            static_cast<float>(pb_->die()->rowWidth()),
-                            static_cast<float>(pb_->die()->rowHeight()));
+      rowStor_.emplace_back(static_cast<float>(die_->rowStartX()),
+                            static_cast<float>(die_->rowStartY() + i * die_->rowHeight()),
+                            static_cast<float>(die_->rowWidth()),
+                            static_cast<float>(die_->rowHeight()));
       rows_.push_back(&rowStor_.back());
     }
+  }
+
+  void AbacusLegalizer::reset(Die* die)
+  {
+    rowStor_.clear();
+    cellStor_.clear();
+    rows_.clear();
+    cells_.clear();
+    die_ = die;
+
+    generateCells();
+    generateRows();
   }
 }
