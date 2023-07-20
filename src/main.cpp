@@ -106,8 +106,10 @@ int main(int argc, const char *argv[])
     Replace rp(targetDensity);
     rp.setPlacerBase(pb);
     rp.doInitialPlace();
-    rp.doNesterovPlace();
+    rp.doNesterovPlace("pregp");
     rp.doLayerAssignment();
+    rp.setTargetDensity(1.0);
+    rp.doNesterovPlace("postgp");
 
   }
 

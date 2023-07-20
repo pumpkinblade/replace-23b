@@ -30,15 +30,20 @@ namespace replace{
                 int layer = rand() % 2;
                 if (layer == 0){
                     topdieGCells_.emplace_back(cell);
-                    LOG_INFO("topcell: ");
+                    // LOG_INFO("topcell: ");
                 }
                 else{
+                    for(Instance* inst_ : cell->insts()){
+                        pb_->die("top")->removeInstance(inst_);
+                        pb_->die("bottom")->addInstance(inst_);
+                    }
                     bottomdieGCells_.emplace_back(cell);
-                    LOG_INFO("bottomcell: ");
+                    // LOG_INFO("bottomcell: ");
                 }
 
             }
         }
+        
 
         // 然后对每一个overlap进行layer assignment
     }
