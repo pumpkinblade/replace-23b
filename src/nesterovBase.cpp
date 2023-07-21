@@ -939,6 +939,7 @@ NesterovBase::~NesterovBase() {
 
 void NesterovBase::init()
 {
+  LOG_TRACE("start NesterovBase::init");
   // gCellStor init
   gCellStor_.reserve(pb_->placeInsts().size());
   for(Instance* inst : pb_->placeInsts())
@@ -968,6 +969,7 @@ void NesterovBase::init()
     gPinStor_.push_back(myGPin);
   }
 
+  LOG_TRACE("in NesterovBase::init gNetStor init");
   // gNetStor init
   gNetStor_.reserve(pb_->nets().size());
   for(auto& net : pb_->nets())
@@ -976,6 +978,7 @@ void NesterovBase::init()
     gNetStor_.push_back(myGNet);
   }
 
+  LOG_TRACE("in NesterovBase::init create filler for each die");
   // create filler for each die
   std::unordered_map<Die*, std::pair<int, int>> fillerIdxMap;
   for(Die* die : pb_->dies())
@@ -986,6 +989,7 @@ void NesterovBase::init()
     fillerIdxMap.emplace(die, std::make_pair(startIdx, endIdx));
   }
 
+  LOG_TRACE("in NesterovBase::init gCell ptr init");
   // gCell ptr init
   gCells_.reserve(gCellStor_.size());
   for(auto& gCell : gCellStor_)
@@ -997,6 +1001,7 @@ void NesterovBase::init()
     }
   }
 
+  LOG_TRACE("in NesterovBase::init gPin ptr init");
 // gPin ptr init
   gPins_.reserve(gPinStor_.size());
   for(auto& gPin : gPinStor_)
@@ -1160,6 +1165,7 @@ void NesterovBase::initFillerGCells(Die* die)
               "\tRe-floorplan to have enough coreArea");
   }
 
+  assert(avgDx * avgDy > 0);
   int fillerCnt = static_cast<int>(totalFillerArea / ((int64_t)avgDx * avgDy));
 
   LOG_INFO("FillerInit: CoreArea: {}", coreArea);

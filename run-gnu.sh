@@ -3,7 +3,7 @@
 
 # set default value
 mode=${1:-23b}
-testcase=${2:-2}
+testcase=${2:-1}
 
 # clean dumped core file
 rm -rf core.[0-9]*

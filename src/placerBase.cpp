@@ -136,7 +136,7 @@ namespace replace
     pins_.erase(
       std::remove(pins_.begin(), pins_.end(), pin),
       pins_.end()
-    )
+    );
   }
 
   ////////////////////////////////////////////////////////
@@ -279,6 +279,23 @@ namespace replace
   PlacerBase::~PlacerBase()
   {
     reset();
+  }
+
+  Instance& PlacerBase::emplaceInstance(){
+    instStor_.emplace_back();
+    insts_.push_back(&instStor_.back());
+    return instStor_.back();
+  }
+
+  Pin& PlacerBase::emplacePin(){
+    pinStor_.emplace_back();
+    pins_.push_back(&pinStor_.back());
+    return pinStor_.back();
+  }
+
+  void PlacerBase::addNet(const Net& net){
+    netStor_.push_back(std::move(net));
+    nets_.push_back(&netStor_.back());
   }
 
   void PlacerBase::reset()

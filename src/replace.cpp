@@ -87,6 +87,7 @@ namespace replace
 
   void Replace::doNesterovPlace(string placename)
   {
+    LOG_TRACE("start Replace::doNesterovPlace");
     NesterovBaseVars nbVars;
     nbVars.targetDensity = density_;
 

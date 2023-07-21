@@ -274,7 +274,7 @@ NesterovPlace::updateGradients(
 
 void
 NesterovPlace::doNesterovPlace(string placename) {
-
+  LOG_TRACE("start NesterovPlace::doNesterovPlace");
   // if replace diverged in init() function, 
   // replace must be skipped.
   if( isDiverged_ ) {

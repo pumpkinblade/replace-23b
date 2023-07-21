@@ -323,6 +323,12 @@ namespace replace
     int terminalSpacing() const { return termSpace_; }
     int terminalCost() const { return termCost_; }
 
+    // some modifier methods
+    // create a new instance in instStor_, return reference
+    Instance& emplaceInstance();
+    Pin& emplacePin();
+    void addNet(const Net& net);
+
   private:
     void reset();
 

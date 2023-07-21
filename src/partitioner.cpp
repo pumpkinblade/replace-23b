@@ -64,16 +64,15 @@ namespace replace{
 
         // create bottom nets
         std::vector<Net> bottomNets;
-        std::vector<Net*>& topNets = pb_->nets();
+        const std::vector<Net*>& topNets = pb_->nets();
         bottomNets.reserve(pb_->nets().size());
         for(auto topnetptr : pb_->nets()){
-            bottomNets.emplace_back()
+            bottomNets.emplace_back();
         }
         std::unordered_map<Net*, Net*> topBotMap;
-        for(int i=0; i<bottomNets.size()){
+        for(int i=0; i<bottomNets.size(); i++){
             topBotMap.emplace(topNets[i], &bottomNets[i]);
         }
-        
 
         // 对replace布局后的结果进行layer assignment
         for (Instance* instance : pb_->insts()){
@@ -89,8 +88,6 @@ namespace replace{
                 instance->setSize(*bottomdie.tech());
                 bottomdie.addInstance(instance);
 
-                // TODO: what about pins?
-                // TODO: what about nets?
                 // When an instance is moved from top to bottom, nets connected
                 // by the pins of this instance should be spilted to two
                 // because current Net Class does not keep layer info of pin and
@@ -113,18 +110,28 @@ namespace replace{
 
         // TODO: when this loop finish, we should clean empty top nets.
         //          and add terminal
-        // TODO: add terminal instance to terminal die
         for(int i=0;i<bottomNets.size();i++){
             auto topNet = topNets[i];
+            Net& botNet = *topBotMap[topNet];
             // if bottom net is not empty
-            if(topBotMap[topNet]->pins().size() > 0){
-                // if top net is empty, remove this top net
+            if(botNet.pins().size() > 0){
+                // TODO: if top net is empty, remove this top net
                 if(topNet->pins().size() == 0){
-                    
+                    ;
                 } else {    // add terminal
-                    
-                    pb_->die("terminal")->addInstance()
+                    Instance& inst = pb_->emplaceInstance();
+                    inst.setSize(pb_->terminalSizeX(), pb_->terminalSizeY());
+
+                    Pin& pinTop = pb_->emplacePin();
+                    Pin& pinBot = pb_->emplacePin();
+                    // add pin to net
+                    topNet->addPin(&pinTop); botNet.addPin(&pinBot);
+                    // add pin to instance
+                    inst.addPin(&pinTop); inst.addPin(&pinBot);
+                    // add instace to die
+                    pb_->die("terminal")->addInstance(&inst);
                 }
+                pb_->addNet(botNet);
             }
         }
 
