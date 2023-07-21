@@ -31,6 +31,9 @@ namespace replace
     void setCenterLocation(int x, int y);
     // w for x dimension, h for y dimension
     void setSize(int w, int h);
+    // use libCellName_ to get LibCell data under tech. and set 
+    // instance size to the LibCell size
+    void setSize(Technology& tech);
     void setBox(int lx, int ly, int ux, int uy);
 
     int lx() const { return lx_; }
@@ -74,6 +77,8 @@ namespace replace
     std::unordered_map<std::string, Pin*> pinNameMap_;
   };
 
+  // A Pin belongs to one instance, can be connected to no more than one net,
+  // and has location info
   class Pin
   {
   public:
@@ -134,6 +139,8 @@ namespace replace
     std::string name_;
   };
 
+  // Net can have name, a vector of pins, 
+  // and hold a boundary to calculate HPWL
   class Net
   {
   public:
@@ -150,11 +157,13 @@ namespace replace
     // HPWL: half-parameter-wire-length
     int64_t hpwl() const { return static_cast<int64_t>((ux_ - lx_) + (uy_ - ly_)); }
 
+    // NOTE: this should be called sometime.
     void updateBox();
 
     const std::vector<Pin *> &pins() const { return pins_; }
 
     void addPin(Pin *pin);
+    void removePin(Pin *pin);
 
     const std::string &name() const { return name_; }
     void setName(const std::string &name) { name_ = name; }

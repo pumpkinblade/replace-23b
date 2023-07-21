@@ -34,6 +34,12 @@ namespace replace
     setBox(lx_, ly_, lx_ + w, ly_ + h);
   }
 
+  void Instance::setSize(Technology &tech)
+  {
+    auto& libcell = *tech.libCell(libCellName());
+    setSize(libcell.sizeX(), libcell.sizeY());
+  }
+
   void Instance::setBox(int lx, int ly, int ux, int uy)
   {
     lx_ = lx;
@@ -124,6 +130,13 @@ namespace replace
   void Net::addPin(Pin *pin)
   {
     pins_.push_back(pin);
+  }
+
+  void Net::removePin(Pin *pin){
+    pins_.erase(
+      std::remove(pins_.begin(), pins_.end(), pin),
+      pins_.end()
+    )
   }
 
   ////////////////////////////////////////////////////////

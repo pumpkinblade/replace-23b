@@ -4,6 +4,7 @@
 #include "placer23b.h"
 #include "partitioner.h"
 #include "replace.h"
+#include <unordered_map>
 
 namespace replace{
 
@@ -60,18 +61,72 @@ namespace replace{
         // TODO: move cell to bottom only where exists overlap
         LOG_TRACE("start partition");
         srand(10086);
+
+        // create bottom nets
+        std::vector<Net> bottomNets;
+        std::vector<Net*>& topNets = pb_->nets();
+        bottomNets.reserve(pb_->nets().size());
+        for(auto topnetptr : pb_->nets()){
+            bottomNets.emplace_back()
+        }
+        std::unordered_map<Net*, Net*> topBotMap;
+        for(int i=0; i<bottomNets.size()){
+            topBotMap.emplace(topNets[i], &bottomNets[i]);
+        }
+        
+
         // 对replace布局后的结果进行layer assignment
-        for (auto instance : pb_->insts()){
+        for (Instance* instance : pb_->insts()){
             float roll = (float) rand()/RAND_MAX;
             bool moveToBottom = roll >= 0.5 ? true : false;
             if(moveToBottom){
-                pb_->die("top")->removeInstance(instance);
-                pb_->die("bottom")->addInstance(instance);
+                Die& topdie = *pb_->die("top");
+                Die& bottomdie = *pb_->die("bottom");
+
+                topdie.removeInstance(instance);
+
+                // set instance size by bottom die technology
+                instance->setSize(*bottomdie.tech());
+                bottomdie.addInstance(instance);
+
+                // TODO: what about pins?
+                // TODO: what about nets?
+                // When an instance is moved from top to bottom, nets connected
+                // by the pins of this instance should be spilted to two
+                // because current Net Class does not keep layer info of pin and
+                // calculate HPWL assuming pins on the same layer.
+
+                // So at the start, all nets are on the top layer, we name them
+                // TOP NETS, and we create BOTTOM NETS, each bottom net 
+                // correponds to one top net. When we move instance to bottom,
+                // we also remove pin in top net and add it to bottom net.
+                for(Pin* pin : instance->pins()){
+                    auto topnet = pin->net();
+                    topnet->removePin(pin);
+                    topBotMap[topnet]->addPin(pin);
+                }
+
+                // Also, under different tech node, the pin offset from instance
+                // is different
             }
         }
 
+        // TODO: when this loop finish, we should clean empty top nets.
+        //          and add terminal
         // TODO: add terminal instance to terminal die
-
+        for(int i=0;i<bottomNets.size();i++){
+            auto topNet = topNets[i];
+            // if bottom net is not empty
+            if(topBotMap[topNet]->pins().size() > 0){
+                // if top net is empty, remove this top net
+                if(topNet->pins().size() == 0){
+                    
+                } else {    // add terminal
+                    
+                    pb_->die("terminal")->addInstance()
+                }
+            }
+        }
 
         LOG_TRACE("finish partition");
     }
