@@ -55,30 +55,90 @@ namespace replace
     float weight_;
   };
 
+  // class AbacusCluster
+  // {
+  // public:
+  //   AbacusCluster();
+  //   ~AbacusCluster() = default;
+
+  //   void addCell(AbacusCell* cell);
+  //   void addCluster(AbacusCluster* cluster);
+  //   void place();
+  //   void reset();
+
+  //   float xc() const { return xc_; }
+  //   float wc() const { return wc_; }
+  //   float qc() const { return qc_; }
+  //   float ec() const { return ec_; }
+
+  //   void setXc(float x) { xc_ = x; }
+  // private:
+  //   std::vector<AbacusCell *> cells_;
+  //   float xc_;
+  //   float ec_;
+  //   float qc_;
+  //   float wc_;
+  // };
+
   class AbacusCluster
   {
   public:
     AbacusCluster();
+    AbacusCluster(int startIdx);
     ~AbacusCluster() = default;
 
     void addCell(AbacusCell* cell);
-    void addCluster(AbacusCluster* cluster);
-    void place();
+    void addCluster(AbacusCluster* other);
     void reset();
 
+    int startIdx() const { return startIdx_; }
+    int endIdx() const { return endIdx_; }
     float xc() const { return xc_; }
     float wc() const { return wc_; }
     float qc() const { return qc_; }
     float ec() const { return ec_; }
 
     void setXc(float x) { xc_ = x; }
+
   private:
-    std::vector<AbacusCell *> cells_;
+    int startIdx_;
+    int endIdx_;
     float xc_;
     float ec_;
     float qc_;
     float wc_;
   };
+
+  // class AbacusRow
+  // {
+  // public:
+  //   AbacusRow();
+  //   AbacusRow(float lx, float ly, float w, float h);
+  //   ~AbacusRow() = default;
+
+  //   void pushCell(AbacusCell* cell);
+  //   void popCell();
+  //   void placeRow();
+
+  //   float lx() const { return lx_; }
+  //   float ly() const { return ly_; }
+  //   float width() const { return width_; }
+  //   float height() const { return height_; }
+  //   float usedWidth() const { return usedWidth_; }
+
+  //   const std::vector<AbacusCell*>& cells() const { return cells_; }
+
+  // private:
+  //   void collapse();
+
+  // private:
+  //   std::vector<AbacusCluster> clusterStor_;
+  //   std::vector<AbacusCell*> cells_;
+
+  //   float lx_, ly_;
+  //   float width_, height_;
+  //   float usedWidth_;
+  // };
 
   class AbacusRow
   {
@@ -87,9 +147,8 @@ namespace replace
     AbacusRow(float lx, float ly, float w, float h);
     ~AbacusRow() = default;
 
-    void pushCell(AbacusCell* cell);
-    void popCell();
-    void placeRow();
+    void tryAddCell(AbacusCell* cell);
+    void addCell(AbacusCell* cell);
 
     float lx() const { return lx_; }
     float ly() const { return ly_; }
@@ -99,11 +158,14 @@ namespace replace
 
     const std::vector<AbacusCell*>& cells() const { return cells_; }
 
-  private:
-    void collapse();
+    void findOverlap() const;
 
   private:
-    std::vector<AbacusCluster> clusters_;
+    void appendCell(std::vector<AbacusCluster>& clusters, AbacusCell* cell);
+    void collapse(std::vector<AbacusCluster>& clusters);
+
+  private:
+    std::vector<AbacusCluster> clusterStor_;
     std::vector<AbacusCell*> cells_;
 
     float lx_, ly_;

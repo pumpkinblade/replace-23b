@@ -31,46 +31,157 @@ namespace replace
   /////////////////////////////////////////////
   // AbacusCluster
   
+  // AbacusCluster::AbacusCluster()
+  //     : ec_(0.f), qc_(0.f), wc_(0.f)
+  // {
+  // }
+
+  // void AbacusCluster::addCell(AbacusCell* cell)
+  // {
+  //   cells_.push_back(cell);
+  //   ec_ += cell->weight();
+  //   qc_ += cell->weight() * (cell->lgLx() - wc_);
+  //   wc_ += cell->width();
+  // }
+
+  // void AbacusCluster::addCluster(AbacusCluster* cluster)
+  // {
+  //   cells_.insert(cells_.end(), cluster->cells_.begin(), cluster->cells_.end());
+  //   ec_ += cluster->ec_;
+  //   qc_ += cluster->qc_ - cluster->ec_ * wc_;
+  //   wc_ += cluster->wc_;
+  //   cluster->reset();
+  // }
+
+  // void AbacusCluster::place()
+  // {
+  //   float x = xc_;
+  //   for(AbacusCell* cell : cells_)
+  //   {
+  //     cell->setLgLx(x);
+  //     x += cell->width();
+  //   }
+  // }
+
+  // void AbacusCluster::reset()
+  // {
+  //   ec_ = qc_ = wc_ = 0.0f;
+  //   cells_.clear();
+  // }
+
   AbacusCluster::AbacusCluster()
-      : ec_(0.f), qc_(0.f), wc_(0.f)
+      : startIdx_(0), endIdx_(0), xc_(0.f), ec_(0.f), qc_(0.f), wc_(0.f)
   {
+  }
+
+  AbacusCluster::AbacusCluster(int startIdx)
+      : AbacusCluster()
+  {
+    startIdx_ = startIdx;
+    endIdx_ = startIdx;
   }
 
   void AbacusCluster::addCell(AbacusCell* cell)
   {
-    cells_.push_back(cell);
+    endIdx_++;
     ec_ += cell->weight();
     qc_ += cell->weight() * (cell->lgLx() - wc_);
     wc_ += cell->width();
   }
 
-  void AbacusCluster::addCluster(AbacusCluster* cluster)
+  void AbacusCluster::addCluster(AbacusCluster* other)
   {
-    cells_.insert(cells_.end(), cluster->cells_.begin(), cluster->cells_.end());
-    ec_ += cluster->ec_;
-    qc_ += cluster->qc_ - cluster->ec_ * wc_;
-    wc_ += cluster->wc_;
-    cluster->reset();
-  }
-
-  void AbacusCluster::place()
-  {
-    float x = xc_;
-    for(AbacusCell* cell : cells_)
-    {
-      cell->setLgLx(x);
-      x += cell->width();
-    }
+    // Note: two clusters can add togather only if they are adjacent
+    endIdx_ = other->endIdx_;
+    ec_ += other->ec_;
+    qc_ += other->qc_ - other->ec_ * wc_;
+    wc_ += other->wc_;
+    other->reset();
   }
 
   void AbacusCluster::reset()
   {
-    ec_ = qc_ = wc_ = 0.0f;
-    cells_.clear();
+    xc_ = ec_ = qc_ = wc_ = 0.f;
+    startIdx_ = endIdx_ = 0;
   }
 
   /////////////////////////////////////////////
   // AbacusRow
+
+  // AbacusRow::AbacusRow()
+  //   : lx_(0.0f), ly_(0.0f), width_(0.0f), height_(0.0f), usedWidth_(0.0f)
+  // {
+  // }
+
+  // AbacusRow::AbacusRow(float lx, float ly, float w, float h)
+  //   : lx_(lx), ly_(ly), width_(w), height_(h), usedWidth_(0.0f)
+  // {
+  // }
+
+  // void AbacusRow::pushCell(AbacusCell* cell)
+  // {
+  //   cells_.push_back(cell);
+  //   cell->setLgLy(ly_);
+  //   usedWidth_ += cell->width();
+  // }
+
+  // void AbacusRow::popCell()
+  // {
+  //   usedWidth_ -= cells_.back()->width();
+  //   cells_.pop_back();
+  // }
+
+  // void AbacusRow::placeRow()
+  // {
+  //   clusterStor_.clear();
+  //   for(AbacusCell* cell : cells_)
+  //   {
+  //     AbacusCluster* cluster = clusterStor_.size() == 0 ? nullptr : &clusterStor_.back();
+  //     if(cluster == nullptr || cluster->xc() + cluster->wc() <= cell->gpLx())
+  //     {
+  //       // create a new cluster
+  //       clusterStor_.emplace_back();
+  //       clusterStor_.back().addCell(cell);
+  //       clusterStor_.back().setXc(cell->gpLx());
+  //     }
+  //     else
+  //     {
+  //       cluster->addCell(cell);
+  //       collapse();
+  //     }
+  //   }
+
+  //   // place cluster
+  //   for(AbacusCluster& cluster : clusterStor_)
+  //   {
+  //     cluster.place();
+  //   }
+  // }
+
+  // void AbacusRow::collapse()
+  // {
+  //   bool needCollapse = clusterStor_.size() > 0;
+  //   while(needCollapse)
+  //   {
+  //     AbacusCluster* curr = &clusterStor_[clusterStor_.size() - 1];
+  //     float xc = curr->qc() / curr->ec();
+  //     xc = std::max(xc, lx_);
+  //     xc = std::min(xc, lx_ + width_ - curr->wc());
+  //     curr->setXc(xc);
+
+  //     AbacusCluster* prev = clusterStor_.size() <= 1 ? nullptr : &clusterStor_[clusterStor_.size() - 2];
+  //     if(prev != nullptr && prev->xc() + prev->wc() > xc)
+  //     {
+  //       prev->addCluster(curr);
+  //       clusterStor_.pop_back();
+  //       needCollapse = true;
+  //     }
+  //     else
+  //     {
+  //       needCollapse = false;
+  //     }
+  //   }
+  // }
 
   AbacusRow::AbacusRow()
     : lx_(0.0f), ly_(0.0f), width_(0.0f), height_(0.0f), usedWidth_(0.0f)
@@ -82,65 +193,111 @@ namespace replace
   {
   }
 
-  void AbacusRow::pushCell(AbacusCell* cell)
+  void AbacusRow::tryAddCell(AbacusCell* cell)
   {
-    cells_.push_back(cell);
+    // push the cell
     cell->setLgLy(ly_);
-    usedWidth_ += cell->width();
-  }
+    cells_.push_back(cell);
 
-  void AbacusRow::popCell()
-  {
-    usedWidth_ -= cells_.back()->width();
+    // make a copy
+    std::vector<AbacusCluster> copy;
+    copy.assign(clusterStor_.begin(), clusterStor_.end());
+
+    appendCell(copy, cell);
+
+    // find the lgLx of the cell
+    float x = copy.back().xc();
+    for(int i = copy.back().startIdx(); i < copy.back().endIdx(); i++)
+    {
+      x += cells_[i]->width();
+    }
+    cell->setLgLx(x - cell->width());
+
+    // pop the cell
     cells_.pop_back();
   }
 
-  void AbacusRow::placeRow()
+  void AbacusRow::addCell(AbacusCell* cell)
   {
-    clusters_.clear();
-    for(AbacusCell* cell : cells_)
-    {
-      AbacusCluster* cluster = clusters_.size() == 0 ? nullptr : &clusters_.back();
-      if(cluster == nullptr || cluster->xc() + cluster->wc() <= cell->gpLx())
-      {
-        clusters_.emplace_back();
-        clusters_.back().addCell(cell);
-        clusters_.back().setXc(cell->gpLx());
-      }
-      else
-      {
-        cluster->addCell(cell);
-        collapse();
-      }
-    }
+    // push the cell
+    cell->setLgLy(ly_);
+    cells_.push_back(cell);
+    usedWidth_ += cell->width();
 
-    for (AbacusCluster& cluster : clusters_)
+    appendCell(clusterStor_, cell);
+
+    // place the last cluster
+    AbacusCluster* last = &clusterStor_.back();
+    float x = last->xc();
+    for(int i = last->startIdx(); i < last->endIdx(); i++)
     {
-      cluster.place();
+      cells_[i]->setLgLx(x);
+      x += cells_[i]->width();
     }
   }
 
-  void AbacusRow::collapse()
+  void AbacusRow::appendCell(std::vector<AbacusCluster>& clusters, AbacusCell* cell)
   {
-    bool needCollapse = clusters_.size() > 0;
+    // find last cluster
+    AbacusCluster* last = clusters.size() == 0 ? nullptr : &clusters.back();
+    if(last == nullptr || last->xc() + last->wc() <= cell->gpLx())
+    {
+      // create a new cluster
+      clusters.emplace_back(static_cast<int>(cells_.size() - 1));
+      clusters.back().addCell(cell);
+      clusters.back().setXc(cell->gpLx());
+    }
+    else
+    {
+      last->addCell(cell);
+      collapse(clusters);
+    }
+  }
+
+  void AbacusRow::collapse(std::vector<AbacusCluster>& clusters)
+  {
+    bool needCollapse = clusters.size() > 0;
     while(needCollapse)
     {
-      AbacusCluster* curr = &clusters_[clusters_.size() - 1];
+      AbacusCluster* curr = &clusters[clusters.size() - 1];
       float xc = curr->qc() / curr->ec();
       xc = std::max(xc, lx_);
       xc = std::min(xc, lx_ + width_ - curr->wc());
       curr->setXc(xc);
 
-      AbacusCluster* prev = clusters_.size() <= 1 ? nullptr : &clusters_[clusters_.size() - 2];
+      AbacusCluster* prev = clusters.size() <= 1 ? nullptr : &clusters[clusters.size() - 2];
       if(prev != nullptr && prev->xc() + prev->wc() > xc)
       {
         prev->addCluster(curr);
-        clusters_.pop_back();
+        clusters.pop_back();
         needCollapse = true;
       }
       else
       {
         needCollapse = false;
+      }
+    }
+  }
+
+  void AbacusRow::findOverlap() const
+  {
+    for(AbacusCell* cell1 : cells_)
+    {
+      float lx1 = cell1->lgLx();
+      float ux1 = cell1->lgLx() + cell1->width();
+      for(AbacusCell* cell2 : cells_)
+      {
+        if(cell2 == cell1)
+          break;
+        float lx2 = cell2->lgLx();
+        float ux2 = cell2->lgLx() + cell2->width();
+
+        if(std::max(lx1, lx2) < std::min(ux1, ux2))
+        {
+          LOG_ERROR("Overlap found in abacus legalizer: {}: [{}, {}] -- {}: [{}, {}]", 
+                    cell1->instance()->name(), cell1->lgLx(), cell1->lgLx() + cell1->width(),
+                    cell2->instance()->name(), cell2->lgLx(), cell2->lgLx() + cell2->width());
+        }
       }
     }
   }
@@ -182,8 +339,9 @@ namespace replace
           if(row.usedWidth() + cell.width() > row.width())
             continue;
 
-          row.pushCell(&cell);
-          row.placeRow();
+          // row.pushCell(&cell);
+          // row.placeRow();
+          row.tryAddCell(&cell);
           double dx = cell.gpLx() - cell.lgLx();
           double dy = cell.gpLy() - cell.lgLy();
           double c = dx * dx + dy * dy;
@@ -192,18 +350,24 @@ namespace replace
             cbest = c;
             rbest = &row;
           }
-          assert(rbest != nullptr);
-          row.popCell();
+          // assert(rbest != nullptr);
+          // row.popCell();
         }
         if(rbest == nullptr)
         {
-          LOG_ERROR("Lack of area. Can't do stdcell legalization on die `{}`", die->name());
+          LOG_ERROR("Lack of area. Unable to do stdcell legalization on die `{}`", die->name());
           break;
         }
-        rbest->pushCell(&cell);
-        rbest->placeRow();
+        // rbest->pushCell(&cell);
+        // rbest->placeRow();
+        rbest->addCell(&cell);
       }
       LOG_TRACE("finish row assignment");
+
+      // for(AbacusRow& row : rowStor_)
+      // {
+      //   row.findOverlap();
+      // }
 
       LOG_TRACE("replace instance's location with its legalized location");
       for(AbacusCell& cell : cellStor_)
