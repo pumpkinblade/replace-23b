@@ -3,6 +3,7 @@
 
 #include <string>
 #include <memory>
+#include "placerBase.h"
 
 namespace replace
 {
