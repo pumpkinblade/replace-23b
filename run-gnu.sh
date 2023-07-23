@@ -10,7 +10,7 @@ rm -rf core.[0-9]*
 
 # BUILD
 cmake -DCMAKE_BUILD_TYPE=Debug -B build
-cmake --build build
+cmake --build build -j 3
 # on build failure, exit
 if [ $? -ne 0 ]; then
     echo build failed, exit
