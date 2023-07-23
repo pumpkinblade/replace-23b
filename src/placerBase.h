@@ -325,18 +325,22 @@ namespace replace
 
     // some modifier methods
     // create a new instance in instStor_, return reference
-    Instance& emplaceInstance();
+    Instance& emplaceInstance(bool isFixed, bool isMacro);
     Pin& emplacePin();
+    // NOTE: this will move net into netStor_. Address will change
     void addNet(const Net& net);
 
+  private:
+    void reset();
+    void pushToInstsByType(bool isFixed, Instance& inst){
+      if(isFixed){ fixedInsts_.push_back(&inst); }
+      else { placeInsts_.push_back(&inst); }
+    }
     // clean vector of pointers
     void cleanIPNs();
     // derive insts_, pins_ and nets_ from XXXStor_. Assuming vector is empty
     // before call this method
-    void deriveIPNs();
-
-  private:
-    void reset();
+    void deriveIPNs();    
 
   private:
     std::vector<Die> dieStor_;

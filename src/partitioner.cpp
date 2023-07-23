@@ -137,9 +137,10 @@ namespace replace
         }
         else
         { // add terminal
-          Instance &inst = pb_->emplaceInstance();
+          Instance &inst = pb_->emplaceInstance(false, false);
           inst.setSize(pb_->terminalSizeX(), pb_->terminalSizeY());
           inst.setLocation(2 * pb_->terminalSizeX(), 2 * pb_->terminalSizeY());
+          inst.setFixed(false);
           Pin &pinTop = pb_->emplacePin();
           Pin &pinBot = pb_->emplacePin();
           // add pin to net

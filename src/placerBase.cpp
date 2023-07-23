@@ -283,11 +283,14 @@ namespace replace
     reset();
   }
 
-  Instance& PlacerBase::emplaceInstance(){
+  Instance& PlacerBase::emplaceInstance(bool isFixed, bool isMacro){
     // TODO: instStor_ maybe moves to get more space
     instStor_.emplace_back();
-    insts_.push_back(&instStor_.back());
-    return instStor_.back();
+    Instance& inst = instStor_.back();
+    inst.setFixed(isFixed); inst.setMacro(isMacro);
+    insts_.push_back(&inst);
+    pushToInstsByType(isFixed, inst);
+    return inst;
   }
 
   Pin& PlacerBase::emplacePin(){
@@ -298,7 +301,12 @@ namespace replace
 
   void PlacerBase::addNet(const Net& net){
     netStor_.push_back(std::move(net));
+    // address of net will change after the above move 
     nets_.push_back(&netStor_.back());
+    // point to the new address of net
+    for(Pin* pin : net.pins()){
+      pin->setNet(nets_.back());
+    }
   }
 
   void PlacerBase::reset()

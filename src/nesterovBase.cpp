@@ -1085,6 +1085,7 @@ void NesterovBase::init()
     binGridMap_.emplace(bg.die(), &bg);
   }
 
+  LOG_TRACE("in NesterovBase::init binGrids_ gCell fill");
   // binGrids_ gCell fill
   for(BinGrid* bg : binGrids_)
   {
@@ -1106,6 +1107,7 @@ void NesterovBase::init()
     // update densitySize and densityScale in each gCell
     bg->updateGCellDensityScaleAndSize();
   }
+  LOG_TRACE("finish NesterovBase::init");
 }
 
 
@@ -1202,13 +1204,17 @@ void NesterovBase::initFillerGCells(Die* die)
 GCell* NesterovBase::placerToNesterov(Instance* inst)
 {
   auto gcPtr = gCellMap_.find(inst);
-  return (gcPtr == gCellMap_.end()) ? nullptr : gcPtr->second;
+  auto result = (gcPtr == gCellMap_.end()) ? nullptr : gcPtr->second;
+  assert(result != nullptr);
+  return result;
 }
 
 GNet* NesterovBase::placerToNesterov(Net* net)
 {
   auto gnPtr = gNetMap_.find(net);
-  return (gnPtr == gNetMap_.end()) ? nullptr : gnPtr->second;
+  auto res = (gnPtr == gNetMap_.end()) ? nullptr : gnPtr->second;
+  assert(res != nullptr);
+  return res;
 }
 
 GPin* NesterovBase::placerToNesterov(Pin* pin)

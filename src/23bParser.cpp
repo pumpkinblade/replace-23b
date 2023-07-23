@@ -392,7 +392,6 @@ namespace replace
       pb->placeInsts_.push_back(&pb->instStor_.back());
       pb->die("top")->addInstance(&pb->instStor_.back());
       assert(&pb->instStor_[0] == pb->insts_[0]);
-      LOG_TRACE("{} {}", (u_int64_t)&pb->instStor_[0], (u_int64_t)pb->insts_[0]);
     }
     
     // Process net
