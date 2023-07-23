@@ -3,12 +3,12 @@
 
 #include <string>
 #include <memory>
-#include "technology.h"
-#include "placerBase.h"
-#include "placer23b.h"
 
 namespace replace
 {
+  class Technology;
+  class PlacerBase;
+
   class Parser
   {
   public:
