@@ -352,19 +352,23 @@ namespace replace
     pb->termSpace_ = desc.termSpace;
     pb->termCost_ = desc.termCost;
 
+    // extra space for terminal
+    int extraInsts = desc.nets.size();
+    int extraNets = desc.nets.size();
+    int extraPins = 2 * desc.nets.size();
     // Process netlist
-    pb->instStor_.reserve(desc.insts.size());
-    pb->insts_.reserve(desc.insts.size());
-    pb->placeInsts_.reserve(desc.insts.size());
-    pb->netStor_.reserve(desc.nets.size());
-    pb->nets_.reserve(desc.nets.size());
+    pb->instStor_.reserve(desc.insts.size()+extraInsts);
+    pb->insts_.reserve(desc.insts.size()+extraInsts);
+    pb->placeInsts_.reserve(desc.insts.size()+extraInsts);
+    pb->netStor_.reserve(desc.nets.size()+extraNets);
+    pb->nets_.reserve(desc.nets.size()+extraNets);
     size_t numPins = 0;
     for(const auto& netDesc : desc.nets)
     {
       numPins += netDesc.pins.size();
     }
-    pb->pinStor_.reserve(numPins);
-    pb->pins_.reserve(numPins);
+    pb->pinStor_.reserve(numPins+extraPins);
+    pb->pins_.reserve(numPins+extraPins);
 
     // Process inst
     for (const auto& instDesc : desc.insts)
@@ -387,10 +391,12 @@ namespace replace
       pb->insts_.push_back(&pb->instStor_.back());
       pb->placeInsts_.push_back(&pb->instStor_.back());
       pb->die("top")->addInstance(&pb->instStor_.back());
+      assert(&pb->instStor_[0] == pb->insts_[0]);
+      LOG_TRACE("{} {}", (u_int64_t)&pb->instStor_[0], (u_int64_t)pb->insts_[0]);
     }
     
     // Process net
-    pb->netStor_.reserve(desc.nets.size());
+    pb->netStor_.reserve(desc.nets.size()+extraNets);
     for (const auto& netDesc : desc.nets)
     {
       pb->netStor_.emplace_back();

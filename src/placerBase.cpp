@@ -57,6 +57,7 @@ namespace replace
   {
     pins_.push_back(pin);
     pinNameMap_.emplace(pin->name(), pin);
+    pin->setInstance(this);
   }
 
   Pin* Instance::pin(const std::string& name) const
@@ -130,6 +131,7 @@ namespace replace
   void Net::addPin(Pin *pin)
   {
     pins_.push_back(pin);
+    pin->setNet(this);
   }
 
   void Net::removePin(Pin *pin){
@@ -282,6 +284,7 @@ namespace replace
   }
 
   Instance& PlacerBase::emplaceInstance(){
+    // TODO: instStor_ maybe moves to get more space
     instStor_.emplace_back();
     insts_.push_back(&instStor_.back());
     return instStor_.back();
@@ -448,8 +451,16 @@ namespace replace
     return it == techNameMap_.end() ? nullptr : it->second;
   }
 
+  void PlacerBase::cleanIPNs(){
+    insts_.clear(); pins_.clear(); nets_.clear();
+  }
+
   void PlacerBase::deriveIPNs()
   {
+    insts_.reserve(instStor_.size());
+    pins_.reserve(pinStor_.size());
+    nets_.reserve(netStor_.size());
+
     for (auto &inst : instStor_)
     {
       insts_.push_back(&inst);

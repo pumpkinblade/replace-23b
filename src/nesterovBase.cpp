@@ -1135,6 +1135,7 @@ void NesterovBase::initFillerGCells(Die* die)
   int64_t dxSum = 0, dySum = 0;
   int minIdx = static_cast<int>(dxStor.size()*0.05);
   int maxIdx = static_cast<int>(dxStor.size()*0.95);
+  assert(maxIdx - minIdx > 0);
   for(int i=minIdx; i<maxIdx; i++)
   {
     dxSum += dxStor[i];
@@ -1165,7 +1166,8 @@ void NesterovBase::initFillerGCells(Die* die)
               "\tRe-floorplan to have enough coreArea");
   }
 
-  assert(avgDx * avgDy > 0);
+  assert(avgDx> 0);
+  assert(avgDy> 0);
   int fillerCnt = static_cast<int>(totalFillerArea / ((int64_t)avgDx * avgDy));
 
   LOG_INFO("FillerInit: CoreArea: {}", coreArea);

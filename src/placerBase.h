@@ -280,7 +280,7 @@ namespace replace
   class PlacerBase
   {
     friend class Parser;
-    friend class RandomParititioner;
+    friend class Partitioner;
 
   public:
     PlacerBase();
@@ -329,6 +329,12 @@ namespace replace
     Pin& emplacePin();
     void addNet(const Net& net);
 
+    // clean vector of pointers
+    void cleanIPNs();
+    // derive insts_, pins_ and nets_ from XXXStor_. Assuming vector is empty
+    // before call this method
+    void deriveIPNs();
+
   private:
     void reset();
 
@@ -338,8 +344,7 @@ namespace replace
     std::vector<Pin> pinStor_;
     std::vector<Net> netStor_;
 
-    // derive insts_, pins_ and nets_ from XXXStor_
-    void deriveIPNs();
+
     std::vector<Die *> dies_;
     std::vector<Instance *> insts_;
     std::vector<Pin *> pins_;
