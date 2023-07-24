@@ -245,7 +245,11 @@ namespace replace
       // create a new cluster
       clusters.emplace_back(static_cast<int>(cells_.size() - 1));
       clusters.back().addCell(cell);
-      clusters.back().setXc(cell->gpLx());
+      // clusters.back().setXc(cell->gpLx());
+      float xc = cell->gpLx();
+      xc = std::max(xc, lx_);
+      xc = std::min(xc, lx_ + width_ - cell->width());
+      clusters.back().setXc(xc);
     }
     else
     {

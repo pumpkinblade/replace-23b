@@ -213,7 +213,7 @@ namespace replace
 
       if(inst->isMacro())
       {
-        img_->draw_rectangle(x1, y1, x3, y3, g_red.data(), opacity);
+        img_->draw_rectangle(x1, y1, x3, y3, g_cyron.data(), opacity);
       }
       else
       {
