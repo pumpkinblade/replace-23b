@@ -48,6 +48,7 @@ set(PLACE_HEADER
   src/abacusLegalizer.h
   src/partitioner.h
   src/layerAssignmenter.h
+  src/macroLegalizer.h
 )
 
 set(PLACE_SRC
@@ -71,6 +72,7 @@ set(PLACE_SRC
   src/abacusLegalizer.cpp
   src/partitioner.cpp
   src/layerAssignmenter.cpp
+  src/macroLegalizer.cpp
 )
 
 add_executable(replace ${PLACE_SRC} ${PLACE_HEADER})

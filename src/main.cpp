@@ -92,6 +92,7 @@ int main(int argc, const char *argv[])
     Replace rp(1.0);
     rp.setPlacerBase(pb);
     rp.doNesterovPlace("postgp");
+    rp.doMacroLegalization();
     rp.doAbacusLegalization();
   }
     else if (mode == "latest")
