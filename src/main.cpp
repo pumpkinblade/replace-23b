@@ -9,6 +9,7 @@
 #include "plot.h"
 #include "partitioner.h"
 #include "terminalModifier.h"
+#include "outputWriter.h"
 
 using namespace replace;
 using namespace TCLAP;
@@ -29,6 +30,7 @@ int main(int argc, const char *argv[])
   string mode;
   string txtFilename;
   float  targetDensity;
+  string outputFilename;
 
   // Wrap everything in a try block.  Do this every time, because exceptions will be thrown for problems.
   try
@@ -41,12 +43,14 @@ int main(int argc, const char *argv[])
     ValueArg<string> modeArg("m", "mode", "lefdef/23b", false, "lefdef", "string");
     ValueArg<string> txtArg("b", "txt23b", "path to 23b text file", false, "none", "string");
     ValueArg<float> densityArg("D", "density", "target density", false, 1.0, "float");
+    ValueArg<string> outputArg("o", "output", "path to output file", false, "output.txt", "string");
 
     cmd.add(lefArg);
     cmd.add(defArg);
     cmd.add(modeArg);
     cmd.add(txtArg);
     cmd.add(densityArg);
+    cmd.add(outputArg);
 
     // Parse the args.
     cmd.parse(argc, argv);
@@ -57,6 +61,7 @@ int main(int argc, const char *argv[])
     mode = modeArg.getValue();
     txtFilename = txtArg.getValue();
     targetDensity = densityArg.getValue();
+    outputFilename = outputArg.getValue();
   }
   catch (ArgException &e) // catch any exceptions
   {
@@ -103,6 +108,8 @@ int main(int argc, const char *argv[])
     int64_t hpwl = pb->hpwl();
     LOG_INFO("Result HPWL: {}", hpwl);
     Plot::plot(pb.get(), "./plot/cell", "result");
+
+    OutputWriter::write(pb.get(), outputFilename);
   }
     else if (mode == "latest")
   {

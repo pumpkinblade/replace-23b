@@ -141,6 +141,8 @@ namespace replace
           inst.setSize(pb_->terminalSizeX(), pb_->terminalSizeY());
           inst.setLocation(2 * pb_->terminalSizeX(), 2 * pb_->terminalSizeY());
           inst.setFixed(false);
+          // set inst's name using net name
+          inst.setName(topNet->name());
           Pin &pinTop = pb_->emplacePin();
           Pin &pinBot = pb_->emplacePin();
           // add pin to net

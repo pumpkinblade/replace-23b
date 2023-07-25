@@ -8,13 +8,13 @@ namespace replace
   void writeInstance(std::ofstream& out, const Instance* inst)
   {
     out << "Inst " << inst->name() << " " 
-        << inst->lx() << inst->ly() << "R0\n";
+        << inst->lx() << " " << inst->ly() << " R0\n";
   }
 
   void writeTerminal(std::ofstream& out, const Instance* term)
   {
     out << "Terminal " << term->name() << " " 
-        << term->cx() << term->cy() << "\n";
+        << term->cx() << " " << term->cy() << "\n";
   }
 
   void OutputWriter::write(PlacerBase* pb, std::string& filename)
@@ -38,6 +38,7 @@ namespace replace
     {
       writeInstance(out, inst);
     }
+    out << std::endl;
 
     // bottom die
     const Die* bottomDie = pb->die("bottom");
@@ -51,6 +52,7 @@ namespace replace
     {
       writeInstance(out, inst);
     }
+    out << std::endl;
 
     // terminal die
     const Die* terminalDie = pb->die("terminal");
@@ -64,5 +66,6 @@ namespace replace
     {
       writeTerminal(out, term);
     }
+    out << std::endl;
   }
 }
