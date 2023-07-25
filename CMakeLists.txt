@@ -49,6 +49,7 @@ set(PLACE_HEADER
   src/partitioner.h
   src/layerAssignmenter.h
   src/macroLegalizer.h
+  src/terminalModifier.h
 )
 
 set(PLACE_SRC
@@ -73,6 +74,7 @@ set(PLACE_SRC
   src/partitioner.cpp
   src/layerAssignmenter.cpp
   src/macroLegalizer.cpp
+  src/terminalModifier.cpp
 )
 
 add_executable(replace ${PLACE_SRC} ${PLACE_HEADER})

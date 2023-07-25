@@ -8,6 +8,7 @@
 #include "replace.h"
 #include "plot.h"
 #include "partitioner.h"
+#include "terminalModifier.h"
 
 using namespace replace;
 using namespace TCLAP;
@@ -89,11 +90,19 @@ int main(int argc, const char *argv[])
     Plot::plot(pb.get(), "./plot/cell", "after_partition");
     
     // then we do optimization
+    TerminalModifier tm;
+    tm.setPlacerBase(pb);
     Replace rp(1.0);
     rp.setPlacerBase(pb);
     rp.doNesterovPlace("postgp");
     rp.doMacroLegalization();
+    tm.modifyBeforeLG();
     rp.doAbacusLegalization();
+    tm.recover();
+
+    int64_t hpwl = pb->hpwl();
+    LOG_INFO("Result HPWL: {}", hpwl);
+    Plot::plot(pb.get(), "./plot/cell", "result");
   }
     else if (mode == "latest")
   {
