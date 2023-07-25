@@ -7,8 +7,10 @@
 namespace replace
 {
   class PlacerBase;
+  class NesterovBase;
   class Instance;
   class Die;
+  class GCell;
 
   class MacroLegalizerVars
   {
@@ -25,12 +27,16 @@ namespace replace
     MacroLegalizer(MacroLegalizerVars lgVars, std::shared_ptr<PlacerBase> pb);
 
     void doLegalization();
+    int overlapArea(GCell* , GCell*);
+    int getCellMacroOverlap();
+    int getMacrosOverlap();
 
   private:
     void postLegalize(const std::vector<Instance*> insts, Die* die);
 
   private:
     std::shared_ptr<PlacerBase> pb_;
+    std::shared_ptr<NesterovBase> nb_;
     MacroLegalizerVars lgVars_;
   };
 }
