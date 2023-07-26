@@ -8,17 +8,6 @@
 namespace replace{
     class Replace;
 
-    class P23bToBaseConverter{
-        public:
-            P23bToBaseConverter() = default;
-            ~P23bToBaseConverter() = default;
-
-            std::shared_ptr<PlacerBase> placer23bToPlaceBase(std::shared_ptr<Placer23b> placer23b_);
-
-    };
-
-
-
     class Partitioner{
         public:
             Partitioner(float targetDensity);

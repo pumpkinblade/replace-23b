@@ -9,6 +9,6 @@ This project is derived from RePlAce(https://github.com/The-OpenROAD-Project/ReP
 ./run-gnu.sh 23b 2
 
 # run in lefdef mode
-./run-gun.sh
+./run-gun.sh lefdef
 ```
 

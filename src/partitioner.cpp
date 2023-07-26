@@ -9,46 +9,6 @@
 
 namespace replace
 {
-
-  std::shared_ptr<PlacerBase> P23bToBaseConverter::placer23bToPlaceBase(std::shared_ptr<Placer23b> placer23b_)
-  {
-    // auto pb = std::make_shared<PlacerBase>();
-    // Technology* topDieTechnology = placer23b_->topDieTechnology();
-    // // Process die and rows
-    // pb->dieStor_.emplace_back(placer23b_->topDie());
-    // pb->dies_.push_back(&pb->dieStor_.back());
-
-    // // 给placebase预留空间
-    // LOG_TRACE("Process def component");
-    // std::unordered_map<std::string, int> instExtIds;
-    // pb->instStor_.reserve(placer23b_->insts().size());
-    // for (auto &inst : placer23b_->insts())
-    // {
-    //     // 在Technology中找到对应的LibCell
-    //     auto libCell = topDieTechnology->cell(inst->libCellName());
-    //     // 将LibCell转换为Instance
-    //     Instance instance;
-    //     instance.setSize(libCell->sizeX(), libCell->sizeY());
-    //     bool isMacro = libCell->isMacro();
-    //     instance.setMacro(isMacro);
-    //     instance.setFixed(0);
-    //     // 将Instance加入到PlacerBase中
-    //     pb->instStor_.push_back(instance);
-
-    // }
-    // LOG_TRACE("Process def net");
-    // // Process def net
-    // pb->netStor_.reserve(placer23b_->nets().size());
-    // for (auto &net : placer23b_->nets()){
-    //     pb->netStor_.emplace_back();
-    //     for(auto &pin23b : net->pins()){
-    //         Pin pin;
-    //         // pin.setInstance(pin23b->instName());
-    //     }
-    // }
-    return nullptr;
-  }
-
   Partitioner::Partitioner(float targetDensity)
   {
     std::unique_ptr<Replace> rp(new Replace(targetDensity));
@@ -57,12 +17,10 @@ namespace replace
 
   void Partitioner::partitioning(std::shared_ptr<PlacerBase> &pb_)
   {
-    assert(&pb_->instStor_[0] == pb_->insts_[0]);
     // 先使用replace进行以此global placement
     replace_->setPlacerBase(pb_);
     replace_->doInitialPlace();
     replace_->doNesterovPlace("pregp");
-    assert(&pb_->instStor_[0] == pb_->insts_[0]);
 
     // TODO: move cell to bottom only where exists overlap
     LOG_TRACE("start partition");
@@ -72,7 +30,6 @@ namespace replace
     std::vector<Net> bottomNets;
     const std::vector<Net *> &topNets = pb_->nets();
     bottomNets.reserve(pb_->nets().size());
-    assert(&pb_->instStor_[0] == pb_->insts_[0]);
     for (auto topnetptr : pb_->nets())
     {
       bottomNets.emplace_back();
