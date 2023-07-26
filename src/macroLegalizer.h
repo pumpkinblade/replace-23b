@@ -4,6 +4,7 @@
 #include <vector>
 #include <cassert>
 #include <memory>
+#include "point.h"
 
 namespace replace{
     class Instance;
