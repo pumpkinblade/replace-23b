@@ -57,16 +57,25 @@ namespace replace
 
   void Partitioner::partitioning(std::shared_ptr<PlacerBase> &pb_)
   {
-    assert(&pb_->instStor_[0] == pb_->insts_[0]);
-    // 先使用replace进行以此global placement
-    replace_->setPlacerBase(pb_);
-    replace_->doInitialPlace();
-    replace_->doNesterovPlace("pregp");
-    assert(&pb_->instStor_[0] == pb_->insts_[0]);
+    // assert(&pb_->instStor_[0] == pb_->insts_[0]);
+    // // 先使用replace进行以此global placement
+    // replace_->setPlacerBase(pb_);
+    // replace_->doInitialPlace();
+    // replace_->doNesterovPlace("pregp");
+    // assert(&pb_->instStor_[0] == pb_->insts_[0]);
 
     // TODO: move cell to bottom only where exists overlap
     LOG_TRACE("start partition");
     srand(10086);
+
+    int totMacro = 0;
+    int topMacro = 0;
+    int botMacro = 0;
+    for (Instance *instance : pb_->insts())
+    {
+      if(instance->isMacro())
+        totMacro++;
+    }
 
     // create bottom nets
     std::vector<Net> bottomNets;
@@ -89,6 +98,19 @@ namespace replace
       assert(&pb_->instStor_[0] == pb_->insts_[0]);
       float roll = (float)rand() / RAND_MAX;
       bool moveToBottom = roll >= 0.5 ? true : false;
+      if(instance->isMacro())
+      {
+        if(botMacro >= (totMacro / 2))
+        {
+          moveToBottom = false;
+        }
+        if(topMacro >= (totMacro / 2))
+        {
+          moveToBottom = true;
+        }
+        botMacro += moveToBottom;
+        topMacro += !moveToBottom;
+      }
       if (moveToBottom)
       {
         Die &topdie = *pb_->die("top");

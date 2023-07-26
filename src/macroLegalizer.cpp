@@ -7,60 +7,84 @@
 
 namespace replace
 {
-    std::pair<int, int> adjust(int l1, int u1, int l2, int u2, int ll, int uu)
+    bool repel(int l1, int u1, int l2, int u2, int ll, int uu, int* pd1, int* pd2)
     {
         if (l1 <= l2 && l2 < u1)
         {
-        // |--------|===========|-------|
-        // ^        ^           ^       ^
-        // l1       l2          u1      u2
-        if (u1 < u2)
-        {
-            int d = u1 - l2;
-            int d1 = std::min(d / 2, l1 - ll);
-            int d2 = std::min(d - d1, uu - u2);
-            return std::make_pair(-d1, d2);
-        }
+            // |--------|===========|-------|
+            // ^        ^           ^       ^
+            // l1       l2          u1      u2
+            if (u1 < u2)
+            {
+                int d = u1 - l2;
+                // try: inst1 <--- d/2
+                int d1 = std::min(d / 2, l1 - ll);
+                // try: inst2 --> d - d1
+                int d2 = std::min(d - d1, uu - u2);
+                // if inst2 can't --> d - d1, then inst1 <-- d - d2
+                d1 = std::min(d - d2, l1 - ll);
 
-        // |--------|===========|-------|
-        // ^        ^           ^       ^
-        // l1       l2          u2      u1
-        else
-        {
-            int d = std::min(u1 - l2, u2 - l1);
-            int d1 = std::min(d / 2, l1 - ll);
-            int d2 = std::min(d - d1, uu - u2);
-            return std::make_pair(-d1, d2);
-        }
+                *pd1 = -d1;
+                *pd2 = d2;
+                return d1 + d2 == d;
+            }
+
+            // |--------|===========|-------|
+            // ^        ^           ^       ^
+            // l1       l2          u2      u1
+            else
+            {
+                int d = std::min(u1 - l2, u2 - l1);
+                // try: inst1 <-- d / 2
+                int d1 = std::min(d / 2, l1 - ll);
+                // try: inst2 --> d - d1
+                int d2 = std::min(d - d1, uu - u2);
+                // if inst2 can't --> d - d1, then inst1 <-- d - d2
+                d1 = std::min(d - d2, l1 - ll);
+
+                *pd1 = -d1;
+                *pd2 = d2;
+                return d1 + d2 == d;
+            }
         }
         if (l2 <= l1 && l1 < u2)
         {
-        // |--------|===========|-------|
-        // ^        ^           ^       ^
-        // l2       l1          u2      u1
-        if (u1 < u2)
-        {
-            int d = u2 - l1;
-            int d2 = std::min(d / 2, l2 - ll);
-            int d1 = std::min(d - d2, uu - u1);
-            return std::make_pair(d1, -d2);
+            // |--------|===========|-------|
+            // ^        ^           ^       ^
+            // l2       l1          u2      u1
+            if (u1 < u2)
+            {
+                int d = u2 - l1;
+                int d2 = std::min(d / 2, l2 - ll);
+                int d1 = std::min(d - d2, uu - u1);
+                d2 = std::min(d - d1, l2 - ll);
+
+                *pd1 = d1;
+                *pd2 = -d2;
+                return d1 + d2 == d;
+            }
+
+            // |--------|===========|-------|
+            // ^        ^           ^       ^
+            // l2       l1          u1      u2
+            else
+            {
+                int d = std::min(u1 - l2, u2 - l1);
+                int d2 = std::min(d / 2, l2 - ll);
+                int d1 = std::min(d - d2, uu - u1);
+                d2 = std::min(d - d1, l2 - ll);
+
+                *pd1 = -d1;
+                *pd2 = d2;
+                return d1 + d2 == d;
+            }
         }
 
-        // |--------|===========|-------|
-        // ^        ^           ^       ^
-        // l2       l1          u1      u2
-        else
-        {
-            int d = std::min(u1 - l2, u2 - l1);
-            int d2 = std::min(d / 2, l2 - ll);
-            int d1 = std::min(d - d2, uu - u1);
-            return std::make_pair(d1, -d2);
-        }
-        }
-
-        return std::make_pair(0, 0);
+        *pd1 = 0;
+        *pd2 = 0;
+        return true;
     }
-
+    
     MacroLegalizer::MacroLegalizer()
     {
     }
@@ -88,7 +112,8 @@ namespace replace
         double temp_ = temp;
         double cooling_rate_ = cooling_rate;
         // 选择一个宏单元
-        random_shuffle(macros.begin(), macros.end());
+        // Note: random_shuffle is a feature of C++17
+        // random_shuffle(macros.begin(), macros.end());
         for (int i = 0; i < vars_.sa_max_iter0; i++) {
             GCell* cell= macros[0];
             // 计算宏单元的成本函数
@@ -246,61 +271,79 @@ namespace replace
         return vars_.sa_hpwl_wgt * hpwl + vars_.sa_den_wgt * den + vars_.sa_ovlp_wgt * ov;
     }
 
-  void MacroLegalizer::postLegalize(const std::vector<Instance *> insts, Die *die)
-  {
-    for (int iter = 0; iter < lgVars_.maxPostLegalizeIter; iter++)
+    void MacroLegalizer::postLegalize(const std::vector<Instance *> insts, Die *die)
     {
-      bool isLegal = true;
-      for (int i = 0; i < insts.size(); i++)
-      {
-        // check boundary
-        Instance *inst1 = insts[i];
-        if (inst1->lx() < die->coreLx())
+        srand(114);
+        for (int iter = 0; iter < lgVars_.maxPostLegalizeIter; iter++)
         {
-          inst1->setLocation(die->coreLx(), inst1->ly());
-          isLegal = false;
-        }
-        if (inst1->ly() < die->coreLy())
-        {
-          inst1->setLocation(inst1->lx(), die->coreLy());
-          isLegal = false;
-        }
-        if (inst1->ux() > die->coreUx())
-        {
-          inst1->setLocation(die->coreUx() - inst1->dx(), inst1->ly());
-          isLegal = false;
-        }
-        if (inst1->uy() > die->coreUy())
-        {
-          inst1->setLocation(inst1->lx(), die->coreUy() - inst1->dy());
-          isLegal = false;
-        }
+            bool isLegal = true;
+            for (int i = 0; i < insts.size(); i++)
+            {
+                // check boundary
+                Instance *inst1 = insts[i];
+                if (inst1->lx() < die->coreLx())
+                {
+                    inst1->setLocation(die->coreLx(), inst1->ly());
+                    isLegal = false;
+                }
+                if (inst1->ly() < die->coreLy())
+                {
+                    inst1->setLocation(inst1->lx(), die->coreLy());
+                    isLegal = false;
+                }
+                if (inst1->ux() > die->coreUx())
+                {
+                    inst1->setLocation(die->coreUx() - inst1->dx(), inst1->ly());
+                    isLegal = false;
+                }
+                if (inst1->uy() > die->coreUy())
+                {
+                    inst1->setLocation(inst1->lx(), die->coreUy() - inst1->dy());
+                    isLegal = false;
+                }
 
-        for (int j = 0; j < i; j++)
-        {
-          // check overlap
-          Instance *inst2 = insts[j];
+                for (int j = 0; j < insts.size(); j++)
+                {
+                    Instance *inst2 = insts[j];
+                    if(i == j)
+                        continue;
 
-          // x overlap
-          auto xMove = adjust(inst1->lx(), inst1->ux(), inst2->lx(), inst2->ux(),
-                              die->coreLx(), die->coreUx());
-          inst1->setLocation(inst1->lx() + xMove.first, inst1->ly());
-          inst2->setLocation(inst2->lx() + xMove.second, inst2->ly());
-          isLegal &= (xMove.first == 0) && (xMove.second == 0);
+                    // check overlap
+                    int lx = std::max(inst1->lx(), inst2->lx());
+                    int ly = std::max(inst1->ly(), inst2->ly());
+                    int ux = std::min(inst1->ux(), inst2->ux());
+                    int uy = std::min(inst1->uy(), inst2->uy());
 
-          // y overlap
-          auto yMove = adjust(inst1->ly(), inst1->uy(), inst2->ly(), inst2->uy(),
-                              die->coreLy(), die->coreUy());
-          inst1->setLocation(inst1->lx(), inst1->ly() + yMove.first);
-          inst2->setLocation(inst2->lx(), inst2->ly() + yMove.second);
-          isLegal &= (yMove.first == 0) && (yMove.second == 0);
+                    if(lx < ux && ly < uy)
+                    {
+                        isLegal = false;
+
+                        int dx1, dx2, dy1, dy2;
+                        // x overlap
+                        bool xOk = repel(inst1->lx(), inst1->ux(), inst2->lx(), inst2->ux(),
+                                         die->coreLx(), die->coreUx(), &dx1, &dx2);
+                        // y overlap
+                        auto yOk = repel(inst1->ly(), inst1->uy(), inst2->ly(), inst2->uy(),
+                                         die->coreLy(), die->coreUy(), &dy1, &dy2);
+
+                        if(((float)rand() / RAND_MAX) < 0.5)
+                        {
+                            inst1->setLocation(inst1->lx() + dx1, inst1->ly());
+                            inst2->setLocation(inst2->lx() + dx2, inst2->ly());
+                        }
+                        else
+                        {
+                            inst1->setLocation(inst1->lx(), inst1->ly() + dy1);
+                            inst2->setLocation(inst2->lx(), inst2->ly() + dy2);
+                        }
+                    }
+                }
+            }
+
+            if (isLegal)
+            {
+                break;
+            }
         }
-      }
-
-      if (isLegal)
-      {
-        break;
-      }
     }
-  }
 }
