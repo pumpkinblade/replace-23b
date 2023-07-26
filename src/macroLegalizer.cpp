@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <random>
 #include "point.h"
+#include <cmath>
 
 namespace replace
 {
@@ -88,33 +89,93 @@ namespace replace
         double temp_ = temp;
         double cooling_rate_ = cooling_rate;
         // 选择一个宏单元
-        random_shuffle(macros.begin(), macros.end());
+        srand(static_cast<unsigned int>(time(0)));
+        int index = rand() % macros.size();
         for (int i = 0; i < vars_.sa_max_iter0; i++) {
-            GCell* cell= macros[0];
+            srand(static_cast<unsigned int>(time(0)));
+            GCell* cell= macros[index];
             // 计算宏单元的成本函数
             double old_cost = calc_cost();
             // 随机移动
-
+            std::pair<int, int> move = getRandomMove(cell);
+            // 尝试将宏单元移动到新的位置
+            cell->setLocation(cell->lx() + move.first, cell->ly() + move.second);
             // 计算宏单元的成本函数
+            double new_cost = calc_cost();
+            // 判断是否接受新的解
+            int delta = new_cost - old_cost;
+            double tau = (float)rand() / RAND_MAX;
+            double p = exp(-delta / temp_);
+            if (delta < 0 || p > tau) {
+                // 接受新的解
+                // 判断是否满足要求
+                int om = getMacrosOverlap();
+                if (om == 0){
+                    break;
+                }
+            } else {
+                // 拒绝新的解
+                cell->setLocation(cell->lx() - move.first, cell->ly() - move.second);
+            }
+
+            // The temperature tj,k at each iteration (j, k) is determined based on the maximum cost 
+            // increase fmax(j, k) that will be accepted by more than 50% probabil-
+            // -ity, thus we set tj,k = (fmax(j, k)/ln 2). We set fmax(j, 0) (fmax(j, kmax))as0.03×βj (0.0001×βj), 
+            // denoting that cost increase by less than 3% (0.01%) at the first (last) SA iteration will be accepted by more than 50% probability. 
+            // We initialize fmax(j, k) by fmax(j, 0) and linearly decrease it toward fmax(j, kmax). 
+            // The radius rj,k of macro motion range is dependent on both the penalty factor and the amount of macros.
+
 
             // 退火
-            temp *= cooling_rate;
+            // temp_ *= cooling_rate_;
         }
     }
 
-    IntPoint MacroLegalizer::getRandomMove(GCell* cell)
+    
+
+    std::pair<int, int> MacroLegalizer::getRandomMove(GCell* cell)
     {
-        // 暂未完成
-        int lx = cell->lx();
-        int ly = cell->ly();
-        // int x_max = nb_->pb()->die()[0].width() - w;
-        // int y_max = nb_->die().height() - h;
-        // std::random_device rd;
-        // std::mt19937 gen(rd());
-        // std::uniform_int_distribution<> dis_x(x, x_max);
-        // std::uniform_int_distribution<> dis_y(y, y_max);
-        // return IntPoint(dis_x(gen), dis_y(gen));
-        return IntPoint(lx, ly);
+        // 随机种子，使用当前时间
+        srand(static_cast<unsigned int>(time(0)));
+        int clx = cell->lx();
+        int cly = cell->ly();
+        int cux = cell->lx();
+        int cuy = cell->ly();
+        // 获得die的大小
+        int dlx = pb_->dies()[0]->dieLx();
+        int dly = pb_->dies()[0]->dieLy();
+        int dux = pb_->dies()[0]->dieUx();
+        int duy = pb_->dies()[0]->dieUy();
+        int diewidth = dux - dlx;
+        int dieheight = duy - dly;
+        // maxMoveX，maxMoveY为die的长宽的1/10
+        int maxMoveX = diewidth / 10;
+        int maxMoveY = dieheight / 10;
+        int moveX = (-maxMoveX) + rand() % (maxMoveX - (-maxMoveX) + 1);
+        int moveY = (-maxMoveY) + rand() % (maxMoveY - (-maxMoveY) + 1);
+        // 计算移动后的 Macro 的四个角坐标
+        int newcux = cux + moveX; 
+        int newcuy = cuy + moveY;
+        int newclx = clx + moveX;
+        int newcly = cly + moveY;
+        // 检查移动后的坐标是否超过 Die 的边界范围，若超过则修正坐标
+        if (newclx < dlx) {
+            int diff = dlx - newclx;
+            moveX += diff;
+        }
+        if (newcuy > duy) {
+            int diff = newcuy - duy;
+            moveY -= diff;
+        }
+        if (newcux > dux) {
+            int diff = newcux - dux;
+            moveX -= diff;
+        }
+        if (newcly < dly) {
+            int diff = newcly - dly;
+            moveY += diff;
+        }
+        return std::make_pair(moveX, moveY);
     }
 
     void MacroLegalizer::doMacroLegalization()

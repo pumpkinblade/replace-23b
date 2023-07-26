@@ -36,7 +36,7 @@ namespace replace{
             void doLegalization();
             ~MacroLegalizer();
             void doSimulatedAnnealing(double temp, double cooling_rate);
-            IntPoint getRandomMove(GCell *cell);
+            std::pair<int, int> getRandomMove(GCell *cell);
             void doMacroLegalization();
             int overlapArea(GCell* , GCell*);
             int getCellMacroOverlap();
