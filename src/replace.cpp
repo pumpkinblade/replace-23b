@@ -5,6 +5,7 @@
 #include "nesterovBase.h"
 #include "abacusLegalizer.h"
 #include "layerAssignmenter.h"
+#include "macroLegalizer.h"
 #include <iostream>
 #include <memory>
 #include "log.h"
@@ -24,10 +25,10 @@ namespace replace
         initialPlaceNetWeightScale_(800),
         nesterovPlaceMaxIter_(2000),
         binGridCntX_(0), binGridCntY_(0),
-        overflow_(0.1), density_(targetDensity),
-        initDensityPenalityFactor_(0.00008),
-        initWireLengthCoef_(0.25),
-        minPhiCoef_(0.95), maxPhiCoef_(1.05),
+        overflow_(0.1f), density_(targetDensity),
+        initDensityPenalityFactor_(0.00008f),
+        initWireLengthCoef_(0.25f),
+        minPhiCoef_(0.95f), maxPhiCoef_(1.05f),
         referenceHpwl_(446000000),
         incrementalPlaceMode_(false)
         // verbose_(0)
@@ -55,10 +56,10 @@ namespace replace
     binGridCntX_ = binGridCntY_ = 0;
     overflow_ = 0;
     density_ = 0;
-    initDensityPenalityFactor_ = 0.0001;
-    initWireLengthCoef_ = 1.0;
-    minPhiCoef_ = 0.95;
-    maxPhiCoef_ = 1.05;
+    initDensityPenalityFactor_ = 0.0001f;
+    initWireLengthCoef_ = 1.0f;
+    minPhiCoef_ = 0.95f;
+    maxPhiCoef_ = 1.05f;
     referenceHpwl_ = 446000000;
 
     incrementalPlaceMode_ = false;
@@ -132,6 +133,19 @@ namespace replace
     alg_.reset(new AbacusLegalizer(algVars, pb_));
     alg_->doLegalization();
     LOG_TRACE("end Replace::doAbacusLegalization");
+  }
+
+  void Replace::doMacroLegalization()
+  {
+    LOG_TRACE("start Replace::doMacroLegalization");
+
+    MacroLegalizerVars mlgVars;
+    mlgVars.maxPostLegalizeIter = 1000;
+
+    mlg_.reset(new MacroLegalizer(mlgVars, pb_));
+    mlg_->doLegalization();
+
+    LOG_TRACE("end Replace::doMacorLegalization");
   }
 
   void Replace::doLayerAssignment()

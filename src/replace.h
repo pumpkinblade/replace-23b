@@ -14,6 +14,7 @@ namespace replace
   class NesterovPlace;
   class AbacusLegalizer;
   class LayerAssignmenter;
+  class MacroLegalizer;
 
   class Replace
   {
@@ -33,6 +34,7 @@ namespace replace
     // the placements before and after partition
     void doNesterovPlace(string placename = "");
     void doAbacusLegalization();
+    void doMacroLegalization();
 
     void doLayerAssignment();
 
@@ -68,6 +70,7 @@ namespace replace
     std::unique_ptr<NesterovPlace> np_;
     std::unique_ptr<AbacusLegalizer> alg_;
     std::unique_ptr<LayerAssignmenter> la_;
+    std::unique_ptr<MacroLegalizer> mlg_;
 
     int initialPlaceMaxIter_;
     int initialPlaceMinDiffLength_;
