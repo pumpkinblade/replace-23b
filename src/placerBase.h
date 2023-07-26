@@ -46,6 +46,7 @@ namespace replace
     int dx() const { return ux_ - lx_; }
     // instance size in y dimension
     int dy() const { return uy_ - ly_; }
+    int size() const { return dx() * dy(); }
 
     void setExtId(int extId) { extId_ = extId; }
     int extId() const { return extId_; }
@@ -102,6 +103,7 @@ namespace replace
     int offsetCy() const { return offsetCy_; }
 
     void updateLocation(const Instance *inst);
+    // this is the only medifiter of offsetX nad offsetY
     void updateLocation(const Instance *inst, int offsetX, int offsetY);
 
     void setInstance(Instance *inst);
