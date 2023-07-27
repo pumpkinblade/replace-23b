@@ -5,9 +5,12 @@
 #include <random>
 #include "point.h"
 #include <cmath>
+#include <ctime>
 
 namespace replace
 {
+    int max_sa_r_x, max_sa_r_y; 
+
     bool repel(int l1, int u1, int l2, int u2, int ll, int uu, int* pd1, int* pd2)
     {
         if (l1 <= l2 && l2 < u1)
@@ -108,29 +111,30 @@ namespace replace
     {
     }
 
-    void MacroLegalizer::doSimulatedAnnealing(double temp, double cooling_rate)
+    void MacroLegalizer::doSimulatedAnnealing(double temp_0, double temp_max, int iter)
     {
-        double temp_ = temp;
-        double cooling_rate_ = cooling_rate;
+        
+        //double cooling_rate_ = cooling_rate;
         // 选择一个宏单元
         srand(static_cast<unsigned int>(time(0)));
         int index = rand() % macros.size();
         for (int i = 0; i < vars_.sa_max_iter0; i++) {
             srand(static_cast<unsigned int>(time(0)));
+            double temp = temp_0 + (temp_max - temp_0) * (double)(i / vars_.sa_max_iter0);
             GCell* cell= macros[index];
             // 计算宏单元的成本函数
             double old_cost = calc_cost();
             // 随机移动
-            std::pair<int, int> move = getRandomMove(cell);
+            std::pair<int, int> move = getRandomMove(cell , iter);
             // 尝试将宏单元移动到新的位置
             cell->setLocation(cell->lx() + move.first, cell->ly() + move.second);
             // 计算宏单元的成本函数
             double new_cost = calc_cost();
             // 判断是否接受新的解
-            int delta = new_cost - old_cost;
-            double tau = (float)rand() / RAND_MAX;
-            double p = exp(-delta / temp_);
-            if (delta < 0 || p > tau) {
+            double delta = (new_cost - old_cost) / old_cost;
+            double tau = (double)rand() / RAND_MAX;
+            double p = exp(-1.0 * delta / temp);
+            if (p > tau) {
                 // 接受新的解
                 // 判断是否满足要求
                 int om = getMacrosOverlap();
@@ -148,7 +152,23 @@ namespace replace
             // denoting that cost increase by less than 3% (0.01%) at the first (last) SA iteration will be accepted by more than 50% probability. 
             // We initialize fmax(j, k) by fmax(j, 0) and linearly decrease it toward fmax(j, kmax). 
             // The radius rj,k of macro motion range is dependent on both the penalty factor and the amount of macros.
-
+            /////////////////////////////////////////////////////////////////////////
+            /*  function accept (programmed by Replace_master)
+                int rnd = 0;
+                int flg = 0;
+                prec dc = (c1 - c0) / c0;
+                prec drnd = 0;
+                prec exp_val = 0;
+                sa_t = 0.0001 * pow(1.5, (prec)iter) / log(2.0);
+                rnd = rand();
+                drnd = (prec)rnd / RAND_MAX;
+                exp_val = exp(-1.0 * dc / sa_t);
+                if(drnd < exp_val)
+                    flg = 1;
+                else
+                    flg = 0;
+                return flg;
+            */
 
             // 退火
             // temp_ *= cooling_rate_;
@@ -157,7 +177,7 @@ namespace replace
 
     
 
-    std::pair<int, int> MacroLegalizer::getRandomMove(GCell* cell)
+    std::pair<int, int> MacroLegalizer::getRandomMove(GCell* cell,int iter)
     {
         // 随机种子，使用当前时间
         srand(static_cast<unsigned int>(time(0)));
@@ -172,11 +192,18 @@ namespace replace
         int duy = pb_->dies()[0]->dieUy();
         int diewidth = dux - dlx;
         int dieheight = duy - dly;
-        // maxMoveX，maxMoveY为die的长宽的1/10
+        // maxMoveX，maxMoveY为die的长宽的1/10 
         int maxMoveX = diewidth / 10;
         int maxMoveY = dieheight / 10;
-        int moveX = (-maxMoveX) + rand() % (maxMoveX - (-maxMoveX) + 1);
-        int moveY = (-maxMoveY) + rand() % (maxMoveY - (-maxMoveY) + 1);
+        /*int moveX = (-maxMoveX) + rand() % (maxMoveX - (-maxMoveX) + 1);
+        int moveY = (-maxMoveY) + rand() % (maxMoveY - (-maxMoveY) + 1);*/
+        int rndx = rand();
+        int rndy = rand();
+        double rcof = 0.05 * pow(1.5, (double)iter);
+        double rx = (max_sa_r_x - 1)/iter; // 1 = rowheight
+        double ry = (max_sa_r_y - 1)/iter;
+        int moveX = (int) (rndx / RAND_MAX - 0.5) * rx;
+        int moveY = (int) (rndy / RAND_MAX - 0.5) * ry;
         // 计算移动后的 Macro 的四个角坐标
         int newcux = cux + moveX; 
         int newcuy = cuy + moveY;
@@ -204,8 +231,17 @@ namespace replace
 
     void MacroLegalizer::doMacroLegalization()
     {
-        // for (int i = 0; i < vars_.max_iter; i++) {
+        
+        for (int iter = 0; iter < vars_.sa_max_iter; iter++) {
         //     // 初始化参数
+            double cooling_rate;
+            double temp_0 = 0.03 * pow(1.5, (double)iter) / log(2.0);
+            double temp_max = 0.0001 * pow(1.5, (double)iter) / log(2.0);
+            double rcof = 0.05 * pow(1.5, (double) iter);
+            max_sa_r_x = 1 / sqrt(macros.size()) * rcof; // 1 = total place region
+            max_sa_r_y = 1 / sqrt(macros.size()) * rcof;
+        
+            doSimulatedAnnealing(temp_0, temp_max, iter);
             
         //     // 选择一个宏单元
         //     for (int j = 0; j < num_macros; j++) {
@@ -232,6 +268,7 @@ namespace replace
         //     temp *= cooling_rate;
         // }
     // return std::make_pair(0, 0);
+    }
   }
 
   ///////////////////////////////////////
