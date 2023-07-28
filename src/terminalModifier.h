@@ -15,7 +15,7 @@ namespace replace
 
     void setPlacerBase(std::shared_ptr<PlacerBase> pb) { pb_ = pb; }
 
-    void modifyBeforeLG();
+    void modify();
     void recover();
 
   private:

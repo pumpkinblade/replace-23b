@@ -3,7 +3,7 @@
 
 namespace replace
 {
-  void TerminalModifier::modifyBeforeLG()
+  void TerminalModifier::modify()
   {
     // terminal resizing with spacing
     int modSizeX = pb_->terminalSizeX() + pb_->terminalSpacing();

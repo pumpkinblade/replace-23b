@@ -97,12 +97,12 @@ int main(int argc, const char *argv[])
     // then we do optimization
     TerminalModifier tm;
     tm.setPlacerBase(pb);
+    tm.modify();
     Replace rp(1.0);
     rp.setPlacerBase(pb);
     rp.doInitialPlace();
     rp.doNesterovPlace("postgp");
     rp.doMacroLegalization();
-    tm.modifyBeforeLG();
     rp.doAbacusLegalization();
     tm.recover();
 
