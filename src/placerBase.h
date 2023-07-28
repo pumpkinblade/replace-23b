@@ -101,6 +101,9 @@ namespace replace
     int offsetCx() const { return offsetCx_; }
     int offsetCy() const { return offsetCy_; }
 
+    void setOffset(int offsetX, int offsetY);
+    void setLocation(int cx, int cy);
+
     void updateLocation(const Instance *inst);
     void updateLocation(const Instance *inst, int offsetX, int offsetY);
 

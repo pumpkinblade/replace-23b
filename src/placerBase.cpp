@@ -38,6 +38,12 @@ namespace replace
   {
     auto& libcell = *tech.libCell(libCellName());
     setSize(libcell.sizeX(), libcell.sizeY());
+    for(Pin* pin : pins_)
+    {
+      LibPin* libpin = libcell.libPin(pin->name());
+      if(libpin != nullptr)
+        pin->setOffset(libpin->x(), libpin->y());
+    }
   }
 
   void Instance::setBox(int lx, int ly, int ux, int uy)
@@ -88,6 +94,20 @@ namespace replace
     offsetCy_ = offsetY;
     cx_ = inst->cx() + offsetCx_;
     cy_ = inst->cy() + offsetCy_;
+  }
+
+  void Pin::setOffset(int offsetX, int offsetY)
+  {
+    offsetCx_ = offsetX;
+    offsetCy_ = offsetY;
+    cx_ = offsetCx_ + (inst_ == nullptr ? 0 : inst_->cx());
+    cy_ = offsetCx_ + (inst_ == nullptr ? 0 : inst_->cy());
+  }
+
+  void Pin::setLocation(int cx, int cy)
+  {
+    cx_ = cx;
+    cy_ = cy;
   }
 
   void Pin::setInstance(Instance *inst)

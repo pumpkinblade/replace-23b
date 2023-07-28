@@ -5,50 +5,11 @@
 #include "partitioner.h"
 #include "replace.h"
 #include <unordered_map>
+#include <unordered_set>
 
 
 namespace replace
 {
-
-  std::shared_ptr<PlacerBase> P23bToBaseConverter::placer23bToPlaceBase(std::shared_ptr<Placer23b> placer23b_)
-  {
-    // auto pb = std::make_shared<PlacerBase>();
-    // Technology* topDieTechnology = placer23b_->topDieTechnology();
-    // // Process die and rows
-    // pb->dieStor_.emplace_back(placer23b_->topDie());
-    // pb->dies_.push_back(&pb->dieStor_.back());
-
-    // // 给placebase预留空间
-    // LOG_TRACE("Process def component");
-    // std::unordered_map<std::string, int> instExtIds;
-    // pb->instStor_.reserve(placer23b_->insts().size());
-    // for (auto &inst : placer23b_->insts())
-    // {
-    //     // 在Technology中找到对应的LibCell
-    //     auto libCell = topDieTechnology->cell(inst->libCellName());
-    //     // 将LibCell转换为Instance
-    //     Instance instance;
-    //     instance.setSize(libCell->sizeX(), libCell->sizeY());
-    //     bool isMacro = libCell->isMacro();
-    //     instance.setMacro(isMacro);
-    //     instance.setFixed(0);
-    //     // 将Instance加入到PlacerBase中
-    //     pb->instStor_.push_back(instance);
-
-    // }
-    // LOG_TRACE("Process def net");
-    // // Process def net
-    // pb->netStor_.reserve(placer23b_->nets().size());
-    // for (auto &net : placer23b_->nets()){
-    //     pb->netStor_.emplace_back();
-    //     for(auto &pin23b : net->pins()){
-    //         Pin pin;
-    //         // pin.setInstance(pin23b->instName());
-    //     }
-    // }
-    return nullptr;
-  }
-
   Partitioner::Partitioner(float targetDensity)
   {
     std::unique_ptr<Replace> rp(new Replace(targetDensity));
@@ -67,15 +28,6 @@ namespace replace
     // TODO: move cell to bottom only where exists overlap
     LOG_TRACE("start partition");
     srand(10086);
-
-    int totMacro = 0;
-    int topMacro = 0;
-    int botMacro = 0;
-    for (Instance *instance : pb_->insts())
-    {
-      if(instance->isMacro())
-        totMacro++;
-    }
 
     // create bottom nets
     std::vector<Net> bottomNets;
@@ -98,19 +50,6 @@ namespace replace
       assert(&pb_->instStor_[0] == pb_->insts_[0]);
       float roll = (float)rand() / RAND_MAX;
       bool moveToBottom = roll >= 0.5 ? true : false;
-      if(instance->isMacro())
-      {
-        if(botMacro >= (totMacro / 2))
-        {
-          moveToBottom = false;
-        }
-        if(topMacro >= (totMacro / 2))
-        {
-          moveToBottom = true;
-        }
-        botMacro += moveToBottom;
-        topMacro += !moveToBottom;
-      }
       if (moveToBottom)
       {
         Die &topdie = *pb_->die("top");
@@ -181,5 +120,133 @@ namespace replace
     }
 
     LOG_TRACE("finish partition");
+  }
+
+  void moveDecide(int64_t topArea, int64_t botArea, int64_t topCap, int64_t botCap,
+                  bool* moveToTop, bool* moveToBot)
+  {
+    bool topCanContain = topArea < topCap;
+    bool botCanContain = botArea < botCap;
+
+    *moveToTop = *moveToBot = false;
+    if(topCanContain && botCanContain)
+    {
+      *moveToTop = ((float)rand() / RAND_MAX) < 0.5;
+      *moveToBot = !(*moveToTop);
+    }
+    else if(topCanContain)
+    {
+      *moveToTop = true;
+      *moveToBot = false;
+    }
+    else
+    {
+      *moveToBot = true;
+      *moveToTop = false;
+    }
+  }
+
+  void Partitioner::partitioning2(std::shared_ptr<PlacerBase> pb)
+  {
+    srand(114514);
+
+    Die* topdie = pb->die("top");
+    Die* botdie = pb->die("bottom");
+
+    // die capacity
+    int64_t topCap = topdie->coreDx() * (long long)topdie->coreDy();
+    topCap = static_cast<long long>(topCap * topdie->maxUtil());
+    int64_t botCap = botdie->coreDx() * (long long)botdie->coreDy();
+    botCap = static_cast<long long>(botCap * botdie->maxUtil());
+
+    // cheat: using extId
+    for(int i = 0; i < pb->insts().size(); i++)
+    {
+      pb->insts()[i]->setExtId(i);
+    }
+    std::vector<bool> hasAssigned(pb->insts().size(), false);
+    std::vector<bool> isBot(pb->insts().size(), false);
+
+    // for insts that hasn't been assigned
+    for(Instance* inst : pb->insts())
+    {
+      if(hasAssigned[inst->extId()] == false)
+      {
+        auto instTopArea = inst->dx() * (long long)inst->dy();
+        LibCell* botLibCell = botdie->tech()->libCell(inst->libCellName());
+        auto instBotArea = botLibCell->sizeX() * (long long)botLibCell->sizeY();
+
+        bool moveToTop, moveToBot;
+        moveDecide(instTopArea, instBotArea, topCap, botCap, &moveToTop, &moveToBot);
+        if(moveToBot)
+        {
+          botCap -= instBotArea;
+          hasAssigned[inst->extId()] = true;
+          isBot[inst->extId()] = true;
+
+          inst->setSize(*botdie->tech());
+          topdie->removeInstance(inst);
+          botdie->addInstance(inst);
+        }
+        else
+        {
+          topCap -= instTopArea;
+          isBot[inst->extId()] = false;
+          hasAssigned[inst->extId()] = true;
+        }
+      }
+    }
+
+    // generate terminals
+    for(Net* net : pb->nets())
+    {
+      bool hasTopPin = false;
+      bool hasBotPin = false;
+      for(Pin* pin : net->pins())
+      {
+        Instance* inst = pin->instance();
+        hasTopPin |= !isBot[inst->extId()];
+        hasBotPin |= isBot[inst->extId()];
+      }
+
+      // need to split net and generate net
+      if(hasTopPin && hasBotPin)
+      {
+        // add terminal
+        Instance &term = pb->emplaceInstance(false, false);
+        term.setSize(pb->terminalSizeX(), pb->terminalSizeY());
+        term.setLocation(2 * pb->terminalSizeX(), 2 * pb->terminalSizeY());
+        term.setFixed(false);
+        // set term's name using net name
+        term.setName(net->name());
+        // generate pin for term
+        Pin &pinTop = pb->emplacePin();
+        Pin &pinBot = pb->emplacePin();
+        term.addPin(&pinTop);
+        term.addPin(&pinBot);
+        // add instance to die
+        pb->instNameMap_.emplace(term.name(), &term);
+        pb->die("terminal")->addInstance(&term);
+        
+        // generate another net
+        pb->netStor_.emplace_back();
+        Net* net2 = &pb->netStor_.back();
+        pb->netNameMap_.emplace(net->name() + "2", net2);
+        pb->nets_.push_back(net2);
+
+        // add pin to net
+        for(Pin* pin : net->pins())
+        {
+          int id = pin->instance()->extId();
+          if(isBot[id])
+          {
+            net->removePin(pin);
+            net2->addPin(pin);
+          }
+        }
+        net->addPin(&pinTop);
+        net2->addPin(&pinBot);
+      }
+    }
   }
 }

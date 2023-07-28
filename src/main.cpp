@@ -20,7 +20,7 @@ int main(int argc, const char *argv[])
   Log::Init();
 
   PlotVars vars;
-  vars.minLength = 2000;
+  vars.minLength = 1000;
   vars.xMargin = 30;
   vars.yMargin = 30;
   Plot::init(vars);
@@ -91,7 +91,7 @@ int main(int argc, const char *argv[])
 
     // then we do partition
     Partitioner partitioner(targetDensity);
-    partitioner.partitioning(pb);
+    partitioner.partitioning2(pb);
     Plot::plot(pb.get(), "./plot/cell", "after_partition");
     
     // then we do optimization
@@ -99,6 +99,7 @@ int main(int argc, const char *argv[])
     tm.setPlacerBase(pb);
     Replace rp(1.0);
     rp.setPlacerBase(pb);
+    rp.doInitialPlace();
     rp.doNesterovPlace("postgp");
     rp.doMacroLegalization();
     tm.modifyBeforeLG();

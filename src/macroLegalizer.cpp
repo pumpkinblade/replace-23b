@@ -326,7 +326,9 @@ namespace replace
                         auto yOk = repel(inst1->ly(), inst1->uy(), inst2->ly(), inst2->uy(),
                                          die->coreLy(), die->coreUy(), &dy1, &dy2);
 
-                        if(((float)rand() / RAND_MAX) < 0.5)
+                        float thres = (float)(dx1 + dx2) / (float)(dy1 + dy2 + dx1 + dx2);
+
+                        if(((float)rand() / RAND_MAX) < thres)
                         {
                             inst1->setLocation(inst1->lx() + dx1, inst1->ly());
                             inst2->setLocation(inst2->lx() + dx2, inst2->ly());
