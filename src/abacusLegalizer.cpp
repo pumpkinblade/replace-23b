@@ -240,15 +240,14 @@ namespace replace
   {
     // find last cluster
     AbacusCluster* last = clusters.size() == 0 ? nullptr : &clusters.back();
-    if(last == nullptr || last->xc() + last->wc() <= cell->gpLx())
+    float xc = cell->gpLx();
+    xc = std::max(xc, lx_);
+    xc = std::min(xc, lx_ + width_ - cell->width());
+    if(last == nullptr || last->xc() + last->wc() <= xc)
     {
       // create a new cluster
       clusters.emplace_back(static_cast<int>(cells_.size() - 1));
       clusters.back().addCell(cell);
-      // clusters.back().setXc(cell->gpLx());
-      float xc = cell->gpLx();
-      xc = std::max(xc, lx_);
-      xc = std::min(xc, lx_ + width_ - cell->width());
       clusters.back().setXc(xc);
     }
     else

@@ -20,7 +20,7 @@ int main(int argc, const char *argv[])
   Log::Init();
 
   PlotVars vars;
-  vars.minLength = 1000;
+  vars.minLength = 2000;
   vars.xMargin = 30;
   vars.yMargin = 30;
   Plot::init(vars);
@@ -35,7 +35,7 @@ int main(int argc, const char *argv[])
   // Wrap everything in a try block.  Do this every time, because exceptions will be thrown for problems.
   try
   {
-    CmdLine cmd("Command description message", ' ', "0.1(alpha)");
+    CmdLine cmd("Command description message", ' ', "beta");
 
     // Define a value argument and add it to the command line.
     ValueArg<string> lefArg("l", "lef", "path to lef file", false, "none", "string");
@@ -100,8 +100,9 @@ int main(int argc, const char *argv[])
     tm.modify();
     Replace rp(1.0);
     rp.setPlacerBase(pb);
-    rp.doInitialPlace();
-    rp.doNesterovPlace("postgp");
+    // rp.doInitialPlace();
+    // rp.doNesterovPlace("postgp");
+    // Plot::plot(pb.get(), "./plot/cell", "after_gp");
     rp.doMacroLegalization();
     rp.doAbacusLegalization();
     tm.recover();

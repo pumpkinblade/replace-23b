@@ -140,7 +140,7 @@ namespace replace
     LOG_TRACE("start Replace::doMacroLegalization");
 
     MacroLegalizerVars mlgVars;
-    mlgVars.maxPostLegalizeIter = 1000;
+    mlgVars.maxPostLegalizeIter = 10000;
 
     mlg_.reset(new MacroLegalizer(mlgVars, pb_));
     mlg_->doLegalization();

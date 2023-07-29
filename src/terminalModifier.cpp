@@ -6,21 +6,23 @@ namespace replace
   void TerminalModifier::modify()
   {
     // terminal resizing with spacing
-    int modSizeX = pb_->terminalSizeX() + pb_->terminalSpacing();
-    int modSizeY = pb_->terminalSizeX() + pb_->terminalSpacing();
+    int spaceLeft = pb_->terminalSpacing();
+    int spaceRight = pb_->terminalSpacing() - spaceLeft;
     for(Instance* inst : pb_->die("terminal")->insts())
     {
-      int cx = inst->cx();
-      int cy = inst->cy();
-      inst->setSize(modSizeX, modSizeY);
-      inst->setCenterLocation(cx, cy);
+      inst->setBox(
+        inst->lx() - spaceLeft,
+        inst->ly() - spaceLeft,
+        inst->ux() + spaceRight,
+        inst->uy() + spaceRight
+      );
     }
 
     // terminal die core area
-    int coreLx = pb_->die("terminal")->coreLx() + pb_->terminalSpacing() / 2;
-    int coreLy = pb_->die("terminal")->coreLy() + pb_->terminalSpacing() / 2;
-    int coreUx = pb_->die("terminal")->coreUx() - pb_->terminalSpacing() / 2;
-    int coreUy = pb_->die("terminal")->coreUy() - pb_->terminalSpacing() / 2;
+    int coreLx = pb_->die("terminal")->coreLx() + spaceRight;
+    int coreLy = pb_->die("terminal")->coreLy() + spaceRight;
+    int coreUx = pb_->die("terminal")->coreUx() - spaceLeft;
+    int coreUy = pb_->die("terminal")->coreUy() - spaceLeft;
     pb_->die("terminal")->setCoreBox(coreLx, coreLy, coreUx, coreUy);
 
     // set row Params
@@ -34,21 +36,23 @@ namespace replace
 
   void TerminalModifier::recover()
   {
-    int origSizeX = pb_->terminalSizeX();
-    int origSizeY = pb_->terminalSizeY();
+    int spaceLeft = pb_->terminalSpacing();
+    int spaceRight = pb_->terminalSpacing() - spaceLeft;
     for(Instance* inst : pb_->die("terminal")->insts())
     {
-      int cx = inst->cx();
-      int cy = inst->cy();
-      inst->setSize(origSizeX, origSizeY);
-      inst->setCenterLocation(cx, cy);
+      inst->setBox(
+        inst->lx() + spaceLeft,
+        inst->ly() + spaceLeft,
+        inst->ux() - spaceRight,
+        inst->uy() - spaceRight
+      );
     }
 
     // terminal die core area
-    int coreLx = pb_->die("terminal")->coreLx() - pb_->terminalSpacing() / 2;
-    int coreLy = pb_->die("terminal")->coreLy() - pb_->terminalSpacing() / 2;
-    int coreUx = pb_->die("terminal")->coreUx() + pb_->terminalSpacing() / 2;
-    int coreUy = pb_->die("terminal")->coreUy() + pb_->terminalSpacing() / 2;
+    int coreLx = pb_->die("terminal")->coreLx() - spaceRight;
+    int coreLy = pb_->die("terminal")->coreLy() - spaceRight;
+    int coreUx = pb_->die("terminal")->coreUx() + spaceLeft;
+    int coreUy = pb_->die("terminal")->coreUy() + spaceLeft;
     pb_->die("terminal")->setCoreBox(coreLx, coreLy, coreUx, coreUy);
   }
 }
