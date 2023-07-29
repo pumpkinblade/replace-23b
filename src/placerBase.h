@@ -5,13 +5,14 @@
 #include <unordered_map>
 #include <memory>
 #include "technology.h"
+#include <cassert>
 
 namespace replace
 {
   class Pin;
   class Net;
 
-  // Instance is either a cell or a macro related to a given technology node, 
+  // Instance is either a cell or a macro related to a given technology node,
   // Instance can be fixed or not, has shape and location.
   // It also contains a pin list
   class Instance
@@ -31,9 +32,9 @@ namespace replace
     void setCenterLocation(int x, int y);
     // w for x dimension, h for y dimension
     void setSize(int w, int h);
-    // use libCellName_ to get LibCell data under tech. and set 
+    // use libCellName_ to get LibCell data under tech. and set
     // instance size to the LibCell size
-    void setSize(Technology& tech);
+    void setSize(Technology &tech);
     void setBox(int lx, int ly, int ux, int uy);
 
     int lx() const { return lx_; }
@@ -46,18 +47,19 @@ namespace replace
     int dx() const { return ux_ - lx_; }
     // instance size in y dimension
     int dy() const { return uy_ - ly_; }
+    int size() const { return dx() * dy(); }
 
     void setExtId(int extId) { extId_ = extId; }
     int extId() const { return extId_; }
 
     void addPin(Pin *pin);
     const std::vector<Pin *> &pins() const { return pins_; }
-    Pin* pin(const std::string& name) const;
+    Pin *pin(const std::string &name) const;
 
     const std::string &name() const { return name_; }
     void setName(const std::string &name) { name_ = name; }
     const std::string &libCellName() const { return libCellName_; }
-    void setLibCellName(const std::string& libCellName) { libCellName_ = libCellName; }
+    void setLibCellName(const std::string &libCellName) { libCellName_ = libCellName; }
 
   private:
     std::vector<Pin *> pins_;
@@ -74,7 +76,7 @@ namespace replace
     // For 23b
     std::string name_;
     std::string libCellName_;
-    std::unordered_map<std::string, Pin*> pinNameMap_;
+    std::unordered_map<std::string, Pin *> pinNameMap_;
   };
 
   // A Pin belongs to one instance, can be connected to no more than one net,
@@ -105,6 +107,7 @@ namespace replace
     void setLocation(int cx, int cy);
 
     void updateLocation(const Instance *inst);
+    // this is the only medifiter of offsetX nad offsetY
     void updateLocation(const Instance *inst, int offsetX, int offsetY);
 
     void setInstance(Instance *inst);
@@ -142,7 +145,7 @@ namespace replace
     std::string name_;
   };
 
-  // Net can have name, a vector of pins, 
+  // Net can have name, a vector of pins,
   // and hold a boundary to calculate HPWL
   class Net
   {
@@ -189,11 +192,11 @@ namespace replace
   public:
     Die();
     ~Die() = default;
-    void copyDieBoxAndRowParamsFrom(const Die& ano);
+    void copyDieBoxAndRowParamsFrom(const Die &ano);
 
     void setDieBox(int lx, int ly, int ux, int uy);
     void setCoreBox(int lx, int ly, int ux, int uy);
-    void setDieBox(const Die& ano);
+    void setDieBox(const Die &ano);
 
     int dieLx() const { return dieLx_; }
     int dieLy() const { return dieLy_; }
@@ -215,7 +218,7 @@ namespace replace
     int coreDy() const { return coreUy_ - coreLy_; }
 
     void setRowParams(int startX, int startY, int width, int height, int repeatCount);
-    void setRowParams(const Die& ano);
+    void setRowParams(const Die &ano);
     int rowStartX() const { return rowStartX_; }
     int rowStartY() const { return rowStartY_; }
     int rowWidth() const { return rowWidth_; }
@@ -235,8 +238,8 @@ namespace replace
 
     const std::string &name() const { return name_; }
     void setName(const std::string &name) { name_ = name; }
-    Technology* tech() const { return tech_; }
-    void setTech(Technology* tech) { tech_ = tech; }
+    Technology *tech() const { return tech_; }
+    void setTech(Technology *tech) { tech_ = tech; }
     float maxUtil() const { return maxUtil_; }
     void setMaxUtil(float util) { maxUtil_ = util; }
 
@@ -272,13 +275,13 @@ namespace replace
 
     // For 23b
     std::string name_;
-    Technology* tech_;
+    Technology *tech_;
     float maxUtil_;
   };
 
-  // PlacerBase is a class containing all data, including instance set, 
+  // PlacerBase is a class containing all data, including instance set,
   // pin set, net set, die set. Also hold statistics about area and hpwl.
-  // It lead out data by providing vector<T *> so T is writeable by 
+  // It lead out data by providing vector<T *> so T is writeable by
   // other classes. This class itself does not perform any placement.
   class PlacerBase
   {
@@ -289,11 +292,16 @@ namespace replace
     PlacerBase();
     ~PlacerBase();
 
-    const std::vector<Instance *> &insts() const { return insts_; }
+    const std::vector<Instance *> &insts() const
+    {
+      // check whether first pointer is valid
+      assert(insts_[0] == &instStor_[0]);
+      return insts_;
+    }
     const std::vector<Pin *> &pins() const { return pins_; }
     const std::vector<Net *> &nets() const { return nets_; }
     const std::vector<Die *> &dies() const { return dies_; }
-    const std::vector<Technology *>& techs() const { return techs_; }
+    const std::vector<Technology *> &techs() const { return techs_; }
 
     //
     // placeInsts : a real instance that need to be placed
@@ -315,10 +323,10 @@ namespace replace
     int64_t fixedInstsArea() const;
 
     // query object by name
-    Instance* inst(const std::string& name) const;
-    Die* die(const std::string& name) const;
-    Net* net(const std::string& name) const;
-    Technology* tech(const std::string& name) const;
+    Instance *inst(const std::string &name) const;
+    Die *die(const std::string &name) const;
+    Net *net(const std::string &name) const;
+    Technology *tech(const std::string &name) const;
 
     // terminal params
     int terminalSizeX() const { return termSizeX_; }
@@ -328,29 +336,35 @@ namespace replace
 
     // some modifier methods
     // create a new instance in instStor_, return reference
-    Instance& emplaceInstance(bool isFixed, bool isMacro);
-    Pin& emplacePin();
+    Instance &emplaceInstance(bool isFixed, bool isMacro);
+    Pin &emplacePin();
     // NOTE: this will move net into netStor_. Address will change
-    void addNet(const Net& net);
+    void addNet(const Net &net);
 
   private:
     void reset();
-    void pushToInstsByType(bool isFixed, Instance& inst){
-      if(isFixed){ fixedInsts_.push_back(&inst); }
-      else { placeInsts_.push_back(&inst); }
+    void pushToInstsByType(bool isFixed, Instance &inst)
+    {
+      if (isFixed)
+      {
+        fixedInsts_.push_back(&inst);
+      }
+      else
+      {
+        placeInsts_.push_back(&inst);
+      }
     }
     // clean vector of pointers
     void cleanIPNs();
     // derive insts_, pins_ and nets_ from XXXStor_. Assuming vector is empty
     // before call this method
-    void deriveIPNs();    
+    void deriveIPNs();
 
   private:
     std::vector<Die> dieStor_;
     std::vector<Instance> instStor_;
     std::vector<Pin> pinStor_;
     std::vector<Net> netStor_;
-
 
     std::vector<Die *> dies_;
     std::vector<Instance *> insts_;

@@ -39,7 +39,7 @@ namespace replace
                     macros.push_back(inst);
                 }
             }
-            saLegalize(macros, die);
+            // saLegalize(macros, die);
             postLegalize(macros, die);
         }
     }

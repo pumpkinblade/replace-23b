@@ -42,3 +42,4 @@ lib
 core.[0-9]*
 module/CImg/.github
 result
+output.txt

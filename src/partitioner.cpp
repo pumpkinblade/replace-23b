@@ -5,6 +5,7 @@
 #include "partitioner.h"
 #include "replace.h"
 #include <unordered_map>
+#include <algorithm>
 #include <unordered_set>
 
 
@@ -18,12 +19,10 @@ namespace replace
 
   void Partitioner::partitioning(std::shared_ptr<PlacerBase> &pb_)
   {
-    // assert(&pb_->instStor_[0] == pb_->insts_[0]);
-    // // 先使用replace进行以此global placement
-    // replace_->setPlacerBase(pb_);
-    // replace_->doInitialPlace();
-    // replace_->doNesterovPlace("pregp");
-    // assert(&pb_->instStor_[0] == pb_->insts_[0]);
+    // 先使用replace进行以此global placement
+    replace_->setPlacerBase(pb_);
+    replace_->doInitialPlace();
+    replace_->doNesterovPlace("pregp");
 
     // TODO: move cell to bottom only where exists overlap
     LOG_TRACE("start partition");
@@ -33,7 +32,6 @@ namespace replace
     std::vector<Net> bottomNets;
     const std::vector<Net *> &topNets = pb_->nets();
     bottomNets.reserve(pb_->nets().size());
-    assert(&pb_->instStor_[0] == pb_->insts_[0]);
     for (auto topnetptr : pb_->nets())
     {
       bottomNets.emplace_back();
@@ -44,17 +42,22 @@ namespace replace
       topBotMap.emplace(topNets[i], &bottomNets[i]);
     }
 
+    // Short alias for top die and bottom die;
+    Die &topdie = *pb_->die("top");
+    Die &bottomdie = *pb_->die("bottom");
+    std::vector<Instance*> macros;
     // 对replace布局后的结果进行layer assignment
     for (Instance *instance : pb_->insts())
     {
-      assert(&pb_->instStor_[0] == pb_->insts_[0]);
+      // colloect all macros
+      if(instance->isMacro()){
+        macros.push_back(instance);
+        continue;
+      }
       float roll = (float)rand() / RAND_MAX;
       bool moveToBottom = roll >= 0.5 ? true : false;
       if (moveToBottom)
       {
-        Die &topdie = *pb_->die("top");
-        Die &bottomdie = *pb_->die("bottom");
-
         topdie.removeInstance(instance);
 
         // set instance size by bottom die technology
@@ -77,10 +80,37 @@ namespace replace
           topBotMap[topnet]->addPin(pin);
         }
 
-        // Also, under different tech node, the pin offset from instance
+        // TODO: Also, under different tech node, the pin offset from instance
         // is different
       }
     }
+
+    std::sort(macros.begin(), macros.end(), [](const Instance* left,
+    const Instance* right){ return left->size() > right->size(); });
+    // A greedy macro partition method, which may be not optimal.
+    int topMacroSize = 0;
+    int bottomMacroSize = 0;
+    for(Instance* macro : macros){
+      if(topMacroSize > bottomMacroSize){
+        topdie.removeInstance(macro);
+        macro->setSize(*bottomdie.tech());
+        bottomdie.addInstance(macro);
+
+        for (Pin *pin : macro->pins())
+        {
+          auto topnet = pin->net();
+          topnet->removePin(pin);
+          topBotMap[topnet]->addPin(pin);
+        }
+
+        bottomMacroSize += macro->size();
+      } else {
+        topMacroSize += macro->size();
+      }
+    }
+    LOG_INFO("partition macros, top: {} bottom: {}",
+      topMacroSize, bottomMacroSize);
+
 
     // TODO: when this loop finish, we should clean empty top nets.
     //          and add terminal
