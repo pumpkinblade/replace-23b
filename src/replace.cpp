@@ -148,6 +148,19 @@ namespace replace
     LOG_TRACE("end Replace::doMacorLegalization");
   }
 
+  void Replace::doSAMacroLegalization()
+  {
+    LOG_TRACE("start Replace::doSAMacroLegalization");
+
+    MacroLegalizerVars mlgVars;
+    mlgVars.maxPostLegalizeIter = 1000;
+
+    mlg_.reset(new MacroLegalizer(mlgVars, pb_));
+    mlg_->doLegalization();
+
+    LOG_TRACE("end Replace::doMacorLegalization");
+  }
+
   void Replace::doLayerAssignment()
   {
     // TODO
@@ -155,7 +168,7 @@ namespace replace
     LOG_TRACE("start Replace::doLayerAssignment");
     la_->setPlacerBase(pb_);
     la_->setNesterovBase(nb_);
-    la_->doLayerAssignmenter();
+    // la_->doLayerAssgnmenter();
     LOG_TRACE("end Replace::doLayerAssignment");
   }
 

@@ -36,6 +36,8 @@ namespace replace
     void doAbacusLegalization();
     void doMacroLegalization();
 
+    void doSAMacroLegalization();
+
     void doLayerAssignment();
 
     // Initial Place param settings

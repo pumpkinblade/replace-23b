@@ -6,6 +6,7 @@
 #include "point.h"
 #include <cmath>
 #include <ctime>
+#include "log.h"
 
 namespace replace
 {
@@ -41,6 +42,7 @@ namespace replace
             }
             saLegalize(macros, die);
             postLegalize(macros, die);
+            // LOG_INFO("[MacroLegalization] Die {} ", die->name());
         }
     }
 
@@ -59,33 +61,6 @@ namespace replace
             int64_t tot_place_region = die->coreDx() * (int64_t)die->coreDy();
             int max_sa_r_x = static_cast<int>(tot_place_region / sqrt(macros.size()) * rcof);
             int max_sa_r_y = static_cast<int>(tot_place_region / sqrt(macros.size()) * rcof);
-
-            // 模拟退火
-            //     // 选择一个宏单元
-            //     for (int j = 0; j < num_macros; j++) {
-            //         // 计算宏单元的成本函数
-            //         double old_cost = calc_cost(j);
-
-            //         // 尝试将宏单元移动到新的位置
-            //         move_macro(j);
-
-            //         // 计算宏单元的成本函数
-            //         double new_cost = calc_cost(j);
-
-            //         // 判断是否接受新的解
-            //         if (accept(new_cost, old_cost, temp)) {
-            //             // 接受新的解
-            //             update_cost(j, new_cost);
-            //         } else {
-            //             // 拒绝新的解
-            //             undo_move(j);
-            //         }
-            //     }
-
-            //     // 退火
-            //     temp *= cooling_rate;
-            // }
-            // return std::make_pair(0, 0);
 
             // 为使结果可复现，应手动设置seed
             srand(iter * 114 + 514);
@@ -109,10 +84,13 @@ namespace replace
                 double delta = (new_cost - old_cost) / old_cost;
                 double tau = (double)rand() / RAND_MAX;
                 double p = exp(-1.0 * delta / temp);
+                int isAccept=0;
+                LOG_INFO("[MacroLegalization] old_cost: {} new_cost: {} move: {}-{} delta{}", old_cost, new_cost, move.first, move.second, delta);
                 if (p > tau)
                 {
                     // 接受新的解
                     // 判断是否满足要求
+                    isAccept=1;
                     int om = getMacrosOverlap(macros, die);
                     if (om == 0)
                     {
@@ -122,35 +100,11 @@ namespace replace
                 else
                 {
                     // 拒绝新的解
+                    isAccept=0;
                     cell->setLocation(cell->lx() - move.first, cell->ly() - move.second);
                 }
 
-                // The temperature tj,k at each iteration (j, k) is determined based on the maximum cost
-                // increase fmax(j, k) that will be accepted by more than 50% probabil-
-                // -ity, thus we set tj,k = (fmax(j, k)/ln 2). We set fmax(j, 0) (fmax(j, kmax))as0.03×βj (0.0001×βj),
-                // denoting that cost increase by less than 3% (0.01%) at the first (last) SA iteration will be accepted by more than 50% probability.
-                // We initialize fmax(j, k) by fmax(j, 0) and linearly decrease it toward fmax(j, kmax).
-                // The radius rj,k of macro motion range is dependent on both the penalty factor and the amount of macros.
-                /////////////////////////////////////////////////////////////////////////
-                /*  function accept (programmed by Replace_master)
-                    int rnd = 0;
-                    int flg = 0;
-                    prec dc = (c1 - c0) / c0;
-                    prec drnd = 0;
-                    prec exp_val = 0;
-                    sa_t = 0.0001 * pow(1.5, (prec)iter) / log(2.0);
-                    rnd = rand();
-                    drnd = (prec)rnd / RAND_MAX;
-                    exp_val = exp(-1.0 * dc / sa_t);
-                    if(drnd < exp_val)
-                        flg = 1;
-                    else
-                        flg = 0;
-                    return flg;
-                */
-
-                // 退火
-                // temp_ *= cooling_rate_;
+                LOG_INFO("[MacroLegalization] Iter {} new_cost: {} accept: {}", i, new_cost, isAccept);
             }
         }
     }
@@ -159,8 +113,8 @@ namespace replace
     {
         int clx = cell->lx();
         int cly = cell->ly();
-        int cux = cell->lx();
-        int cuy = cell->ly();
+        int cux = cell->ux();
+        int cuy = cell->uy();
         // 获得die的大小
         int dlx = die->dieLx();
         int dly = die->dieLy();
@@ -168,19 +122,15 @@ namespace replace
         int duy = die->dieUy();
         int diewidth = dux - dlx;
         int dieheight = duy - dly;
-        // maxMoveX，maxMoveY为die的长宽的1/10
-        int maxMoveX = diewidth / 10;
-        int maxMoveY = dieheight / 10;
-        /*int moveX = (-maxMoveX) + rand() % (maxMoveX - (-maxMoveX) + 1);
-        int moveY = (-maxMoveY) + rand() % (maxMoveY - (-maxMoveY) + 1);*/
         int rndx = rand();
         int rndy = rand();
         int rh = die->rowHeight();
         double rcof = 0.05 * pow(1.5, (double)iter);
         double rx = (max_sa_r_x - rh) / (double)(iter + 1); // 1 = rowheight
         double ry = (max_sa_r_y - rh) / (double)(iter + 1);
-        int moveX = (int)(rndx / RAND_MAX - 0.5) * rx;
-        int moveY = (int)(rndy / RAND_MAX - 0.5) * ry;
+        int moveX = int((rndx / RAND_MAX - 0.5) * rx);
+        int moveY = int((rndy / RAND_MAX - 0.5) * ry);
+        LOG_INFO("[MacroLegalization] moveX: {} moveY: {} ", moveX, moveY);
         // 计算移动后的 Macro 的四个角坐标
         int newcux = cux + moveX;
         int newcuy = cuy + moveY;

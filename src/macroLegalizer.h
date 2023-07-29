@@ -23,8 +23,8 @@ namespace replace
         double sa_hpwl_cof = 1.0;
         double sa_den_cof = 1.0;
         double sa_ovlp_cof = 1.5;   /// need tuning
-        double sa_max_iter = 1000;  /// need tuning
-        double sa_max_iter0 = 1000; /// need tuning
+        double sa_max_iter = 500;  /// need tuning
+        double sa_max_iter0 = 20; /// need tuning
         int maxPostLegalizeIter;
 
         MacroLegalizerVars();
