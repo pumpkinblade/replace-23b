@@ -1118,36 +1118,50 @@ void NesterovBase::initFillerGCells(Die* die)
   if(die->placeInsts().size() == 0)
     return;
 
-  // extract average dx/dy in range (10%, 90%)
-  vector<int> dxStor;
-  vector<int> dyStor;
-  dxStor.reserve(die->placeInsts().size());
-  dyStor.reserve(die->placeInsts().size());
-  for(Instance* inst : die->placeInsts())
-  {
-    dxStor.push_back(inst->dx());
-    dyStor.push_back(inst->dy());
-  }
+  // // extract average dx/dy in range (10%, 90%)
+  // vector<int> dxStor;
+  // vector<int> dyStor;
+  // dxStor.reserve(die->placeInsts().size());
+  // dyStor.reserve(die->placeInsts().size());
+  // for(Instance* inst : die->placeInsts())
+  // {
+  //   dxStor.push_back(inst->dx());
+  //   dyStor.push_back(inst->dy());
+  // }
   
-  // sort
-  std::sort(dxStor.begin(), dxStor.end());
-  std::sort(dyStor.begin(), dyStor.end());
+  // // sort
+  // std::sort(dxStor.begin(), dxStor.end());
+  // std::sort(dyStor.begin(), dyStor.end());
 
-  // average from (10 - 90%) .
-  int64_t dxSum = 0, dySum = 0;
-  int minIdx = static_cast<int>(dxStor.size()*0.05);
-  int maxIdx = static_cast<int>(dxStor.size()*0.95);
-  assert(maxIdx - minIdx > 0);
-  for(int i=minIdx; i<maxIdx; i++)
+  // // average from (10 - 90%) .
+  // int64_t dxSum = 0, dySum = 0;
+  // int minIdx = static_cast<int>(dxStor.size()*0.05);
+  // int maxIdx = static_cast<int>(dxStor.size()*0.95);
+  // assert(maxIdx - minIdx > 0);
+  // for(int i=minIdx; i<maxIdx; i++)
+  // {
+  //   dxSum += dxStor[i];
+  //   dySum += dyStor[i];
+  // }
+
+  // // the avgDx and avgDy will be used as filler cells' 
+  // // width and height
+  // int avgDx = static_cast<int>(dxSum / (maxIdx - minIdx));
+  // int avgDy = static_cast<int>(dySum / (maxIdx - minIdx));
+
+  double dxSum = 0.0, dySum = 0.0;
+  int numStdcell = 0;
+  for(Instance* inst : die->insts())
   {
-    dxSum += dxStor[i];
-    dySum += dyStor[i];
+    if(!inst->isMacro())
+    {
+      dxSum += inst->dx();
+      dySum += inst->dy();
+      numStdcell++;
+    }
   }
-
-  // the avgDx and avgDy will be used as filler cells' 
-  // width and height
-  int avgDx = static_cast<int>(dxSum / (maxIdx - minIdx));
-  int avgDy = static_cast<int>(dySum / (maxIdx - minIdx));
+  int avgDx = static_cast<int>(dxSum / numStdcell);
+  int avgDy = static_cast<int>(dySum / numStdcell);
 
   int64_t coreArea = (int64_t)die->coreDx() * die->coreDy();
 

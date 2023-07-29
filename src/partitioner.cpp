@@ -5,6 +5,7 @@
 #include "partitioner.h"
 #include "replace.h"
 #include <unordered_map>
+#include <algorithm>
 #include <unordered_set>
 
 
@@ -18,12 +19,10 @@ namespace replace
 
   void Partitioner::partitioning(std::shared_ptr<PlacerBase> &pb_)
   {
-    // assert(&pb_->instStor_[0] == pb_->insts_[0]);
-    // // 先使用replace进行以此global placement
-    // replace_->setPlacerBase(pb_);
-    // replace_->doInitialPlace();
-    // replace_->doNesterovPlace("pregp");
-    // assert(&pb_->instStor_[0] == pb_->insts_[0]);
+    // 先使用replace进行以此global placement
+    replace_->setPlacerBase(pb_);
+    replace_->doInitialPlace();
+    replace_->doNesterovPlace("pregp");
 
     // TODO: move cell to bottom only where exists overlap
     LOG_TRACE("start partition");
@@ -33,7 +32,6 @@ namespace replace
     std::vector<Net> bottomNets;
     const std::vector<Net *> &topNets = pb_->nets();
     bottomNets.reserve(pb_->nets().size());
-    assert(&pb_->instStor_[0] == pb_->insts_[0]);
     for (auto topnetptr : pb_->nets())
     {
       bottomNets.emplace_back();
@@ -44,17 +42,22 @@ namespace replace
       topBotMap.emplace(topNets[i], &bottomNets[i]);
     }
 
+    // Short alias for top die and bottom die;
+    Die &topdie = *pb_->die("top");
+    Die &bottomdie = *pb_->die("bottom");
+    std::vector<Instance*> macros;
     // 对replace布局后的结果进行layer assignment
     for (Instance *instance : pb_->insts())
     {
-      assert(&pb_->instStor_[0] == pb_->insts_[0]);
+      // colloect all macros
+      if(instance->isMacro()){
+        macros.push_back(instance);
+        continue;
+      }
       float roll = (float)rand() / RAND_MAX;
       bool moveToBottom = roll >= 0.5 ? true : false;
       if (moveToBottom)
       {
-        Die &topdie = *pb_->die("top");
-        Die &bottomdie = *pb_->die("bottom");
-
         topdie.removeInstance(instance);
 
         // set instance size by bottom die technology
@@ -77,10 +80,37 @@ namespace replace
           topBotMap[topnet]->addPin(pin);
         }
 
-        // Also, under different tech node, the pin offset from instance
+        // TODO: Also, under different tech node, the pin offset from instance
         // is different
       }
     }
+
+    std::sort(macros.begin(), macros.end(), [](const Instance* left,
+    const Instance* right){ return left->size() > right->size(); });
+    // A greedy macro partition method, which may be not optimal.
+    int topMacroSize = 0;
+    int bottomMacroSize = 0;
+    for(Instance* macro : macros){
+      if(topMacroSize > bottomMacroSize){
+        topdie.removeInstance(macro);
+        macro->setSize(*bottomdie.tech());
+        bottomdie.addInstance(macro);
+
+        for (Pin *pin : macro->pins())
+        {
+          auto topnet = pin->net();
+          topnet->removePin(pin);
+          topBotMap[topnet]->addPin(pin);
+        }
+
+        bottomMacroSize += macro->size();
+      } else {
+        topMacroSize += macro->size();
+      }
+    }
+    LOG_INFO("partition macros, top: {} bottom: {}",
+      topMacroSize, bottomMacroSize);
+
 
     // TODO: when this loop finish, we should clean empty top nets.
     //          and add terminal
@@ -148,7 +178,7 @@ namespace replace
 
   void Partitioner::partitioning2(std::shared_ptr<PlacerBase> pb)
   {
-    srand(114514);
+    srand(114);
 
     Die* topdie = pb->die("top");
     Die* botdie = pb->die("bottom");
@@ -166,6 +196,101 @@ namespace replace
     }
     std::vector<bool> hasAssigned(pb->insts().size(), false);
     std::vector<bool> isBot(pb->insts().size(), false);
+
+    // using zjl's method to assign macros
+    std::vector<Instance*> macros;
+    for(Instance* inst : pb->insts())
+    {
+      if(inst->isMacro())
+        macros.push_back(inst);
+    }
+    std::sort(macros.begin(), macros.end(), [](const Instance* left, const Instance* right)
+              { return left->size() > right->size(); });
+    // A greedy macro partition method, which may be not optimal.
+    int topMacroSize = 0;
+    int bottomMacroSize = 0;
+    for(Instance* macro : macros)
+    {
+      if(topMacroSize > bottomMacroSize)
+      {
+        topdie->removeInstance(macro);
+        macro->setSize(*botdie->tech());
+        botdie->addInstance(macro);
+
+        bottomMacroSize += macro->size();
+        botCap -= macro->size();
+        hasAssigned[macro->extId()] = true;
+        isBot[macro->extId()] = false;
+      }
+      else
+      {
+        topMacroSize += macro->size();
+        topCap -= macro->size();
+        hasAssigned[macro->extId()] = true;
+        isBot[macro->extId()] = false;
+      }
+    }
+    LOG_INFO("partition macros, top: {} bottom: {}", topMacroSize, bottomMacroSize);
+
+    // enumerating net
+    for(Net* net : pb->nets())
+    {
+      std::unordered_set<Instance*> netInstSet;
+      bool canPlaceTop = true;
+      int64_t netAreaTop = 0;
+      bool canPlaceBot = true;
+      int64_t netAreaBot = 0;
+      for(Pin* pin : net->pins())
+      {
+        Instance* inst = pin->instance();
+        LibCell* libcell = botdie->tech()->libCell(inst->libCellName());
+        canPlaceTop &= (!hasAssigned[inst->extId()]) || (!isBot[inst->extId()]);
+        netAreaTop += hasAssigned[inst->extId()] ? 0 : (int64_t)inst->dx() * inst->dy();
+        canPlaceBot &= (!hasAssigned[inst->extId()]) || (isBot[inst->extId()]);
+        netAreaBot += hasAssigned[inst->extId()] ? 0 : (int64_t)libcell->sizeX() * libcell->sizeY();
+      }
+
+      bool toTop = false;
+      bool toBot = false;
+      if(canPlaceTop && netAreaTop < topCap && canPlaceBot && netAreaBot < botCap)
+      {
+        moveDecide(netAreaTop, netAreaBot, topCap, botCap, &toTop, &toBot);
+      }
+      else if(canPlaceTop && netAreaTop < topCap)
+      {
+        toTop = true;
+      }
+      else if(canPlaceBot && netAreaBot < botCap)
+      {
+        toBot = true;
+      }
+
+      if(toTop)
+      {
+        topCap -= netAreaTop;
+        for(Pin* pin : net->pins())
+        {
+          Instance* inst = pin->instance();
+          hasAssigned[inst->extId()] = true;
+          isBot[inst->extId()] = false;
+        }
+      }
+      else if(toBot)
+      {
+        botCap -= netAreaBot;
+        for(Pin* pin : net->pins())
+        {
+          Instance* inst = pin->instance();
+          if(hasAssigned[inst->extId()])
+            continue;
+          hasAssigned[inst->extId()] = true;
+          isBot[inst->extId()] = true;
+          inst->setSize(*botdie->tech());
+          topdie->removeInstance(inst);
+          botdie->addInstance(inst);
+        }
+      }
+    }
 
     // for insts that hasn't been assigned
     for(Instance* inst : pb->insts())
