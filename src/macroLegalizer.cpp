@@ -9,9 +9,303 @@
 
 namespace replace
 {
-    int max_sa_r_x, max_sa_r_y; 
+    ///////////////////////////////////////
+    // MacroLegalizerVars
 
-    bool repel(int l1, int u1, int l2, int u2, int ll, int uu, int* pd1, int* pd2)
+    MacroLegalizerVars::MacroLegalizerVars()
+        : maxPostLegalizeIter(1000)
+    {
+    }
+
+    /////////////////////////////////////////
+    // MacroLegalizer
+
+    MacroLegalizer::MacroLegalizer(MacroLegalizerVars lgVars, std::shared_ptr<PlacerBase> pb)
+        : pb_(pb), lgVars_(lgVars)
+    {
+    }
+
+    void MacroLegalizer::doLegalization()
+    {
+        std::vector<Instance *> macros;
+        for (Die *die : pb_->dies())
+        {
+            macros.clear();
+            for (Instance *inst : die->insts())
+            {
+                // regardless of fixed instance
+                if (inst->isMacro())
+                {
+                    macros.push_back(inst);
+                }
+            }
+            saLegalize(macros, die);
+            postLegalize(macros, die);
+        }
+    }
+
+    void MacroLegalizer::saLegalize(const std::vector<Instance *> macros, Die *die)
+    {
+        if (macros.size() == 0)
+            return;
+        for (int iter = 0; iter < vars_.sa_max_iter; iter++)
+        {
+            // 初始化参数
+            double cooling_rate;
+            double temp_0 = 0.03 * pow(1.5, (double)iter) / log(2.0);
+            double temp_max = 0.0001 * pow(1.5, (double)iter) / log(2.0);
+            double rcof = 0.05 * pow(1.5, (double)iter);
+
+            int64_t tot_place_region = die->coreDx() * (int64_t)die->coreDy();
+            int max_sa_r_x = static_cast<int>(tot_place_region / sqrt(macros.size()) * rcof);
+            int max_sa_r_y = static_cast<int>(tot_place_region / sqrt(macros.size()) * rcof);
+
+            // 模拟退火
+            //     // 选择一个宏单元
+            //     for (int j = 0; j < num_macros; j++) {
+            //         // 计算宏单元的成本函数
+            //         double old_cost = calc_cost(j);
+
+            //         // 尝试将宏单元移动到新的位置
+            //         move_macro(j);
+
+            //         // 计算宏单元的成本函数
+            //         double new_cost = calc_cost(j);
+
+            //         // 判断是否接受新的解
+            //         if (accept(new_cost, old_cost, temp)) {
+            //             // 接受新的解
+            //             update_cost(j, new_cost);
+            //         } else {
+            //             // 拒绝新的解
+            //             undo_move(j);
+            //         }
+            //     }
+
+            //     // 退火
+            //     temp *= cooling_rate;
+            // }
+            // return std::make_pair(0, 0);
+
+            // 为使结果可复现，应手动设置seed
+            srand(iter * 114 + 514);
+            // double cooling_rate_ = cooling_rate;
+            //  选择一个宏单元
+            int index = rand() % macros.size();
+
+            for (int i = 0; i < vars_.sa_max_iter0; i++)
+            {
+                double temp = temp_0 + (temp_max - temp_0) * (double)(i / vars_.sa_max_iter0);
+                Instance *cell = macros[index];
+                // 计算宏单元的成本函数
+                double old_cost = calc_cost(macros, die);
+                // 随机移动
+                std::pair<int, int> move = getRandomMove(cell, iter, die, max_sa_r_x, max_sa_r_y);
+                // 尝试将宏单元移动到新的位置
+                cell->setLocation(cell->lx() + move.first, cell->ly() + move.second);
+                // 计算宏单元的成本函数
+                double new_cost = calc_cost(macros, die);
+                // 判断是否接受新的解
+                double delta = (new_cost - old_cost) / old_cost;
+                double tau = (double)rand() / RAND_MAX;
+                double p = exp(-1.0 * delta / temp);
+                if (p > tau)
+                {
+                    // 接受新的解
+                    // 判断是否满足要求
+                    int om = getMacrosOverlap(macros, die);
+                    if (om == 0)
+                    {
+                        break;
+                    }
+                }
+                else
+                {
+                    // 拒绝新的解
+                    cell->setLocation(cell->lx() - move.first, cell->ly() - move.second);
+                }
+
+                // The temperature tj,k at each iteration (j, k) is determined based on the maximum cost
+                // increase fmax(j, k) that will be accepted by more than 50% probabil-
+                // -ity, thus we set tj,k = (fmax(j, k)/ln 2). We set fmax(j, 0) (fmax(j, kmax))as0.03×βj (0.0001×βj),
+                // denoting that cost increase by less than 3% (0.01%) at the first (last) SA iteration will be accepted by more than 50% probability.
+                // We initialize fmax(j, k) by fmax(j, 0) and linearly decrease it toward fmax(j, kmax).
+                // The radius rj,k of macro motion range is dependent on both the penalty factor and the amount of macros.
+                /////////////////////////////////////////////////////////////////////////
+                /*  function accept (programmed by Replace_master)
+                    int rnd = 0;
+                    int flg = 0;
+                    prec dc = (c1 - c0) / c0;
+                    prec drnd = 0;
+                    prec exp_val = 0;
+                    sa_t = 0.0001 * pow(1.5, (prec)iter) / log(2.0);
+                    rnd = rand();
+                    drnd = (prec)rnd / RAND_MAX;
+                    exp_val = exp(-1.0 * dc / sa_t);
+                    if(drnd < exp_val)
+                        flg = 1;
+                    else
+                        flg = 0;
+                    return flg;
+                */
+
+                // 退火
+                // temp_ *= cooling_rate_;
+            }
+        }
+    }
+
+    std::pair<int, int> MacroLegalizer::getRandomMove(Instance *cell, int iter, Die *die, int max_sa_r_x, int max_sa_r_y)
+    {
+        int clx = cell->lx();
+        int cly = cell->ly();
+        int cux = cell->lx();
+        int cuy = cell->ly();
+        // 获得die的大小
+        int dlx = die->dieLx();
+        int dly = die->dieLy();
+        int dux = die->dieUx();
+        int duy = die->dieUy();
+        int diewidth = dux - dlx;
+        int dieheight = duy - dly;
+        // maxMoveX，maxMoveY为die的长宽的1/10
+        int maxMoveX = diewidth / 10;
+        int maxMoveY = dieheight / 10;
+        /*int moveX = (-maxMoveX) + rand() % (maxMoveX - (-maxMoveX) + 1);
+        int moveY = (-maxMoveY) + rand() % (maxMoveY - (-maxMoveY) + 1);*/
+        int rndx = rand();
+        int rndy = rand();
+        int rh = die->rowHeight();
+        double rcof = 0.05 * pow(1.5, (double)iter);
+        double rx = (max_sa_r_x - rh) / (double)(iter + 1); // 1 = rowheight
+        double ry = (max_sa_r_y - rh) / (double)(iter + 1);
+        int moveX = (int)(rndx / RAND_MAX - 0.5) * rx;
+        int moveY = (int)(rndy / RAND_MAX - 0.5) * ry;
+        // 计算移动后的 Macro 的四个角坐标
+        int newcux = cux + moveX;
+        int newcuy = cuy + moveY;
+        int newclx = clx + moveX;
+        int newcly = cly + moveY;
+        // 检查移动后的坐标是否超过 Die 的边界范围，若超过则修正坐标
+        if (newclx < dlx)
+        {
+            int diff = dlx - newclx;
+            moveX += diff;
+        }
+        if (newcuy > duy)
+        {
+            int diff = newcuy - duy;
+            moveY -= diff;
+        }
+        if (newcux > dux)
+        {
+            int diff = newcux - dux;
+            moveX -= diff;
+        }
+        if (newcly < dly)
+        {
+            int diff = newcly - dly;
+            moveY += diff;
+        }
+        return std::make_pair(moveX, moveY);
+    }
+
+    // 计算两个矩形的重叠面积
+    int MacroLegalizer::overlapArea(Instance *cell1, Instance *cell2)
+    {
+        int x_overlap = std::max(0, std::min(cell1->ux(), cell2->ux()) - std::max(cell2->lx(), cell2->lx()));
+        int y_overlap = std::max(0, std::min(cell1->uy(), cell2->uy()) - std::max(cell2->ly(), cell2->ly()));
+        return x_overlap * y_overlap;
+    }
+
+    int MacroLegalizer::get_hpwl(const std::vector<Instance *> &macros, Die *die)
+    {
+        return pb_->hpwl();
+        /*
+        int64_t getHpwl();
+
+        nt64_t NesterovBase::getHpwl()
+        {
+        int64_t hpwl = 0;
+        for(auto& gNet : gNets_)
+        {
+            gNet->updateBox();
+            hpwl += gNet->hpwl();
+        }
+        return hpwl;
+        }
+
+        int64_t
+        GNet::hpwl() {
+        return static_cast<int64_t>((ux_ - lx_) + (uy_ - ly_));
+        }
+
+        void Net::updateBox()
+        {
+            lx_ = INT_MAX;
+            ly_ = INT_MAX;
+            ux_ = INT_MIN;
+            uy_ = INT_MIN;
+
+            for (const Pin *p : pins_)
+            {
+            lx_ = std::min(p->cx(), lx_);
+            ux_ = std::max(p->cx(), ux_);
+            ly_ = std::min(p->cy(), ly_);
+            uy_ = std::max(p->cy(), uy_);
+            }
+        }
+        */
+    }
+
+    int MacroLegalizer::getCellMacroOverlap(const std::vector<Instance *> &macros, Die *die)
+    {
+        // TODO: use quadtree
+
+        int totalOverlap = 0;
+        // 外层macro里层stdcell
+        for (int i = 0; i < macros.size(); i++)
+        {
+            for (int j = 0; j < die->insts().size(); j++)
+            {
+                if (!die->insts()[j]->isMacro())
+                {
+                    totalOverlap += overlapArea(macros[i], die->insts()[j]);
+                }
+            }
+        }
+        return totalOverlap;
+    }
+
+    int MacroLegalizer::getMacrosOverlap(const std::vector<Instance *> &macros, Die *die)
+    {
+        int totalOverlap = 0;
+        for (int i = 0; i < macros.size(); i++)
+        {
+            for (int j = i + 1; j < macros.size(); j++)
+            {
+                totalOverlap += overlapArea(macros[i], macros[j]);
+            }
+        }
+        return totalOverlap;
+    }
+
+    // 计算宏单元的成本函数
+    double MacroLegalizer::calc_cost(const std::vector<Instance *> &macros, Die *die)
+    {
+        // HPWL
+        double hpwl = get_hpwl(macros, die);
+        // 宏单元与标准单元重叠
+        double den = getCellMacroOverlap(macros, die);
+        // 宏单元与宏单元重叠
+        double ov = getMacrosOverlap(macros, die);
+        return vars_.sa_hpwl_wgt * hpwl + vars_.sa_den_wgt * den + vars_.sa_ovlp_wgt * ov;
+    }
+
+    //////////////////////////////////
+    // Post Legalization
+
+    static bool repel(int l1, int u1, int l2, int u2, int ll, int uu, int *pd1, int *pd2)
     {
         if (l1 <= l2 && l2 < u1)
         {
@@ -88,337 +382,6 @@ namespace replace
         *pd2 = 0;
         return true;
     }
-    
-    MacroLegalizer::MacroLegalizer()
-    {
-    }
-
- /*   MacroLegalizer::MacroLegalizer(NesterovBase *nb_)
-    {
-        nb_ = nb_;
-        // pb_ = nb_->pb_;
-        macros = std::vector<GCell*>();
-        for(GCell* gcell : nb_->gCells()){
-            if(gcell->isMacroInstance()){
-                macros.emplace_back(gcell);
-            }
-        }
-        vars_ = MacroLegalizerVars();
-
-    }*/
-    
-    MacroLegalizer::~MacroLegalizer()
-    {
-    }
-
-    void MacroLegalizer::doSimulatedAnnealing(double temp_0, double temp_max, int iter, int location)
-    { 
-        
-        //double cooling_rate_ = cooling_rate;
-        // 选择一个宏单元
-        srand(static_cast<unsigned int>(time(0)));
-        int index = rand() % pb_->dies()[location]->insts().size();
-
-        for (;0 == pb_->dies()[location]->insts()[index]->isMacro();) {
-            index = rand() % pb_->dies()[location]->insts().size();
-        }
-        
-        for (int i = 0; i < vars_.sa_max_iter0; i++) {
-            srand(static_cast<unsigned int>(time(0)));
-            double temp = temp_0 + (temp_max - temp_0) * (double)(i / vars_.sa_max_iter0);
-            Instance* cell = pb_->dies()[location]->insts()[index];
-            // 计算宏单元的成本函数
-            double old_cost = calc_cost(location);
-            // 随机移动
-            std::pair<int, int> move = getRandomMove(cell , iter,location);
-            // 尝试将宏单元移动到新的位置
-            cell->setLocation(cell->lx() + move.first, cell->ly() + move.second);
-            // 计算宏单元的成本函数
-            double new_cost = calc_cost(location);
-            // 判断是否接受新的解
-            double delta = (new_cost - old_cost) / old_cost;
-            double tau = (double)rand() / RAND_MAX;
-            double p = exp(-1.0 * delta / temp);
-            if (p > tau) {
-                // 接受新的解
-                // 判断是否满足要求
-                int om = getMacrosOverlap(location);
-                if (om == 0){
-                    break;
-                }
-            } else {
-                // 拒绝新的解
-                cell->setLocation(cell->lx() - move.first, cell->ly() - move.second);
-            }
-
-            // The temperature tj,k at each iteration (j, k) is determined based on the maximum cost 
-            // increase fmax(j, k) that will be accepted by more than 50% probabil-
-            // -ity, thus we set tj,k = (fmax(j, k)/ln 2). We set fmax(j, 0) (fmax(j, kmax))as0.03×βj (0.0001×βj), 
-            // denoting that cost increase by less than 3% (0.01%) at the first (last) SA iteration will be accepted by more than 50% probability. 
-            // We initialize fmax(j, k) by fmax(j, 0) and linearly decrease it toward fmax(j, kmax). 
-            // The radius rj,k of macro motion range is dependent on both the penalty factor and the amount of macros.
-            /////////////////////////////////////////////////////////////////////////
-            /*  function accept (programmed by Replace_master)
-                int rnd = 0;
-                int flg = 0;
-                prec dc = (c1 - c0) / c0;
-                prec drnd = 0;
-                prec exp_val = 0;
-                sa_t = 0.0001 * pow(1.5, (prec)iter) / log(2.0);
-                rnd = rand();
-                drnd = (prec)rnd / RAND_MAX;
-                exp_val = exp(-1.0 * dc / sa_t);
-                if(drnd < exp_val)
-                    flg = 1;
-                else
-                    flg = 0;
-                return flg;
-            */
-
-            // 退火
-            // temp_ *= cooling_rate_;
-        }
-    }
-
-    
-
-    std::pair<int, int> MacroLegalizer::getRandomMove(Instance* cell,int iter,int location)
-    {
-        // 随机种子，使用当前时间
-        srand(static_cast<unsigned int>(time(0)));
-        int clx = cell->lx();
-        int cly = cell->ly();
-        int cux = cell->lx();
-        int cuy = cell->ly();
-        // 获得die的大小
-        int dlx = pb_->dies()[location]->dieLx();
-        int dly = pb_->dies()[location]->dieLy();
-        int dux = pb_->dies()[location]->dieUx();
-        int duy = pb_->dies()[location]->dieUy();
-        int diewidth = dux - dlx;
-        int dieheight = duy - dly;
-        // maxMoveX，maxMoveY为die的长宽的1/10 
-        int maxMoveX = diewidth / 10;
-        int maxMoveY = dieheight / 10;
-        /*int moveX = (-maxMoveX) + rand() % (maxMoveX - (-maxMoveX) + 1);
-        int moveY = (-maxMoveY) + rand() % (maxMoveY - (-maxMoveY) + 1);*/
-        int rndx = rand();
-        int rndy = rand();
-        int rh = pb_->dies()[location]->rowHeight();
-        double rcof = 0.05 * pow(1.5, (double)iter);
-        double rx = (max_sa_r_x - rh)/iter; // 1 = rowheight
-        double ry = (max_sa_r_y - rh)/iter;
-        int moveX = (int) (rndx / RAND_MAX - 0.5) * rx;
-        int moveY = (int) (rndy / RAND_MAX - 0.5) * ry;
-        // 计算移动后的 Macro 的四个角坐标
-        int newcux = cux + moveX; 
-        int newcuy = cuy + moveY;
-        int newclx = clx + moveX;
-        int newcly = cly + moveY;
-        // 检查移动后的坐标是否超过 Die 的边界范围，若超过则修正坐标
-        if (newclx < dlx) {
-            int diff = dlx - newclx;
-            moveX += diff;
-        }
-        if (newcuy > duy) {
-            int diff = newcuy - duy;
-            moveY -= diff;
-        }
-        if (newcux > dux) {
-            int diff = newcux - dux;
-            moveX -= diff;
-        }
-        if (newcly < dly) {
-            int diff = newcly - dly;
-            moveY += diff;
-        }
-        return std::make_pair(moveX, moveY);
-    }
-
-    void MacroLegalizer::doMacroLegalization()
-    {
-        
-        for (int iter = 0; iter < vars_.sa_max_iter; iter++) {
-        //     // 初始化参数
-            double cooling_rate;
-            double temp_0 = 0.03 * pow(1.5, (double)iter) / log(2.0);
-            double temp_max = 0.0001 * pow(1.5, (double)iter) / log(2.0);
-            double rcof = 0.05 * pow(1.5, (double) iter);
-            int64_t tot_place_region = pb_->dies()[0]->placeInstsArea();
-            max_sa_r_x = tot_place_region / sqrt(macros.size()) * rcof;
-            max_sa_r_y = tot_place_region / sqrt(macros.size()) * rcof;
-        
-            doSimulatedAnnealing(temp_0, temp_max, iter,0);
-            doSimulatedAnnealing(temp_0, temp_max, iter,1);
-            
-        //     // 选择一个宏单元
-        //     for (int j = 0; j < num_macros; j++) {
-        //         // 计算宏单元的成本函数
-        //         double old_cost = calc_cost(j);
-
-        //         // 尝试将宏单元移动到新的位置
-        //         move_macro(j);
-
-        //         // 计算宏单元的成本函数
-        //         double new_cost = calc_cost(j);
-
-        //         // 判断是否接受新的解
-        //         if (accept(new_cost, old_cost, temp)) {
-        //             // 接受新的解
-        //             update_cost(j, new_cost);
-        //         } else {
-        //             // 拒绝新的解
-        //             undo_move(j);
-        //         }
-        //     }
-
-        //     // 退火
-        //     temp *= cooling_rate;
-        // }
-    // return std::make_pair(0, 0);
-    }
-  }
-
-  ///////////////////////////////////////
-  // MacroLegalizerVars
-
-  MacroLegalizerVars::MacroLegalizerVars()
-      : maxPostLegalizeIter(1000)
-  {
-  }
-
-  /////////////////////////////////////////
-  // MacroLegalizer
-
-  MacroLegalizer::MacroLegalizer(MacroLegalizerVars lgVars, std::shared_ptr<PlacerBase> pb)
-      : pb_(pb), lgVars_(lgVars)
-  {
-  }
-
-  void MacroLegalizer::doLegalization()
-  {
-    std::vector<Instance *> insts;
-    for (Die *die : pb_->dies())
-    {
-      insts.clear();
-      for (Instance *inst : die->insts())
-      {
-        // regardless of fixed instance
-        if (inst->isMacro())
-        {
-          insts.push_back(inst);
-        }
-      }
-      postLegalize(insts, die);
-    }
-  }
-
-  // 计算两个矩形的重叠面积
-  int MacroLegalizer::overlapArea(Instance *cell1, Instance *cell2)
-  {
-    int x_overlap = std::max(0, std::min(cell1->ux(), cell2->ux()) - std::max(cell2->lx(), cell2->lx()));
-    int y_overlap = std::max(0, std::min(cell1->uy(), cell2->uy()) - std::max(cell2->ly(), cell2->ly()));
-    return x_overlap * y_overlap;
-  }
-
-  int MacroLegalizer::get_hpwl(int location)
-  {
-    int hpwl = 0;
-    for(int cnt = 1; cnt < pb_->dies()[location]->insts().size(); cnt++){
-        hpwl += (pb_->dies()[location]->insts()[cnt]->ux()-pb_->dies()[location]->insts()[cnt]->lx());
-        hpwl += (pb_->dies()[location]->insts()[cnt]->uy()-pb_->dies()[location]->insts()[cnt]->ly());
-    }
-    /*
-    int64_t getHpwl();
-
-    nt64_t NesterovBase::getHpwl()
-    {
-    int64_t hpwl = 0;
-    for(auto& gNet : gNets_)
-    {
-        gNet->updateBox();
-        hpwl += gNet->hpwl();
-    }
-    return hpwl;
-    }
-
-    int64_t
-    GNet::hpwl() {
-    return static_cast<int64_t>((ux_ - lx_) + (uy_ - ly_));
-    }
-
-    void Net::updateBox()
-    {
-        lx_ = INT_MAX;
-        ly_ = INT_MAX;
-        ux_ = INT_MIN;
-        uy_ = INT_MIN;
-
-        for (const Pin *p : pins_)
-        {
-        lx_ = std::min(p->cx(), lx_);
-        ux_ = std::max(p->cx(), ux_);
-        ly_ = std::min(p->cy(), ly_);
-        uy_ = std::max(p->cy(), uy_);
-        }
-    }
-    */
-  }
-
-  int MacroLegalizer::getCellMacroOverlap(int location)
-  {
-    int totalOverlap = 0;
-    for (auto &cell : pb_->dies()[location]->insts())
-    {
-        int totalOverlap = 0;
-        // 外层macro里层stdcell
-        for(int i=0; i<pb_->dies()[location]->insts().size();i++){
-            if(!pb_->dies()[location]->insts()[i]->isMacro()){
-                continue;
-            }else{
-                for(int j=i+1; j<pb_->dies()[location]->insts().size();j++){
-                    if(!pb_->dies()[location]->insts()[j]->isMacro()){     //????????????
-                        totalOverlap += overlapArea(pb_->dies()[location]->insts()[i], pb_->dies()[location]->insts()[j]);
-                    }else{
-                        continue;
-                    }
-                }
-            }
-        }
-        return totalOverlap;
-    }
-  }
-
-    int MacroLegalizer::getMacrosOverlap(int location)
-    {
-        int totalOverlap = 0;
-        for(int i=0; i<pb_->dies()[location]->insts().size();i++){
-            if(!pb_->dies()[location]->insts()[i]->isMacro()){
-                continue;
-            }else{
-                for(int j=i+1; j<pb_->insts().size();j++){
-                    if(pb_->dies()[location]->insts()[j]->isMacro()){
-                        totalOverlap += overlapArea(pb_->dies()[location]->insts()[i], pb_->dies()[location]->insts()[j]);
-                    }else{
-                        continue;
-                    }
-                }
-            }
-        }
-        return totalOverlap;
-    }
-
-    // 计算宏单元的成本函数
-    double MacroLegalizer::calc_cost(int location)
-    {
-        // HPWL
-        double hpwl = get_hpwl(location);
-        // 宏单元与标准单元重叠
-        double den= getCellMacroOverlap(location);
-        // 宏单元与宏单元重叠
-        double ov = getMacrosOverlap(location);
-        return vars_.sa_hpwl_wgt * hpwl + vars_.sa_den_wgt * den + vars_.sa_ovlp_wgt * ov;
-    }
 
     void MacroLegalizer::postLegalize(const std::vector<Instance *> insts, Die *die)
     {
@@ -454,7 +417,7 @@ namespace replace
                 for (int j = 0; j < insts.size(); j++)
                 {
                     Instance *inst2 = insts[j];
-                    if(i == j)
+                    if (i == j)
                         continue;
 
                     // check overlap
@@ -463,7 +426,7 @@ namespace replace
                     int ux = std::min(inst1->ux(), inst2->ux());
                     int uy = std::min(inst1->uy(), inst2->uy());
 
-                    if(lx < ux && ly < uy)
+                    if (lx < ux && ly < uy)
                     {
                         isLegal = false;
 
@@ -475,7 +438,7 @@ namespace replace
                         auto yOk = repel(inst1->ly(), inst1->uy(), inst2->ly(), inst2->uy(),
                                          die->coreLy(), die->coreUy(), &dy1, &dy2);
 
-                        if(((float)rand() / RAND_MAX) < 0.5)
+                        if (((float)rand() / RAND_MAX) < 0.5)
                         {
                             inst1->setLocation(inst1->lx() + dx1, inst1->ly());
                             inst2->setLocation(inst2->lx() + dx2, inst2->ly());
