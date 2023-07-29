@@ -100,9 +100,9 @@ int main(int argc, const char *argv[])
     tm.modify();
     Replace rp(1.0);
     rp.setPlacerBase(pb);
-    // rp.doInitialPlace();
-    // rp.doNesterovPlace("postgp");
-    // Plot::plot(pb.get(), "./plot/cell", "after_gp");
+    rp.doInitialPlace();
+    rp.doNesterovPlace("postgp");
+    Plot::plot(pb.get(), "./plot/cell", "after_gp");
     rp.doMacroLegalization();
     rp.doAbacusLegalization();
     tm.recover();
