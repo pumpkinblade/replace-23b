@@ -6,7 +6,8 @@
 #include <memory>
 #include "point.h"
 
-namespace replace{
+namespace replace
+{
     class Instance;
     class Die;
     class PlacerBase;
@@ -15,54 +16,47 @@ namespace replace{
 
     class MacroLegalizerVars
     {
-        public:
-            double sa_hpwl_wgt = 1.0;
-            double sa_den_wgt;
-            double sa_ovlp_wgt;
-            double sa_hpwl_cof = 1.0;
-            double sa_den_cof = 1.0;
-            double sa_ovlp_cof = 1.5;    /// need tuning
-            double sa_max_iter = 1000;   /// need tuning
-            double sa_max_iter0 = 1000;  /// need tuning
-            int maxPostLegalizeIter;
+    public:
+        double sa_hpwl_wgt = 1.0;
+        double sa_den_wgt = 1.0;
+        double sa_ovlp_wgt = 1.0;
+        double sa_hpwl_cof = 1.0;
+        double sa_den_cof = 1.0;
+        double sa_ovlp_cof = 1.5;   /// need tuning
+        double sa_max_iter = 1000;  /// need tuning
+        double sa_max_iter0 = 1000; /// need tuning
+        int maxPostLegalizeIter;
 
-            MacroLegalizerVars();
+        MacroLegalizerVars();
     };
 
     class MacroLegalizer
     {
-        public:
-            MacroLegalizer(/* args */);
-            MacroLegalizer(NesterovBase *nb_);
-            MacroLegalizer(MacroLegalizerVars lgVars, std::shared_ptr<PlacerBase> pb);
-            void doLegalization();
-            ~MacroLegalizer();
-            void doSimulatedAnnealing(double temp_0,double temp_max, int iter, int location);
-            std::pair<int, int> getRandomMove(Instance *cell,int iter, int location);
-            void doMacroLegalization();
-            int overlapArea(Instance* , Instance*);
-            int getCellMacroOverlap(int location);
-            int getMacrosOverlap(int location);
-            int get_hpwl(int location);
-            double calc_cost(int location);
+    public:
+        MacroLegalizer() = default;
+        MacroLegalizer(MacroLegalizerVars lgVars, std::shared_ptr<PlacerBase> pb);
+        ~MacroLegalizer() = default;
 
-        private:
+        void doLegalization();
+
+        void saLegalize(const std::vector<Instance *> macros, Die *die);
+        std::pair<int, int> getRandomMove(Instance *cell, int iter, Die *die, int max_sa_r_x, int max_sa_r_y);
+        int overlapArea(Instance *inst1, Instance *inst2);
+        int getCellMacroOverlap(const std::vector<Instance *> &macros, Die *die);
+        int getMacrosOverlap(const std::vector<Instance *> &macros, Die *die);
+        int get_hpwl(const std::vector<Instance *> &macros, Die *die);
+        double calc_cost(const std::vector<Instance *> &macros, Die *die);
+
+        void postLegalize(const std::vector<Instance *> macros, Die *die);
+
+    private:
         /* data */
-        void postLegalize(const std::vector<Instance*> insts, Die* die);
-            std::shared_ptr<PlacerBase> pb_;
+        std::shared_ptr<PlacerBase> pb_;
         std::shared_ptr<NesterovBase> nb_;
-
-        std::vector<Instance*> macros;
 
         MacroLegalizerVars vars_;
         MacroLegalizerVars lgVars_;
     };
-    
-    
-
-
-
-
 
 }
 
