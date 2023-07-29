@@ -24,9 +24,11 @@ namespace replace
 
   void Instance::setCenterLocation(int x, int y)
   {
-    int halfX = (ux_ - lx_) / 2;
-    int halfY = (uy_ - ly_) / 2;
-    setBox(x - halfX, y - halfY, x + halfX, y + halfY);
+    int halfXLeft = (ux_ - lx_) / 2;
+    int halfXRight = ux_ - lx_ - halfXLeft;
+    int halfYTop = (uy_ - ly_) / 2;
+    int halfYBottom = uy_ - ly_ - halfYTop;
+    setBox(x - halfXLeft, y - halfYTop, x + halfXRight, y + halfYBottom);
   }
 
   void Instance::setSize(int w, int h)

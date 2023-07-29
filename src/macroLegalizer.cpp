@@ -39,7 +39,7 @@ namespace replace
                     macros.push_back(inst);
                 }
             }
-            saLegalize(macros, die);
+            // saLegalize(macros, die);
             postLegalize(macros, die);
         }
     }
@@ -437,8 +437,9 @@ namespace replace
                         // y overlap
                         auto yOk = repel(inst1->ly(), inst1->uy(), inst2->ly(), inst2->uy(),
                                          die->coreLy(), die->coreUy(), &dy1, &dy2);
-
-                        if (((float)rand() / RAND_MAX) < 0.5)
+                        double thres = (double)(std::abs(dx1) + std::abs(dx2))
+                                     / (std::abs(dx1) + std::abs(dx2) + std::abs(dy1) + std::abs(dy2));
+                        if ((double)rand() / (double)RAND_MAX < thres)
                         {
                             inst1->setLocation(inst1->lx() + dx1, inst1->ly());
                             inst2->setLocation(inst2->lx() + dx2, inst2->ly());
