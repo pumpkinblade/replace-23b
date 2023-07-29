@@ -197,6 +197,41 @@ namespace replace
     std::vector<bool> hasAssigned(pb->insts().size(), false);
     std::vector<bool> isBot(pb->insts().size(), false);
 
+    // using zjl's method to assign macros
+    std::vector<Instance*> macros;
+    for(Instance* inst : pb->insts())
+    {
+      if(inst->isMacro())
+        macros.push_back(inst);
+    }
+    std::sort(macros.begin(), macros.end(), [](const Instance* left, const Instance* right)
+              { return left->size() > right->size(); });
+    // A greedy macro partition method, which may be not optimal.
+    int topMacroSize = 0;
+    int bottomMacroSize = 0;
+    for(Instance* macro : macros)
+    {
+      if(topMacroSize > bottomMacroSize)
+      {
+        topdie->removeInstance(macro);
+        macro->setSize(*botdie->tech());
+        botdie->addInstance(macro);
+
+        bottomMacroSize += macro->size();
+        botCap -= macro->size();
+        hasAssigned[macro->extId()] = true;
+        isBot[macro->extId()] = false;
+      }
+      else
+      {
+        topMacroSize += macro->size();
+        topCap -= macro->size();
+        hasAssigned[macro->extId()] = true;
+        isBot[macro->extId()] = false;
+      }
+    }
+    LOG_INFO("partition macros, top: {} bottom: {}", topMacroSize, bottomMacroSize);
+
     // enumerating net
     for(Net* net : pb->nets())
     {
