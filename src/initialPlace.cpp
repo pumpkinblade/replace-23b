@@ -88,7 +88,7 @@ namespace replace
 #if defined(DEBUG) || defined(_DEBUG)
       Plot::plot(pb_.get(), "./plot/cell", "ip_" + to_string(i));
 #endif
-      if (max(errorX, errorY) <= 1e-5 && i >= 5)
+      if (max(errorX, errorY) <= 1e-3 && i >= 5)
       {
         break;
       }

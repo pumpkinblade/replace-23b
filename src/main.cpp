@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <tclap/CmdLine.h>
+#include <omp.h>
 
 #include "placerBase.h"
 #include "parser.h"
@@ -29,6 +30,8 @@ int main(int argc, const char *argv[])
   vars.xMargin = 30;
   vars.yMargin = 30;
   Plot::init(vars);
+
+  omp_set_num_threads(16);
 
   string inputFilename;
   string outputFilename;

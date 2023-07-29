@@ -6,13 +6,10 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+find_package(Threads REQUIRED)
+find_package(OpenMP REQUIRED)
+
 set(REPLACE_HOME ${PROJECT_SOURCE_DIR} )
-set(DEFLIB_HOME
-  ${PROJECT_SOURCE_DIR}/module/def
-)
-set(LEFLIB_HOME
-  ${PROJECT_SOURCE_DIR}/module/lef
-)
 set(SPDLOG_HOME
   ${PROJECT_SOURCE_DIR}/module/spdlog
 )
@@ -28,9 +25,6 @@ set(CIMG_HOME
 set(STB_HOME
     ${PROJECT_SOURCE_DIR}/module/stb
 )
-
-add_subdirectory(${DEFLIB_HOME})
-add_subdirectory(${LEFLIB_HOME})
 
 set(PLACE_HEADER
   src/log.h
@@ -54,7 +48,6 @@ set(PLACE_HEADER
 set(PLACE_SRC
   src/main.cpp
   src/log.cpp
-  src/lefdefParser.cpp
   src/placerBase.cpp
   src/replace.cpp
   src/initialPlace.cpp
@@ -83,7 +76,13 @@ target_include_directories(replace PRIVATE ${EIGEN_HOME}/include)
 target_include_directories(replace PRIVATE ${STB_HOME})
 target_include_directories(replace PRIVATE ${CIMG_HOME})
 
-target_link_libraries(replace PRIVATE def)
-target_link_libraries(replace PRIVATE lef)
+target_link_libraries(replace PRIVATE OpenMP::OpenMP_CXX)
+target_link_libraries(replace PRIVATE Threads::Threads)
 
 target_compile_definitions(replace PRIVATE -Dcimg_display=0)
+target_compile_definitions(replace PRIVATE -DFFT2D_MAX_THREADS=16)
+if(CMAKE_USE_PTHREADS_INIT)
+  target_compile_definitions(replace PRIVATE -DUSE_FFT2D_PTHREADS)
+elseif(CMAKE_USE_WIN32_THREADS_INIT)
+  target_compile_definitions(replace PRIVATE -DUSE_FFT2D_WINTHREADS)
+endif()

@@ -88,14 +88,13 @@ namespace replace
                      const std::string &imgDir,
                      const std::string &prefix)
   {
-    int dieIdx = 0;
     for (Die *die : pb->dies())
     {
       initContext(die);
 
       drawInstances(die, 0.7f);
 
-      std::string title = prefix + "_die" + std::to_string(dieIdx);
+      std::string title = prefix + "_" + die->name();
       img_->draw_text(0, 0, title.c_str(), g_black.data(), NULL, 1, 30);
 
       std::string saveName = imgDir + "/" + title + ".jpg";
@@ -103,8 +102,6 @@ namespace replace
       cimgWriteJpeg(saveName, 70);
 
       LOG_TRACE("{} has been saved.", saveName);
-
-      dieIdx++;
     }
   }
 
@@ -113,7 +110,6 @@ namespace replace
                      const std::string &imgDir,
                      const std::string &prefix)
   {
-    int dieIdx = 0;
     for (BinGrid *bg : nb->binGrids())
     {
       initContext(bg);
@@ -134,7 +130,7 @@ namespace replace
         break;
       }
 
-      std::string title = prefix + "_die" + std::to_string(dieIdx);
+      std::string title = prefix + "_" + bg->die()->name();
       img_->draw_text(0, 0, title.c_str(), g_black.data(), NULL, 1, 30);
 
       std::string saveName = imgDir + "/" + title + ".jpg";
@@ -142,8 +138,6 @@ namespace replace
       cimgWriteJpeg(saveName, 70);
 
       LOG_TRACE("{} has been saved.", saveName);
-
-      dieIdx++;
     }
   }
 
