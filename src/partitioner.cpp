@@ -1,7 +1,6 @@
 #include "technology.h"
 #include "log.h"
 #include "placerBase.h"
-#include "placer23b.h"
 #include "partitioner.h"
 #include "replace.h"
 #include <unordered_map>
@@ -108,8 +107,7 @@ namespace replace
         topMacroSize += macro->size();
       }
     }
-    LOG_INFO("partition macros, top: {} bottom: {}",
-      topMacroSize, bottomMacroSize);
+    LOG_DEBUG("partition macros, top: {} bottom: {}", topMacroSize, bottomMacroSize);
 
 
     // TODO: when this loop finish, we should clean empty top nets.
@@ -178,7 +176,7 @@ namespace replace
 
   void Partitioner::partitioning2(std::shared_ptr<PlacerBase> pb)
   {
-    srand(114);
+    srand(114514);
 
     Die* topdie = pb->die("top");
     Die* botdie = pb->die("bottom");
@@ -227,10 +225,10 @@ namespace replace
         topMacroSize += macro->size();
         topCap -= macro->size();
         hasAssigned[macro->extId()] = true;
-        isBot[macro->extId()] = false;
+        isBot[macro->extId()] = true;
       }
     }
-    LOG_INFO("partition macros, top: {} bottom: {}", topMacroSize, bottomMacroSize);
+    LOG_DEBUG("partition macros, top: {} bottom: {}", topMacroSize, bottomMacroSize);
 
     // enumerating net
     for(Net* net : pb->nets())

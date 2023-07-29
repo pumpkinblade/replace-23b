@@ -42,7 +42,7 @@ namespace replace
             }
             // saLegalize(macros, die);
             postLegalize(macros, die);
-            // LOG_INFO("[MacroLegalization] Die {} ", die->name());
+            // LOG_DEBUG("[MacroLegalization] Die {} ", die->name());
         }
     }
 
@@ -85,7 +85,7 @@ namespace replace
                 double tau = (double)rand() / RAND_MAX;
                 double p = exp(-1.0 * delta / temp);
                 int isAccept=0;
-                LOG_INFO("[MacroLegalization] old_cost: {} new_cost: {} move: {}-{} delta{}", old_cost, new_cost, move.first, move.second, delta);
+                LOG_DEBUG("[MacroLegalization] old_cost: {} new_cost: {} move: {}-{} delta{}", old_cost, new_cost, move.first, move.second, delta);
                 if (p > tau)
                 {
                     // 接受新的解
@@ -104,7 +104,7 @@ namespace replace
                     cell->setLocation(cell->lx() - move.first, cell->ly() - move.second);
                 }
 
-                LOG_INFO("[MacroLegalization] Iter {} new_cost: {} accept: {}", i, new_cost, isAccept);
+                LOG_DEBUG("[MacroLegalization] Iter {} new_cost: {} accept: {}", i, new_cost, isAccept);
             }
         }
     }
@@ -130,7 +130,7 @@ namespace replace
         double ry = (max_sa_r_y - rh) / (double)(iter + 1);
         int moveX = int((rndx / RAND_MAX - 0.5) * rx);
         int moveY = int((rndy / RAND_MAX - 0.5) * ry);
-        LOG_INFO("[MacroLegalization] moveX: {} moveY: {} ", moveX, moveY);
+        LOG_DEBUG("[MacroLegalization] moveX: {} moveY: {} ", moveX, moveY);
         // 计算移动后的 Macro 的四个角坐标
         int newcux = cux + moveX;
         int newcuy = cuy + moveY;
