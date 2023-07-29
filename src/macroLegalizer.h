@@ -22,6 +22,7 @@ namespace replace{
             double sa_hpwl_cof = 1.0;
             double sa_den_cof = 1.0;
             double sa_ovlp_cof = 1.5;    /// need tuning
+            double sa_max_iter = 1000;   /// need tuning
             double sa_max_iter0 = 1000;  /// need tuning
             int maxPostLegalizeIter;
 
@@ -36,20 +37,23 @@ namespace replace{
             MacroLegalizer(MacroLegalizerVars lgVars, std::shared_ptr<PlacerBase> pb);
             void doLegalization();
             ~MacroLegalizer();
-            void doSimulatedAnnealing(double temp, double cooling_rate);
-            std::pair<int, int> getRandomMove(GCell *cell);
+            void doSimulatedAnnealing(double temp_0,double temp_max, int iter, int location);
+            std::pair<int, int> getRandomMove(Instance *cell,int iter, int location);
             void doMacroLegalization();
-            int overlapArea(GCell* , GCell*);
-            int getCellMacroOverlap();
-            int getMacrosOverlap();
-            double calc_cost();
+            int overlapArea(Instance* , Instance*);
+            int getCellMacroOverlap(int location);
+            int getMacrosOverlap(int location);
+            int get_hpwl(int location);
+            double calc_cost(int location);
 
         private:
         /* data */
         void postLegalize(const std::vector<Instance*> insts, Die* die);
             std::shared_ptr<PlacerBase> pb_;
         std::shared_ptr<NesterovBase> nb_;
-        std::vector<GCell*> macros;
+
+        std::vector<Instance*> macros;
+
         MacroLegalizerVars vars_;
         MacroLegalizerVars lgVars_;
     };

@@ -93,7 +93,7 @@ namespace replace
     {
     }
 
-    MacroLegalizer::MacroLegalizer(NesterovBase *nb_)
+ /*   MacroLegalizer::MacroLegalizer(NesterovBase *nb_)
     {
         nb_ = nb_;
         // pb_ = nb_->pb_;
@@ -105,31 +105,36 @@ namespace replace
         }
         vars_ = MacroLegalizerVars();
 
-    }
+    }*/
     
     MacroLegalizer::~MacroLegalizer()
     {
     }
 
-    void MacroLegalizer::doSimulatedAnnealing(double temp_0, double temp_max, int iter)
-    {
+    void MacroLegalizer::doSimulatedAnnealing(double temp_0, double temp_max, int iter, int location)
+    { 
         
         //double cooling_rate_ = cooling_rate;
         // 选择一个宏单元
         srand(static_cast<unsigned int>(time(0)));
-        int index = rand() % macros.size();
+        int index = rand() % pb_->dies()[location]->insts().size();
+
+        for (;0 == pb_->dies()[location]->insts()[index]->isMacro();) {
+            index = rand() % pb_->dies()[location]->insts().size();
+        }
+        
         for (int i = 0; i < vars_.sa_max_iter0; i++) {
             srand(static_cast<unsigned int>(time(0)));
             double temp = temp_0 + (temp_max - temp_0) * (double)(i / vars_.sa_max_iter0);
-            GCell* cell= macros[index];
+            Instance* cell = pb_->dies()[location]->insts()[index];
             // 计算宏单元的成本函数
-            double old_cost = calc_cost();
+            double old_cost = calc_cost(location);
             // 随机移动
-            std::pair<int, int> move = getRandomMove(cell , iter);
+            std::pair<int, int> move = getRandomMove(cell , iter,location);
             // 尝试将宏单元移动到新的位置
             cell->setLocation(cell->lx() + move.first, cell->ly() + move.second);
             // 计算宏单元的成本函数
-            double new_cost = calc_cost();
+            double new_cost = calc_cost(location);
             // 判断是否接受新的解
             double delta = (new_cost - old_cost) / old_cost;
             double tau = (double)rand() / RAND_MAX;
@@ -137,7 +142,7 @@ namespace replace
             if (p > tau) {
                 // 接受新的解
                 // 判断是否满足要求
-                int om = getMacrosOverlap();
+                int om = getMacrosOverlap(location);
                 if (om == 0){
                     break;
                 }
@@ -177,7 +182,7 @@ namespace replace
 
     
 
-    std::pair<int, int> MacroLegalizer::getRandomMove(GCell* cell,int iter)
+    std::pair<int, int> MacroLegalizer::getRandomMove(Instance* cell,int iter,int location)
     {
         // 随机种子，使用当前时间
         srand(static_cast<unsigned int>(time(0)));
@@ -186,10 +191,10 @@ namespace replace
         int cux = cell->lx();
         int cuy = cell->ly();
         // 获得die的大小
-        int dlx = pb_->dies()[0]->dieLx();
-        int dly = pb_->dies()[0]->dieLy();
-        int dux = pb_->dies()[0]->dieUx();
-        int duy = pb_->dies()[0]->dieUy();
+        int dlx = pb_->dies()[location]->dieLx();
+        int dly = pb_->dies()[location]->dieLy();
+        int dux = pb_->dies()[location]->dieUx();
+        int duy = pb_->dies()[location]->dieUy();
         int diewidth = dux - dlx;
         int dieheight = duy - dly;
         // maxMoveX，maxMoveY为die的长宽的1/10 
@@ -199,9 +204,10 @@ namespace replace
         int moveY = (-maxMoveY) + rand() % (maxMoveY - (-maxMoveY) + 1);*/
         int rndx = rand();
         int rndy = rand();
+        int rh = pb_->dies()[location]->rowHeight();
         double rcof = 0.05 * pow(1.5, (double)iter);
-        double rx = (max_sa_r_x - 1)/iter; // 1 = rowheight
-        double ry = (max_sa_r_y - 1)/iter;
+        double rx = (max_sa_r_x - rh)/iter; // 1 = rowheight
+        double ry = (max_sa_r_y - rh)/iter;
         int moveX = (int) (rndx / RAND_MAX - 0.5) * rx;
         int moveY = (int) (rndy / RAND_MAX - 0.5) * ry;
         // 计算移动后的 Macro 的四个角坐标
@@ -238,10 +244,12 @@ namespace replace
             double temp_0 = 0.03 * pow(1.5, (double)iter) / log(2.0);
             double temp_max = 0.0001 * pow(1.5, (double)iter) / log(2.0);
             double rcof = 0.05 * pow(1.5, (double) iter);
-            max_sa_r_x = 1 / sqrt(macros.size()) * rcof; // 1 = total place region
-            max_sa_r_y = 1 / sqrt(macros.size()) * rcof;
+            int64_t tot_place_region = pb_->dies()[0]->placeInstsArea();
+            max_sa_r_x = tot_place_region / sqrt(macros.size()) * rcof;
+            max_sa_r_y = tot_place_region / sqrt(macros.size()) * rcof;
         
-            doSimulatedAnnealing(temp_0, temp_max, iter);
+            doSimulatedAnnealing(temp_0, temp_max, iter,0);
+            doSimulatedAnnealing(temp_0, temp_max, iter,1);
             
         //     // 选择一个宏单元
         //     for (int j = 0; j < num_macros; j++) {
@@ -306,27 +314,71 @@ namespace replace
   }
 
   // 计算两个矩形的重叠面积
-  int MacroLegalizer::overlapArea(GCell *cell1, GCell *cell2)
+  int MacroLegalizer::overlapArea(Instance *cell1, Instance *cell2)
   {
     int x_overlap = std::max(0, std::min(cell1->ux(), cell2->ux()) - std::max(cell2->lx(), cell2->lx()));
     int y_overlap = std::max(0, std::min(cell1->uy(), cell2->uy()) - std::max(cell2->ly(), cell2->ly()));
     return x_overlap * y_overlap;
   }
 
-  int MacroLegalizer::getCellMacroOverlap()
+  int MacroLegalizer::get_hpwl(int location)
+  {
+    int hpwl = 0;
+    for(int cnt = 1; cnt < pb_->dies()[location]->insts().size(); cnt++){
+        hpwl += (pb_->dies()[location]->insts()[cnt]->ux()-pb_->dies()[location]->insts()[cnt]->lx());
+        hpwl += (pb_->dies()[location]->insts()[cnt]->uy()-pb_->dies()[location]->insts()[cnt]->ly());
+    }
+    /*
+    int64_t getHpwl();
+
+    nt64_t NesterovBase::getHpwl()
+    {
+    int64_t hpwl = 0;
+    for(auto& gNet : gNets_)
+    {
+        gNet->updateBox();
+        hpwl += gNet->hpwl();
+    }
+    return hpwl;
+    }
+
+    int64_t
+    GNet::hpwl() {
+    return static_cast<int64_t>((ux_ - lx_) + (uy_ - ly_));
+    }
+
+    void Net::updateBox()
+    {
+        lx_ = INT_MAX;
+        ly_ = INT_MAX;
+        ux_ = INT_MIN;
+        uy_ = INT_MIN;
+
+        for (const Pin *p : pins_)
+        {
+        lx_ = std::min(p->cx(), lx_);
+        ux_ = std::max(p->cx(), ux_);
+        ly_ = std::min(p->cy(), ly_);
+        uy_ = std::max(p->cy(), uy_);
+        }
+    }
+    */
+  }
+
+  int MacroLegalizer::getCellMacroOverlap(int location)
   {
     int totalOverlap = 0;
-    for (auto &cell : nb_->gCells())
+    for (auto &cell : pb_->dies()[location]->insts())
     {
         int totalOverlap = 0;
         // 外层macro里层stdcell
-        for(int i=0; i<nb_->gCells().size();i++){
-            if(!nb_->gCells()[i]->isMacroInstance()){
+        for(int i=0; i<pb_->dies()[location]->insts().size();i++){
+            if(!pb_->dies()[location]->insts()[i]->isMacro()){
                 continue;
             }else{
-                for(int j=i+1; j<nb_->gCells().size();j++){
-                    if(nb_->gCells()[j]->isStdInstance()){
-                        totalOverlap += overlapArea(nb_->gCells()[i], nb_->gCells()[j]);
+                for(int j=i+1; j<pb_->dies()[location]->insts().size();j++){
+                    if(!pb_->dies()[location]->insts()[j]->isMacro()){     //????????????
+                        totalOverlap += overlapArea(pb_->dies()[location]->insts()[i], pb_->dies()[location]->insts()[j]);
                     }else{
                         continue;
                     }
@@ -337,16 +389,16 @@ namespace replace
     }
   }
 
-    int MacroLegalizer::getMacrosOverlap()
+    int MacroLegalizer::getMacrosOverlap(int location)
     {
         int totalOverlap = 0;
-        for(int i=0; i<nb_->gCells().size();i++){
-            if(!nb_->gCells()[i]->isMacroInstance()){
+        for(int i=0; i<pb_->dies()[location]->insts().size();i++){
+            if(!pb_->dies()[location]->insts()[i]->isMacro()){
                 continue;
             }else{
-                for(int j=i+1; j<nb_->gCells().size();j++){
-                    if(nb_->gCells()[j]->isMacroInstance()){
-                        totalOverlap += overlapArea(nb_->gCells()[i], nb_->gCells()[j]);
+                for(int j=i+1; j<pb_->insts().size();j++){
+                    if(pb_->dies()[location]->insts()[j]->isMacro()){
+                        totalOverlap += overlapArea(pb_->dies()[location]->insts()[i], pb_->dies()[location]->insts()[j]);
                     }else{
                         continue;
                     }
@@ -357,14 +409,14 @@ namespace replace
     }
 
     // 计算宏单元的成本函数
-    double MacroLegalizer::calc_cost()
+    double MacroLegalizer::calc_cost(int location)
     {
         // HPWL
-        double hpwl = nb_->getHpwl();
+        double hpwl = get_hpwl(location);
         // 宏单元与标准单元重叠
-        double den= getCellMacroOverlap();
+        double den= getCellMacroOverlap(location);
         // 宏单元与宏单元重叠
-        double ov = getMacrosOverlap();
+        double ov = getMacrosOverlap(location);
         return vars_.sa_hpwl_wgt * hpwl + vars_.sa_den_wgt * den + vars_.sa_ovlp_wgt * ov;
     }
 
@@ -423,9 +475,7 @@ namespace replace
                         auto yOk = repel(inst1->ly(), inst1->uy(), inst2->ly(), inst2->uy(),
                                          die->coreLy(), die->coreUy(), &dy1, &dy2);
 
-                        float thres = (float)(dx1 + dx2) / (float)(dy1 + dy2 + dx1 + dx2);
-
-                        if(((float)rand() / RAND_MAX) < thres)
+                        if(((float)rand() / RAND_MAX) < 0.5)
                         {
                             inst1->setLocation(inst1->lx() + dx1, inst1->ly());
                             inst2->setLocation(inst2->lx() + dx2, inst2->ly());
