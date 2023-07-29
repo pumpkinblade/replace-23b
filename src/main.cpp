@@ -59,9 +59,7 @@ int main(int argc, const char *argv[])
 
   LOG_TRACE("Parse 23b Text File Begin");
   std::shared_ptr<PlacerBase> pb = Parser::txtToPlacerBase(inputFilename);
-#if defined(DEBUG) || defined(_DEBUG)
-  pb->printInfo();
-#endif
+  pb->printDebugInfo();
   LOG_TRACE("Parse 23b Text File End");
 
   // then we do partition

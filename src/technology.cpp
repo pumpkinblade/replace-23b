@@ -60,7 +60,7 @@ namespace replace
     return it == cellNameMap_.end() ? nullptr : it->second;
   }
 
-  void Technology::printInfo() const
+  void Technology::printDebugInfo() const
   {
     int numLibStdCell = 0, numLibMacro = 0;
     int64_t maxStdArea = INT64_MIN;
@@ -85,13 +85,13 @@ namespace replace
       }
     }
 
-    LOG_INFO("NumLibCells: {}", cells_.size());
-    LOG_INFO("NumLibStdCells: {}", numLibStdCell);
-    LOG_INFO("NumLibMacros: {}", numLibMacro);
-    LOG_INFO("MaxStdArea: {}", maxStdArea);
-    LOG_INFO("AvgStdArea: {}", sumStdArea / (double)numLibStdCell);
-    LOG_INFO("MaxMacroArea: {}", maxMacroArea);
-    LOG_INFO("AvgMacroArea: {}", sumMacroArea / (double)numLibMacro);
+    LOG_DEBUG("NumLibCells: {}", cells_.size());
+    LOG_DEBUG("NumLibStdCells: {}", numLibStdCell);
+    LOG_DEBUG("NumLibMacros: {}", numLibMacro);
+    LOG_DEBUG("MaxStdArea: {}", maxStdArea);
+    LOG_DEBUG("AvgStdArea: {}", sumStdArea / (double)numLibStdCell);
+    LOG_DEBUG("MaxMacroArea: {}", maxMacroArea);
+    LOG_DEBUG("AvgMacroArea: {}", sumMacroArea / (double)numLibMacro);
 
     int maxStdPin = INT_MIN;
     int maxMacroPin = INT_MIN;
@@ -110,11 +110,11 @@ namespace replace
         sumStdPin += (int)cell->libPins().size();
       }
     }
-    LOG_INFO("MaxStdPin: {}", maxStdPin);
-    LOG_INFO("AvgStdPin: {}", sumStdPin / numLibStdCell);
-    LOG_INFO("MaxMacroPin: {}", maxMacroPin);
+    LOG_DEBUG("MaxStdPin: {}", maxStdPin);
+    LOG_DEBUG("AvgStdPin: {}", sumStdPin / numLibStdCell);
+    LOG_DEBUG("MaxMacroPin: {}", maxMacroPin);
     if(numLibMacro != 0){
-      LOG_INFO("AvgMacroPin: {}", sumMacroPin / numLibMacro);
+      LOG_DEBUG("AvgMacroPin: {}", sumMacroPin / numLibMacro);
     }
   }
 

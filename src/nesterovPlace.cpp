@@ -442,7 +442,7 @@ NesterovPlace::doNesterovPlace(string placename) {
 
     // minimum iteration is 50
     if( i > 50 && sumOverflow_ <= npVars_.targetOverflow) {
-      cout << "[NesterovSolve] Finished with Overflow: " << sumOverflow_ << endl;
+      LOG_DEBUG("[NesterovSolve] Finished with Overflow: {}", sumOverflow_);
       break;
     }
   }
