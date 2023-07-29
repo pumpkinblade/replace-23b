@@ -148,7 +148,7 @@ namespace replace
 
   void Partitioner::partitioning2(std::shared_ptr<PlacerBase> pb)
   {
-    srand(114514);
+    srand(114);
 
     Die* topdie = pb->die("top");
     Die* botdie = pb->die("bottom");
@@ -166,6 +166,66 @@ namespace replace
     }
     std::vector<bool> hasAssigned(pb->insts().size(), false);
     std::vector<bool> isBot(pb->insts().size(), false);
+
+    // enumerating net
+    for(Net* net : pb->nets())
+    {
+      std::unordered_set<Instance*> netInstSet;
+      bool canPlaceTop = true;
+      int64_t netAreaTop = 0;
+      bool canPlaceBot = true;
+      int64_t netAreaBot = 0;
+      for(Pin* pin : net->pins())
+      {
+        Instance* inst = pin->instance();
+        LibCell* libcell = botdie->tech()->libCell(inst->libCellName());
+        canPlaceTop &= (!hasAssigned[inst->extId()]) || (!isBot[inst->extId()]);
+        netAreaTop += hasAssigned[inst->extId()] ? 0 : (int64_t)inst->dx() * inst->dy();
+        canPlaceBot &= (!hasAssigned[inst->extId()]) || (isBot[inst->extId()]);
+        netAreaBot += hasAssigned[inst->extId()] ? 0 : (int64_t)libcell->sizeX() * libcell->sizeY();
+      }
+
+      bool toTop = false;
+      bool toBot = false;
+      if(canPlaceTop && netAreaTop < topCap && canPlaceBot && netAreaBot < botCap)
+      {
+        moveDecide(netAreaTop, netAreaBot, topCap, botCap, &toTop, &toBot);
+      }
+      else if(canPlaceTop && netAreaTop < topCap)
+      {
+        toTop = true;
+      }
+      else if(canPlaceBot && netAreaBot < botCap)
+      {
+        toBot = true;
+      }
+
+      if(toTop)
+      {
+        topCap -= netAreaTop;
+        for(Pin* pin : net->pins())
+        {
+          Instance* inst = pin->instance();
+          hasAssigned[inst->extId()] = true;
+          isBot[inst->extId()] = false;
+        }
+      }
+      else if(toBot)
+      {
+        botCap -= netAreaBot;
+        for(Pin* pin : net->pins())
+        {
+          Instance* inst = pin->instance();
+          if(hasAssigned[inst->extId()])
+            continue;
+          hasAssigned[inst->extId()] = true;
+          isBot[inst->extId()] = true;
+          inst->setSize(*botdie->tech());
+          topdie->removeInstance(inst);
+          botdie->addInstance(inst);
+        }
+      }
+    }
 
     // for insts that hasn't been assigned
     for(Instance* inst : pb->insts())

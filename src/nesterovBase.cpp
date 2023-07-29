@@ -1149,6 +1149,20 @@ void NesterovBase::initFillerGCells(Die* die)
   int avgDx = static_cast<int>(dxSum / (maxIdx - minIdx));
   int avgDy = static_cast<int>(dySum / (maxIdx - minIdx));
 
+  // double dxSum = 0.0, dySum = 0.0;
+  // int numStdcell = 0;
+  // for(Instance* inst : die->insts())
+  // {
+  //   if(!inst->isMacro())
+  //   {
+  //     dxSum += inst->dx();
+  //     dySum += inst->dy();
+  //     numStdcell++;
+  //   }
+  // }
+  // int avgDx = static_cast<int>(dxSum / numStdcell);
+  // int avgDy = static_cast<int>(dySum / numStdcell);
+
   int64_t coreArea = (int64_t)die->coreDx() * die->coreDy();
 
   // nonPlaceInstsArea should not have targetDensity downscaling!!! 
