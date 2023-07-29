@@ -13,7 +13,6 @@ namespace replace
   class InitialPlace;
   class NesterovPlace;
   class AbacusLegalizer;
-  class LayerAssignmenter;
   class MacroLegalizer;
 
   class Replace
@@ -37,8 +36,6 @@ namespace replace
     void doMacroLegalization();
 
     void doSAMacroLegalization();
-
-    void doLayerAssignment();
 
     // Initial Place param settings
     void setInitialPlaceMaxIter(int iter);
@@ -71,7 +68,6 @@ namespace replace
     std::unique_ptr<InitialPlace> ip_;
     std::unique_ptr<NesterovPlace> np_;
     std::unique_ptr<AbacusLegalizer> alg_;
-    std::unique_ptr<LayerAssignmenter> la_;
     std::unique_ptr<MacroLegalizer> mlg_;
 
     int initialPlaceMaxIter_;

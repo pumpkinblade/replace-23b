@@ -91,7 +91,7 @@ void NesterovPlace::init() {
   prevHpwl_ 
     = nb_->getHpwl();
 
-  LOG_INFO("InitialHPWL: {}", prevHpwl_);
+  LOG_DEBUG("InitialHPWL: {}", prevHpwl_);
 
   // FFT update
   nb_->updateDensityForceBin();
@@ -107,18 +107,18 @@ void NesterovPlace::init() {
   avgBinSizeY /= static_cast<float>(nb_->binGrids().size());
   baseWireLengthCoef_  = npVars_.initWireLengthCoef / (0.5f * (avgBinSizeX + avgBinSizeY));
 
-  LOG_INFO("BaseWireLengthCoef: {}", baseWireLengthCoef_);
+  LOG_DEBUG("BaseWireLengthCoef: {}", baseWireLengthCoef_);
   
   sumOverflow_ = 
     static_cast<float>(nb_->overflowArea()) 
         / static_cast<float>(pb_->placeStdcellsArea() 
             + pb_->placeMacrosArea() * nb_->targetDensity() );
 
-  LOG_INFO("InitSumOverflow: {}", sumOverflow_);
+  LOG_DEBUG("InitSumOverflow: {}", sumOverflow_);
 
   updateWireLengthCoef(sumOverflow_);
 
-  LOG_INFO("WireLengthCoef: {}, {}", wireLengthCoefX_, wireLengthCoefY_);
+  LOG_DEBUG("WireLengthCoef: {}, {}", wireLengthCoefX_, wireLengthCoefY_);
 
   // WL update
   nb_->updateWireLengthForceWA(wireLengthCoefX_, wireLengthCoefY_);
@@ -150,27 +150,27 @@ void NesterovPlace::init() {
     return;
   }
   
-  LOG_INFO("WireLengthGradSum: {}", wireLengthGradSum_);
-  LOG_INFO("DensityGradSum", densityGradSum_);
+  LOG_DEBUG("WireLengthGradSum: {}", wireLengthGradSum_);
+  LOG_DEBUG("DensityGradSum", densityGradSum_);
 
   densityPenalty_ 
     = (wireLengthGradSum_ / densityGradSum_ )
     * npVars_.initDensityPenalty; 
   
-  LOG_INFO("InitDensityPenalty: {}", densityPenalty_);
+  LOG_DEBUG("InitDensityPenalty: {}", densityPenalty_);
   
   sumOverflow_ = 
     static_cast<float>(nb_->overflowArea()) 
         / static_cast<float>(pb_->placeStdcellsArea() 
             + pb_->placeMacrosArea() * nb_->targetDensity() );
   
-  LOG_INFO("PrevSumOverflow: {}", sumOverflow_);
+  LOG_DEBUG("PrevSumOverflow: {}", sumOverflow_);
   
   stepLength_  
     = getStepLength (prevSLPCoordi_, prevSLPSumGrads_, curSLPCoordi_, curSLPSumGrads_);
 
 
-  LOG_INFO("InitialStepLength: {}", stepLength_);
+  LOG_DEBUG("InitialStepLength: {}", stepLength_);
   LOG_TRACE("NesterovInit End");
 }
 
@@ -214,7 +214,7 @@ NesterovPlace::updateGradients(
 
   float gradSum = 0;
 
-  LOG_INFO("Density Penalty: {}", densityPenalty_);
+  LOG_DEBUG("Density Penalty: {}", densityPenalty_);
 
   for(size_t i=0; i<nb_->gCells().size(); i++) {
     GCell* gCell = nb_->gCells().at(i);
@@ -260,9 +260,9 @@ NesterovPlace::updateGradients(
     gradSum += fabs(sumGrads[i].x) + fabs(sumGrads[i].y);
   }
   
-  LOG_INFO("WireLengthGradSum: {}", wireLengthGradSum_);
-  LOG_INFO("DensityGradSum: {}", densityGradSum_);
-  LOG_INFO("GradSum: {}", gradSum);
+  LOG_DEBUG("WireLengthGradSum: {}", wireLengthGradSum_);
+  LOG_DEBUG("DensityGradSum: {}", densityGradSum_);
+  LOG_DEBUG("GradSum: {}", gradSum);
 
   // divergence detection on 
   // Wirelength / density gradient calculation
@@ -285,10 +285,11 @@ NesterovPlace::doNesterovPlace(string placename) {
   if(placename!="" && placename[placename.length() - 1] != '_'){ 
     placename.push_back('_');
   }
+#if defined(DEBUG) || defined(_DEBUG)
   Plot::plot(nb_.get(), PlotNesterovType::GCell, "./plot/cell", placename + "cell_0");
   Plot::plot(nb_.get(), PlotNesterovType::Bin, "./plot/bin", placename + "bin_0");
   Plot::plot(nb_.get(), PlotNesterovType::Arrow, "./plot/arrow", placename + "arrow_0");
-
+#endif
 
   // backTracking variable.
   float curA = 1.0;
@@ -306,7 +307,7 @@ NesterovPlace::doNesterovPlace(string placename) {
 
   // Core Nesterov Loop
   for(int i=0; i<npVars_.maxNesterovIter; i++) {
-    LOG_INFO("Iter: {}", i+1);
+    LOG_DEBUG("Iter: {}", i+1);
     
     float prevA = curA;
 
@@ -318,10 +319,10 @@ NesterovPlace::doNesterovPlace(string placename) {
     // coeff is (a_k -1) / ( a_(k+1)) in paper.
     float coeff = (prevA - 1.0)/curA;
     
-    LOG_INFO("PreviousA: {}", prevA);
-    LOG_INFO("CurrentA: {}", curA);
-    LOG_INFO("Coefficient: {}", coeff);
-    LOG_INFO("StepLength", stepLength_);
+    LOG_DEBUG("PreviousA: {}", prevA);
+    LOG_DEBUG("CurrentA: {}", curA);
+    LOG_DEBUG("Coefficient: {}", coeff);
+    LOG_DEBUG("StepLength", stepLength_);
 
     // Back-Tracking loop
     int numBackTrak = 0;
@@ -369,7 +370,7 @@ NesterovPlace::doNesterovPlace(string placename) {
       float newStepLength  
         = getStepLength (curSLPCoordi_, curSLPSumGrads_, nextSLPCoordi_, nextSLPSumGrads_);
      
-      LOG_INFO("NetStepLength: {}", newStepLength);
+      LOG_DEBUG("NetStepLength: {}", newStepLength);
 
       if( newStepLength > stepLength_ * 0.95) {
         stepLength_ = newStepLength;
@@ -380,7 +381,7 @@ NesterovPlace::doNesterovPlace(string placename) {
       } 
     }
 
-    LOG_INFO("NumBackTrak: {}", numBackTrak+1);
+    LOG_DEBUG("NumBackTrak: {}", numBackTrak+1);
 
     // dynamic adjustment for
     // better convergence with
@@ -410,14 +411,14 @@ NesterovPlace::doNesterovPlace(string placename) {
 
     // For JPEG Saving
     // debug
-
+#if defined(DEBUG) || defined(_DEBUG)
     if( i == 0 || (i+1) % 100 == 0 ) {
-      LOG_INFO("[NesterovSolve] Iter: {} overflow: {} HPWL: {}", i+1, sumOverflow_, prevHpwl_);
+      LOG_DEBUG("[NesterovSolve] Iter: {} overflow: {} HPWL: {}", i+1, sumOverflow_, prevHpwl_);
       Plot::plot(nb_.get(), PlotNesterovType::GCell, "./plot/cell", placename + "cell_" + std::to_string(i+1));
       Plot::plot(nb_.get(), PlotNesterovType::Bin, "./plot/bin", placename + "bin_" + std::to_string(i+1));
       Plot::plot(nb_.get(), PlotNesterovType::Arrow, "./plot/arrow", placename + "arrow_" + std::to_string(i+1));
     }
-
+#endif
     if( minSumOverflow > sumOverflow_ ) {
       minSumOverflow = sumOverflow_;
       hpwlWithMinSumOverflow = prevHpwl_; 
@@ -441,7 +442,7 @@ NesterovPlace::doNesterovPlace(string placename) {
 
     // minimum iteration is 50
     if( i > 50 && sumOverflow_ <= npVars_.targetOverflow) {
-      cout << "[NesterovSolve] Finished with Overflow: " << sumOverflow_ << endl;
+      LOG_DEBUG("[NesterovSolve] Finished with Overflow: {}", sumOverflow_);
       break;
     }
   }
@@ -470,7 +471,7 @@ NesterovPlace::updateWireLengthCoef(float overflow) {
 
   wireLengthCoefX_ *= baseWireLengthCoef_;
   wireLengthCoefY_ *= baseWireLengthCoef_;
-  LOG_INFO("NewWireLengthCoef: {}", wireLengthCoefX_);
+  LOG_DEBUG("NewWireLengthCoef: {}", wireLengthCoefX_);
 }
 
 void
@@ -515,15 +516,15 @@ NesterovPlace::updateNextIter() {
         / static_cast<float>(pb_->placeStdcellsArea() 
             + pb_->placeMacrosArea() * nb_->targetDensity() );
 
-  LOG_INFO("Gradient: {}", getSecondNorm(curSLPSumGrads_));
-  LOG_INFO("Phi: {}", nb_->sumPhi());
-  LOG_INFO("Overflow: {}", sumOverflow_);
+  LOG_DEBUG("Gradient: {}", getSecondNorm(curSLPSumGrads_));
+  LOG_DEBUG("Phi: {}", nb_->sumPhi());
+  LOG_DEBUG("Overflow: {}", sumOverflow_);
 
   updateWireLengthCoef(sumOverflow_);
   int64_t hpwl = nb_->getHpwl();
   
-  LOG_INFO("PreviousHPWL: {}", prevHpwl_);
-  LOG_INFO("NewHPWL: {}", hpwl);
+  LOG_DEBUG("PreviousHPWL: {}", prevHpwl_);
+  LOG_DEBUG("NewHPWL: {}", hpwl);
 
   float phiCoef = getPhiCoef( 
       static_cast<float>(hpwl - prevHpwl_) 
@@ -532,7 +533,7 @@ NesterovPlace::updateNextIter() {
   prevHpwl_ = hpwl;
   densityPenalty_ *= phiCoef;
   
-  LOG_INFO("PhiCoef: {}", phiCoef);
+  LOG_DEBUG("PhiCoef: {}", phiCoef);
 }
 
 float
@@ -547,15 +548,15 @@ NesterovPlace::getStepLength(
   float gradDistance 
     = getDistance(prevSLPSumGrads_, curSLPSumGrads_);
 
-  LOG_INFO("CoordinateDistance: {}", coordiDistance);
-  LOG_INFO("GradientDistance: {}", gradDistance);
+  LOG_DEBUG("CoordinateDistance: {}", coordiDistance);
+  LOG_DEBUG("GradientDistance: {}", gradDistance);
 
   return coordiDistance / gradDistance;
 }
 
 float
 NesterovPlace::getPhiCoef(float scaledDiffHpwl) {
-  LOG_INFO("Input ScaleDiffHPWL", scaledDiffHpwl);
+  LOG_DEBUG("Input ScaleDiffHPWL", scaledDiffHpwl);
 
   float retCoef 
     = (scaledDiffHpwl < 0)? 

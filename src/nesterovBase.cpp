@@ -593,11 +593,11 @@ void BinGrid::initBins()
       std::round(static_cast<float>(averagePlaceInstArea) / targetDensity_);
     int idealBinCnt = totalBinArea / idealBinArea; 
     
-    LOG_INFO("TargetDensity: {}", targetDensity_);
-    LOG_INFO("AveragePlaceInstArea: {}", averagePlaceInstArea);
-    LOG_INFO("IdealBinArea: {}", idealBinArea);
-    LOG_INFO("IdealBinCnt: {}", idealBinCnt);
-    LOG_INFO("TotalBinArea: {}", totalBinArea);
+    LOG_DEBUG("TargetDensity: {}", targetDensity_);
+    LOG_DEBUG("AveragePlaceInstArea: {}", averagePlaceInstArea);
+    LOG_DEBUG("IdealBinArea: {}", idealBinArea);
+    LOG_DEBUG("IdealBinCnt: {}", idealBinCnt);
+    LOG_DEBUG("TotalBinArea: {}", totalBinArea);
 
     // find binCnt: 2, 4, 8, 16, 32, 64, ...
     // s.t. binCnt^2 <= idealBinCnt <= (binCnt*2)^2.
@@ -619,14 +619,14 @@ void BinGrid::initBins()
   }
 
 
-  LOG_INFO("BinCnt: {}, {}", binCntX_, binCntY_);
+  LOG_DEBUG("BinCnt: {}, {}", binCntX_, binCntY_);
   
   binSizeX_ = ceil(
       static_cast<float>((ux_ - lx_))/binCntX_);
   binSizeY_ = ceil(
       static_cast<float>((uy_ - ly_))/binCntY_);
   
-  LOG_INFO("BinSize: {}, {}", binSizeX_, binSizeY_);
+  LOG_DEBUG("BinSize: {}, {}", binSizeX_, binSizeY_);
 
   // initialize binStor_, bins_ vector
   binStor_.resize(binCntX_ * binCntY_);
@@ -660,7 +660,7 @@ void BinGrid::initBins()
     bins_.push_back( &bin );
   }
 
-  LOG_INFO("NumBins: {}", bins_.size());
+  LOG_DEBUG("NumBins: {}", bins_.size());
 
   // only initialized once
   updateBinsNonPlaceArea();
@@ -1051,9 +1051,9 @@ void NesterovBase::init()
     }
   }
 
-  LOG_INFO("FillerInit: NumGCells: {}", gCells_.size());
-  LOG_INFO("FillerInit: NumGNets: {}", gNets_.size());
-  LOG_INFO("FillerInit: NumGPins: {}", gPins_.size());
+  LOG_DEBUG("FillerInit: NumGCells: {}", gCells_.size());
+  LOG_DEBUG("FillerInit: NumGNets: {}", gNets_.size());
+  LOG_DEBUG("FillerInit: NumGPins: {}", gPins_.size());
 
   // create bin grid
   binGridStor_.reserve(pb_->dies().size());
@@ -1186,13 +1186,13 @@ void NesterovBase::initFillerGCells(Die* die)
   assert(avgDy> 0);
   int fillerCnt = static_cast<int>(totalFillerArea / ((int64_t)avgDx * avgDy));
 
-  LOG_INFO("FillerInit: CoreArea: {}", coreArea);
-  LOG_INFO("FillerInit: WhiteSpaceArea: {}", whiteSpaceArea);
-  LOG_INFO("FillerInit: MovableArea: {}", movableArea);
-  LOG_INFO("FillerInit: TotalFillerArea: {}", totalFillerArea);
-  LOG_INFO("FillerInit: NumFillerCells: {}", fillerCnt);
-  LOG_INFO("FillerInit: FillerCellArea: {}", static_cast<int64_t>(avgDx*avgDy));
-  LOG_INFO("FillerInit: FillerCellSize: {}, {}", avgDx, avgDy); 
+  LOG_DEBUG("FillerInit: CoreArea: {}", coreArea);
+  LOG_DEBUG("FillerInit: WhiteSpaceArea: {}", whiteSpaceArea);
+  LOG_DEBUG("FillerInit: MovableArea: {}", movableArea);
+  LOG_DEBUG("FillerInit: TotalFillerArea: {}", totalFillerArea);
+  LOG_DEBUG("FillerInit: NumFillerCells: {}", fillerCnt);
+  LOG_DEBUG("FillerInit: FillerCellArea: {}", static_cast<int64_t>(avgDx*avgDy));
+  LOG_DEBUG("FillerInit: FillerCellSize: {}, {}", avgDx, avgDy); 
 
   // 
   // mt19937 supports huge range of random values.

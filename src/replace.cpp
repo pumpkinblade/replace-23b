@@ -4,7 +4,6 @@
 #include "placerBase.h"
 #include "nesterovBase.h"
 #include "abacusLegalizer.h"
-#include "layerAssignmenter.h"
 #include "macroLegalizer.h"
 #include <iostream>
 #include <memory>
@@ -17,7 +16,7 @@ namespace replace
 
   Replace::Replace(float targetDensity)
       : pb_(nullptr), nb_(nullptr),
-        ip_(nullptr), np_(nullptr), alg_(nullptr), la_(nullptr),
+        ip_(nullptr), np_(nullptr), alg_(nullptr),
         initialPlaceMaxIter_(20),
         initialPlaceMinDiffLength_(1500),
         initialPlaceMaxSolverIter_(100),
@@ -159,17 +158,6 @@ namespace replace
     mlg_->doLegalization();
 
     LOG_TRACE("end Replace::doMacorLegalization");
-  }
-
-  void Replace::doLayerAssignment()
-  {
-    // TODO
-    la_.reset(new LayerAssignmenter());
-    LOG_TRACE("start Replace::doLayerAssignment");
-    la_->setPlacerBase(pb_);
-    la_->setNesterovBase(nb_);
-    // la_->doLayerAssgnmenter();
-    LOG_TRACE("end Replace::doLayerAssignment");
   }
 
   void

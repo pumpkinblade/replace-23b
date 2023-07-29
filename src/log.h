@@ -22,6 +22,7 @@ namespace replace
 
 // log macros
 #define LOG_TRACE(...) ::replace::Log::getLogger()->trace(__VA_ARGS__)
+#define LOG_DEBUG(...) ::replace::Log::getLogger()->debug(__VA_ARGS__)
 #define LOG_INFO(...) ::replace::Log::getLogger()->info(__VA_ARGS__)
 #define LOG_WARN(...) ::replace::Log::getLogger()->warn(__VA_ARGS__)
 #define LOG_ERROR(...) ::replace::Log::getLogger()->error(__VA_ARGS__)
