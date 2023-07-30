@@ -159,13 +159,13 @@ namespace replace
     *moveToTop = *moveToBot = false;
     if(topCanContain && botCanContain)
     {
-      *moveToTop = ((float)rand() / RAND_MAX) < 0.5;
-      *moveToBot = !(*moveToTop);
+      *moveToBot = ((float)std::rand() / RAND_MAX) < 0.5;
+      *moveToTop = !(*moveToBot);
     }
     else if(topCanContain)
     {
-      *moveToTop = true;
       *moveToBot = false;
+      *moveToTop = true;
     }
     else
     {
@@ -174,9 +174,17 @@ namespace replace
     }
   }
 
+  inline int64_t instCap(int dx, int dy, bool isMacro, Die* die)
+  {
+    if(isMacro)
+      return dx * (dy + die->rowHeight() - 1) / die->rowHeight() * die->rowHeight();
+    else
+      return dx * dy;
+  }
+
   void Partitioner::partitioning2(std::shared_ptr<PlacerBase> pb)
   {
-    srand(114514);
+    srand(514);
 
     Die* topdie = pb->die("top");
     Die* botdie = pb->die("bottom");
@@ -195,40 +203,40 @@ namespace replace
     std::vector<bool> hasAssigned(pb->insts().size(), false);
     std::vector<bool> isBot(pb->insts().size(), false);
 
-    // using zjl's method to assign macros
-    std::vector<Instance*> macros;
-    for(Instance* inst : pb->insts())
-    {
-      if(inst->isMacro())
-        macros.push_back(inst);
-    }
-    std::sort(macros.begin(), macros.end(), [](const Instance* left, const Instance* right)
-              { return left->size() > right->size(); });
-    // A greedy macro partition method, which may be not optimal.
-    int topMacroSize = 0;
-    int bottomMacroSize = 0;
-    for(Instance* macro : macros)
-    {
-      if(topMacroSize > bottomMacroSize)
-      {
-        topdie->removeInstance(macro);
-        macro->setSize(*botdie->tech());
-        botdie->addInstance(macro);
+    //  // using zjl's method to assign macros
+    //  std::vector<Instance*> macros;
+    //  for(Instance* inst : pb->insts())
+    //  {
+    //    if(inst->isMacro())
+    //      macros.push_back(inst);
+    //  }
+    //  std::sort(macros.begin(), macros.end(), [](const Instance* left, const Instance* right)
+    //            { return left->size() > right->size(); });
+    //  // A greedy macro partition method, which may be not optimal.
+    //  int topMacroSize = 0;
+    //  int bottomMacroSize = 0;
+    //  for(Instance* macro : macros)
+    //  {
+    //    if(topMacroSize > bottomMacroSize)
+    //    {
+    //      topdie->removeInstance(macro);
+    //      macro->setSize(*botdie->tech());
+    //      botdie->addInstance(macro);
 
-        bottomMacroSize += macro->size();
-        botCap -= macro->size();
-        hasAssigned[macro->extId()] = true;
-        isBot[macro->extId()] = false;
-      }
-      else
-      {
-        topMacroSize += macro->size();
-        topCap -= macro->size();
-        hasAssigned[macro->extId()] = true;
-        isBot[macro->extId()] = true;
-      }
-    }
-    LOG_DEBUG("partition macros, top: {} bottom: {}", topMacroSize, bottomMacroSize);
+    //      bottomMacroSize += macro->size();
+    //      botCap -= macro->size();
+    //      hasAssigned[macro->extId()] = true;
+    //      isBot[macro->extId()] = true;
+    //    }
+    //    else
+    //    {
+    //      topMacroSize += macro->size();
+    //      topCap -= macro->size();
+    //      hasAssigned[macro->extId()] = true;
+    //      isBot[macro->extId()] = false;
+    //    }
+    //  }
+    //  LOG_DEBUG("partition macros, top: {} bottom: {}", topMacroSize, bottomMacroSize);
 
     // enumerating net
     for(Net* net : pb->nets())
@@ -243,9 +251,9 @@ namespace replace
         Instance* inst = pin->instance();
         LibCell* libcell = botdie->tech()->libCell(inst->libCellName());
         canPlaceTop &= (!hasAssigned[inst->extId()]) || (!isBot[inst->extId()]);
-        netAreaTop += hasAssigned[inst->extId()] ? 0 : (int64_t)inst->dx() * inst->dy();
         canPlaceBot &= (!hasAssigned[inst->extId()]) || (isBot[inst->extId()]);
-        netAreaBot += hasAssigned[inst->extId()] ? 0 : (int64_t)libcell->sizeX() * libcell->sizeY();
+        netAreaTop += hasAssigned[inst->extId()] ? 0 : instCap(inst->dx(), inst->dy(), inst->isMacro(), topdie);
+        netAreaBot += hasAssigned[inst->extId()] ? 0 : instCap(libcell->sizeX(), libcell->sizeY(), inst->isMacro(), botdie);
       }
 
       bool toTop = false;
@@ -295,9 +303,10 @@ namespace replace
     {
       if(hasAssigned[inst->extId()] == false)
       {
-        auto instTopArea = inst->dx() * (long long)inst->dy();
-        LibCell* botLibCell = botdie->tech()->libCell(inst->libCellName());
-        auto instBotArea = botLibCell->sizeX() * (long long)botLibCell->sizeY();
+        LibCell* libcell = botdie->tech()->libCell(inst->libCellName());
+        int instTopArea, instBotArea;
+        instTopArea = inst->dx() * inst->dy();
+        instBotArea = libcell->sizeX() * libcell->sizeY();
 
         bool moveToTop, moveToBot;
         moveDecide(instTopArea, instBotArea, topCap, botCap, &moveToTop, &moveToBot);

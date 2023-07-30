@@ -333,12 +333,13 @@ namespace replace
         return true;
     }
 
-    void MacroLegalizer::postLegalize(const std::vector<Instance *> insts, Die *die)
+    void MacroLegalizer::postLegalize(std::vector<Instance *> insts, Die *die)
     {
         srand(114);
         for (int iter = 0; iter < lgVars_.maxPostLegalizeIter; iter++)
         {
             bool isLegal = true;
+            std::random_shuffle(insts.begin(), insts.end());
             for (int i = 0; i < insts.size(); i++)
             {
                 // check boundary
@@ -387,9 +388,9 @@ namespace replace
                         // y overlap
                         auto yOk = repel(inst1->ly(), inst1->uy(), inst2->ly(), inst2->uy(),
                                          die->coreLy(), die->coreUy(), &dy1, &dy2);
-                        double thres = (double)(std::abs(dx1) + std::abs(dx2))
-                                     / (std::abs(dx1) + std::abs(dx2) + std::abs(dy1) + std::abs(dy2));
-                        if ((double)rand() / (double)RAND_MAX < thres)
+                        //double thres = (double)(std::abs(dx1) + std::abs(dx2))
+                        //             / (std::abs(dx1) + std::abs(dx2) + std::abs(dy1) + std::abs(dy2));
+                        if (std::abs(dx1) + std::abs(dx2) < std::abs(dy1) + std::abs(dy2))
                         {
                             inst1->setLocation(inst1->lx() + dx1, inst1->ly());
                             inst2->setLocation(inst2->lx() + dx2, inst2->ly());
