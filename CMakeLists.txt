@@ -7,12 +7,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(REPLACE_HOME ${PROJECT_SOURCE_DIR} )
-set(DEFLIB_HOME
-  ${PROJECT_SOURCE_DIR}/module/def
-)
-set(LEFLIB_HOME
-  ${PROJECT_SOURCE_DIR}/module/lef
-)
 set(SPDLOG_HOME
   ${PROJECT_SOURCE_DIR}/module/spdlog
 )
@@ -28,9 +22,6 @@ set(CIMG_HOME
 set(STB_HOME
     ${PROJECT_SOURCE_DIR}/module/stb
 )
-
-add_subdirectory(${DEFLIB_HOME})
-add_subdirectory(${LEFLIB_HOME})
 
 set(PLACE_HEADER
   src/log.h
@@ -54,7 +45,6 @@ set(PLACE_HEADER
 set(PLACE_SRC
   src/main.cpp
   src/log.cpp
-  src/lefdefParser.cpp
   src/placerBase.cpp
   src/replace.cpp
   src/initialPlace.cpp
@@ -82,8 +72,5 @@ target_include_directories(replace PRIVATE ${TCLAP_HOME}/include)
 target_include_directories(replace PRIVATE ${EIGEN_HOME}/include)
 target_include_directories(replace PRIVATE ${STB_HOME})
 target_include_directories(replace PRIVATE ${CIMG_HOME})
-
-target_link_libraries(replace PRIVATE def)
-target_link_libraries(replace PRIVATE lef)
 
 target_compile_definitions(replace PRIVATE -Dcimg_display=0)
