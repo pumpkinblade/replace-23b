@@ -191,7 +191,7 @@ namespace replace
     }
   }
 
-  void printInfo(const PLACER_23B_DESC *desc)
+  void printDebugInfo(const PLACER_23B_DESC *desc)
   {
     size_t numTechs = desc->techs.size();
     size_t numCells;
@@ -206,59 +206,59 @@ namespace replace
     const PIN_DESC *currPin;
     const NET_DESC *currNet;
 
-    LOG_INFO("NumTechnologies {}", numTechs);
+    LOG_DEBUG("NumTechnologies {}", numTechs);
     for (size_t i = 0; i < numTechs; i++)
     {
       currTech = &desc->techs[i];
       numCells = currTech->cells.size();
-      LOG_INFO("Tech {} {}", currTech->name, numCells);
+      LOG_DEBUG("Tech {} {}", currTech->name, numCells);
       for (size_t j = 0; j < numCells; j++)
       {
         currCell = &currTech->cells[j];
         numLibPins = currCell->pins.size();
-        LOG_INFO("LibCell {} {} {} {} {}", currCell->isMacro, currCell->name,
+        LOG_DEBUG("LibCell {} {} {} {} {}", currCell->isMacro, currCell->name,
                  currCell->sizeX, currCell->sizeY, numLibPins);
         for (size_t k = 0; k < numLibPins; k++)
         {
           currLibPin = &currCell->pins[k];
-          LOG_INFO("Pin {} {} {}", currLibPin->name, currLibPin->x, currLibPin->y);
+          LOG_DEBUG("Pin {} {} {}", currLibPin->name, currLibPin->x, currLibPin->y);
         }
       }
     }
 
-    LOG_INFO("DieSize {} {} {} {}", desc->topDieDesc.lx, desc->topDieDesc.ly,
+    LOG_DEBUG("DieSize {} {} {} {}", desc->topDieDesc.lx, desc->topDieDesc.ly,
              desc->topDieDesc.ux, desc->topDieDesc.uy);
-    LOG_INFO("TopDieMaxUtil {}", desc->topDieDesc.maxUtil);
-    LOG_INFO("BottomDieMaxUtil {}", desc->bottomDieDesc.maxUtil);
-    LOG_INFO("TopDieRows {} {} {} {} {}", desc->topDieDesc.rowStartX, desc->topDieDesc.rowStartY,
+    LOG_DEBUG("TopDieMaxUtil {}", desc->topDieDesc.maxUtil);
+    LOG_DEBUG("BottomDieMaxUtil {}", desc->bottomDieDesc.maxUtil);
+    LOG_DEBUG("TopDieRows {} {} {} {} {}", desc->topDieDesc.rowStartX, desc->topDieDesc.rowStartY,
              desc->topDieDesc.rowSizeX, desc->topDieDesc.rowSizeY, desc->topDieDesc.repeatCount);
-    LOG_INFO("BottomDieRows {} {} {} {} {}", desc->bottomDieDesc.rowStartX, desc->bottomDieDesc.rowStartY,
+    LOG_DEBUG("BottomDieRows {} {} {} {} {}", desc->bottomDieDesc.rowStartX, desc->bottomDieDesc.rowStartY,
              desc->bottomDieDesc.rowSizeX, desc->bottomDieDesc.rowSizeY, desc->bottomDieDesc.repeatCount);
-    LOG_INFO("TopDieTech {}", desc->topDieDesc.techName);
-    LOG_INFO("BottomDieTech {}", desc->bottomDieDesc.techName);
-    LOG_INFO("TerminalSize {} {}", desc->termSizeX, desc->termSizeY);
-    LOG_INFO("TerminalSpacing {}", desc->termSpace);
-    LOG_INFO("TerminalCost {}", desc->termCost);
+    LOG_DEBUG("TopDieTech {}", desc->topDieDesc.techName);
+    LOG_DEBUG("BottomDieTech {}", desc->bottomDieDesc.techName);
+    LOG_DEBUG("TerminalSize {} {}", desc->termSizeX, desc->termSizeY);
+    LOG_DEBUG("TerminalSpacing {}", desc->termSpace);
+    LOG_DEBUG("TerminalCost {}", desc->termCost);
 
     numInsts = desc->insts.size();
-    LOG_INFO("NumInstances {}", numInsts);
+    LOG_DEBUG("NumInstances {}", numInsts);
     for (size_t i = 0; i < numInsts; i++)
     {
       currInst = &desc->insts[i];
-      LOG_INFO("Inst {} {}", currInst->name, currInst->cellName);
+      LOG_DEBUG("Inst {} {}", currInst->name, currInst->cellName);
     }
 
     numNets = desc->nets.size();
-    LOG_INFO("NumNets {}", numNets);
+    LOG_DEBUG("NumNets {}", numNets);
     for (size_t i = 0; i < numNets; i++)
     {
       currNet = &desc->nets[i];
       numPins = currNet->pins.size();
-      LOG_INFO("Net {} {}", currNet->name, numPins);
+      LOG_DEBUG("Net {} {}", currNet->name, numPins);
       for (size_t j = 0; j < numPins; j++)
       {
         currPin = &currNet->pins[j];
-        LOG_INFO("Pin {}/{}", currPin->instName, currPin->pinName);
+        LOG_DEBUG("Pin {}/{}", currPin->instName, currPin->pinName);
       }
     }
   }

@@ -74,7 +74,7 @@ int main(int argc, const char *argv[])
     LOG_TRACE("Parse Lef/Def Begin");
     std::shared_ptr<PlacerBase> pb = Parser::lefdefToPlacerBase(lefFilename, defFilename);
     LOG_TRACE("Parse Lef/Def End");
-    pb->printInfo();
+    pb->printDebugInfo();
 
     Replace rp(targetDensity);
     rp.setPlacerBase(pb);
@@ -86,7 +86,7 @@ int main(int argc, const char *argv[])
   {
     LOG_TRACE("Parse 23b Text File Begin");
     std::shared_ptr<PlacerBase> pb = Parser::txtToPlacerBase(txtFilename);
-    pb->printInfo();
+    pb->printDebugInfo();
     LOG_TRACE("Parse 23b Text File End");
 
     // then we do partition
@@ -117,17 +117,15 @@ int main(int argc, const char *argv[])
   {
     LOG_TRACE("Parse 23b Text File Begin");
     std::shared_ptr<PlacerBase> pb = Parser::txtToPlacerBase(txtFilename);
-    pb->printInfo();
+    pb->printDebugInfo();
     LOG_TRACE("Parse 23b Text File End");
 
     Replace rp(targetDensity);
     rp.setPlacerBase(pb);
     rp.doInitialPlace();
     rp.doNesterovPlace("pregp");
-    rp.doLayerAssignment();
     rp.setTargetDensity(1.0);
     rp.doNesterovPlace("postgp");
-
   }
 
 

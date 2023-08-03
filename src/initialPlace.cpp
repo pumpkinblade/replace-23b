@@ -85,7 +85,7 @@ namespace replace
       instLocVecY_ = solver.solveWithGuess(fixedInstForceVecY_, instLocVecY_);
       errorY = solver.error();
 
-      LOG_INFO("[InitialPlace] Iter {} CG Error: {} HPWL: {}", i, max(errorX, errorY), pb_->hpwl());
+      LOG_DEBUG("[InitialPlace] Iter {} CG Error: {} HPWL: {}", i, max(errorX, errorY), pb_->hpwl());
       updateCoordi();
 
       Plot::plot(pb_.get(), "./plot/cell", "ip_" + to_string(i));

@@ -75,7 +75,7 @@ namespace replace
     int siteSizeX() const { return siteSizeX_; }
     int siteSizeY() const { return siteSizeY_; }
 
-    void printInfo() const;
+    void printDebugInfo() const;
 
   private:
     std::string name_;

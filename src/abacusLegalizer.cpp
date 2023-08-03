@@ -317,7 +317,7 @@ namespace replace
   void AbacusLegalizer::doLegalization()
   {
     int64_t hpwlBeforeLG = pb_->hpwl();
-    LOG_INFO("hpwl Before AbacusLegalization: {}", hpwlBeforeLG);
+    LOG_DEBUG("hpwl Before AbacusLegalization: {}", hpwlBeforeLG);
     Plot::plot(pb_.get(), "./plot/cell", "before_lg");
 
     for(Die* die : pb_->dies())
@@ -382,7 +382,7 @@ namespace replace
     }
 
     int64_t hpwlAfterLG = pb_->hpwl();
-    LOG_INFO("hpwl After AbacusLegalization: {}", hpwlAfterLG);
+    LOG_DEBUG("hpwl After AbacusLegalization: {}", hpwlAfterLG);
     Plot::plot(pb_.get(), "./plot/cell", "after_lg");
   }
 

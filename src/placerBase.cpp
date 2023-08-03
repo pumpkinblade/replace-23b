@@ -359,19 +359,19 @@ namespace replace
     return hpwl;
   }
 
-  void PlacerBase::printInfo() const
+  void PlacerBase::printDebugInfo() const
   {
     for (Technology* tech : techs_)
     {
-      LOG_INFO("Technology {}", tech->name());
-      tech->printInfo();
+      LOG_DEBUG("Technology {}", tech->name());
+      tech->printDebugInfo();
     }
 
-    LOG_INFO("NumInstances: {}", instStor_.size());
-    LOG_INFO("NumPlaceInstances: {}", placeInsts_.size());
-    LOG_INFO("NumFixedInstances: {}", fixedInsts_.size());
-    LOG_INFO("NumNets: {}", nets_.size());
-    LOG_INFO("NumPins: {}", pins_.size());
+    LOG_DEBUG("NumInstances: {}", instStor_.size());
+    LOG_DEBUG("NumPlaceInstances: {}", placeInsts_.size());
+    LOG_DEBUG("NumFixedInstances: {}", fixedInsts_.size());
+    LOG_DEBUG("NumNets: {}", nets_.size());
+    LOG_DEBUG("NumPins: {}", pins_.size());
 
     int maxFanout = INT_MIN;
     int sumFanout = 0;
@@ -381,26 +381,26 @@ namespace replace
       sumFanout += (int)net->pins().size();
     }
 
-    LOG_INFO("MaxFanout: {}", maxFanout);
-    LOG_INFO("AvgFanout: {}", sumFanout / (float)nets_.size());
+    LOG_DEBUG("MaxFanout: {}", maxFanout);
+    LOG_DEBUG("AvgFanout: {}", sumFanout / (float)nets_.size());
 
     Die *die = dies_.front();
-    LOG_INFO("CoreAreaLxLy: ({}, {})", die->coreLx(), die->coreLy());
-    LOG_INFO("CoreAreaUxUy: ({}, {})", die->coreUx(), die->coreUy());
+    LOG_DEBUG("CoreAreaLxLy: ({}, {})", die->coreLx(), die->coreLy());
+    LOG_DEBUG("CoreAreaUxUy: ({}, {})", die->coreUx(), die->coreUy());
 
     int64_t coreArea =
         static_cast<int64_t>(die->coreUx() - die->coreLx()) *
         static_cast<int64_t>(die->coreUy() - die->coreLy());
 
-    LOG_INFO("CoreArea: {}", coreArea);
+    LOG_DEBUG("CoreArea: {}", coreArea);
     int dieIdx = 0;
     for (const Die *die : dies_)
     {
-      LOG_INFO("Die {}", dieIdx);
-      LOG_INFO("PlaceInstArea: {}", die->placeInstsArea());
-      LOG_INFO("PlaceStdcellsArea: {}", die->placeStdcellsArea());
-      LOG_INFO("PlaceMacrosArea: {}", die->placeMacrosArea());
-      LOG_INFO("FixedInstArea: {}", die->fixedInstsArea());
+      LOG_DEBUG("Die {}", dieIdx);
+      LOG_DEBUG("PlaceInstArea: {}", die->placeInstsArea());
+      LOG_DEBUG("PlaceStdcellsArea: {}", die->placeStdcellsArea());
+      LOG_DEBUG("PlaceMacrosArea: {}", die->placeMacrosArea());
+      LOG_DEBUG("FixedInstArea: {}", die->fixedInstsArea());
 
       int numStdCell = 0, numMacro = 0;
       for (Instance* inst : die->insts())
@@ -410,8 +410,8 @@ namespace replace
         else
           numStdCell++;
       }
-      LOG_INFO("NumStdCells: {}", numStdCell);
-      LOG_INFO("NumMacros: {}", numMacro);
+      LOG_DEBUG("NumStdCells: {}", numStdCell);
+      LOG_DEBUG("NumMacros: {}", numMacro);
 
       dieIdx++;
     }

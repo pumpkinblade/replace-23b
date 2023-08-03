@@ -315,7 +315,7 @@ namespace replace
     Die *die() { return dies_.front(); }
 
     int64_t hpwl() const;
-    void printInfo() const;
+    void printDebugInfo() const;
 
     int64_t placeInstsArea() const;
     int64_t placeStdcellsArea() const;

@@ -1,7 +1,6 @@
 #include "technology.h"
 #include "log.h"
 #include "placerBase.h"
-#include "placer23b.h"
 #include "partitioner.h"
 #include "replace.h"
 #include <unordered_map>
@@ -108,7 +107,7 @@ namespace replace
         topMacroSize += macro->size();
       }
     }
-    LOG_INFO("partition macros, top: {} bottom: {}",
+    LOG_DEBUG("partition macros, top: {} bottom: {}",
       topMacroSize, bottomMacroSize);
 
 
@@ -220,7 +219,7 @@ namespace replace
         bottomMacroSize += macro->size();
         botCap -= macro->size();
         hasAssigned[macro->extId()] = true;
-        isBot[macro->extId()] = false;
+        isBot[macro->extId()] = true;
       }
       else
       {
@@ -230,7 +229,7 @@ namespace replace
         isBot[macro->extId()] = false;
       }
     }
-    LOG_INFO("partition macros, top: {} bottom: {}", topMacroSize, bottomMacroSize);
+    LOG_DEBUG("partition macros, top: {} bottom: {}", topMacroSize, bottomMacroSize);
 
     // enumerating net
     for(Net* net : pb->nets())

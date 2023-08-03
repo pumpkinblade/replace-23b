@@ -44,10 +44,8 @@ set(PLACE_HEADER
   src/point.h
   src/plot.h
   src/technology.h
-  # src/placer23b.h
   src/abacusLegalizer.h
   src/partitioner.h
-  src/layerAssignmenter.h
   src/macroLegalizer.h
   src/terminalModifier.h
   src/outputWriter.h
@@ -69,11 +67,9 @@ set(PLACE_SRC
   src/point.cpp
   src/plot.cpp
   src/technology.cpp
-  # src/placer23b.cpp
   src/23bParser.cpp
   src/abacusLegalizer.cpp
   src/partitioner.cpp
-  src/layerAssignmenter.cpp
   src/macroLegalizer.cpp
   src/terminalModifier.cpp
   src/outputWriter.cpp

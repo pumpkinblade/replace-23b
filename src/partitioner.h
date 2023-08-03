@@ -3,7 +3,6 @@
 
 #include "technology.h"
 #include "placerBase.h"
-#include "placer23b.h"
 
 namespace replace
 {
