@@ -51,6 +51,7 @@ namespace replace
 
     void cimgDrawArrow(int x1, int y1, int x3, int y3, float thick, const Color &color, float opacity);
     void cimgWriteJpeg(const std::string& name, unsigned int quality);
+    void cimgWritePng(const std::string& name);
 
   private:
     int minLength_;
@@ -88,14 +89,13 @@ namespace replace
                      const std::string &imgDir,
                      const std::string &prefix)
   {
-    int dieIdx = 0;
     for (Die *die : pb->dies())
     {
       initContext(die);
 
       drawInstances(die, 0.7f);
 
-      std::string title = prefix + "_die" + std::to_string(dieIdx);
+      std::string title = prefix + "_" + die->name();
       img_->draw_text(0, 0, title.c_str(), g_black.data(), NULL, 1, 30);
 
       std::string saveName = imgDir + "/" + title + ".jpg";
@@ -103,8 +103,6 @@ namespace replace
       cimgWriteJpeg(saveName, 70);
 
       LOG_TRACE("{} has been saved.", saveName);
-
-      dieIdx++;
     }
   }
 
@@ -113,7 +111,6 @@ namespace replace
                      const std::string &imgDir,
                      const std::string &prefix)
   {
-    int dieIdx = 0;
     for (BinGrid *bg : nb->binGrids())
     {
       initContext(bg);
@@ -134,7 +131,7 @@ namespace replace
         break;
       }
 
-      std::string title = prefix + "_die" + std::to_string(dieIdx);
+      std::string title = prefix + "_" + bg->die()->name();
       img_->draw_text(0, 0, title.c_str(), g_black.data(), NULL, 1, 30);
 
       std::string saveName = imgDir + "/" + title + ".jpg";
@@ -142,8 +139,6 @@ namespace replace
       cimgWriteJpeg(saveName, 70);
 
       LOG_TRACE("{} has been saved.", saveName);
-
-      dieIdx++;
     }
   }
 
@@ -375,6 +370,15 @@ namespace replace
     int h = img_->height();
     img_->permute_axes("cxyz");
     stbi_write_jpg(name.c_str(), w, h, 3, img_->data(), 70);
+    img_->permute_axes("yzcx");
+  }
+
+  void Plotter::cimgWritePng(const std::string& name)
+  {
+    int w = img_->width();
+    int h = img_->height();
+    img_->permute_axes("cxyz");
+    stbi_write_png(name.c_str(), w, h, 3, img_->data(), 3 * w);
     img_->permute_axes("yzcx");
   }
 

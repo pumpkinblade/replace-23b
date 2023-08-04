@@ -20,7 +20,9 @@ namespace replace
         maxSolverIter(100),
         maxFanout(200),
         netWeightScale(800.0),
-        incrementalPlaceMode(false) {}
+        incrementalPlaceMode(false)
+  {
+  }
 
   void InitialPlaceVars::reset()
   {
@@ -33,24 +35,19 @@ namespace replace
   }
 
   InitialPlace::InitialPlace()
-      : ipVars_(), pb_(nullptr)
+      : ipVars_(), pb_(nullptr), placeInstCnt_(0)
   {
   }
 
   InitialPlace::InitialPlace(InitialPlaceVars ipVars, std::shared_ptr<PlacerBase> pb)
       : ipVars_(ipVars), pb_(pb)
   {
-  }
-
-  InitialPlace::~InitialPlace()
-  {
-    reset();
-  }
-
-  void InitialPlace::reset()
-  {
-    pb_ = nullptr;
-    ipVars_.reset();
+    placeInstCnt_ = 0;
+    for(Instance* inst : pb->insts())
+    {
+      if(!inst->isFixed())
+        placeInstCnt_++;
+    }
   }
 
   void InitialPlace::doBicgstabPlace()
@@ -102,12 +99,13 @@ namespace replace
   // starting point of initial place is center.
   void InitialPlace::placeInstsCenter()
   {
-    const int centerX = pb_->die()->coreCx();
-    const int centerY = pb_->die()->coreCy();
+    const int centerX = pb_->dies().front()->coreCx();
+    const int centerY = pb_->dies().front()->coreCy();
 
-    for (auto &inst : pb_->placeInsts())
+    for (auto &inst : pb_->insts())
     {
-      inst->setCenterLocation(centerX, centerY);
+      if(!inst->isFixed())
+        inst->setCenterLocation(centerX, centerY);
     }
   }
 
@@ -119,9 +117,14 @@ namespace replace
       inst->setExtId(INT_MAX);
     }
     // set index only with place-able instances
-    for (auto &inst : pb_->placeInsts())
+    int id = 0;
+    for (Instance* inst : pb_->insts())
     {
-      inst->setExtId(&inst - &(pb_->placeInsts()[0]));
+      if(!inst->isFixed())
+      {
+        inst->setExtId(id);
+        id++;
+      }
     }
   }
 
@@ -196,14 +199,13 @@ namespace replace
   // solve placeInstForceMatrixX_ * xcg_x_ = xcg_b_ and placeInstForceMatrixY_ * ycg_x_ = ycg_b_ eq.
   void InitialPlace::createSparseMatrix()
   {
-    const int placeCnt = pb_->placeInsts().size();
-    instLocVecX_.resize(placeCnt);
-    fixedInstForceVecX_.resize(placeCnt);
-    instLocVecY_.resize(placeCnt);
-    fixedInstForceVecY_.resize(placeCnt);
+    instLocVecX_.resize(placeInstCnt_);
+    fixedInstForceVecX_.resize(placeInstCnt_);
+    instLocVecY_.resize(placeInstCnt_);
+    fixedInstForceVecY_.resize(placeInstCnt_);
 
-    placeInstForceMatrixX_.resize(placeCnt, placeCnt);
-    placeInstForceMatrixY_.resize(placeCnt, placeCnt);
+    placeInstForceMatrixX_.resize(placeInstCnt_, placeInstCnt_);
+    placeInstForceMatrixY_.resize(placeInstCnt_, placeInstCnt_);
 
     //
     // listX and listY is a temporary vector that have tuples, (idx1, idx2, val)
@@ -220,14 +222,17 @@ namespace replace
     listY.reserve(1000000);
 
     // initialize vector
-    for (auto &inst : pb_->placeInsts())
+    for (Instance* inst : pb_->insts())
     {
-      int idx = inst->extId();
+      if(!inst->isFixed())
+      {
+        int idx = inst->extId();
 
-      instLocVecX_(idx) = inst->cx();
-      instLocVecY_(idx) = inst->cy();
+        instLocVecX_(idx) = inst->cx();
+        instLocVecY_(idx) = inst->cy();
 
-      fixedInstForceVecX_(idx) = fixedInstForceVecY_(idx) = 0;
+        fixedInstForceVecX_(idx) = fixedInstForceVecY_(idx) = 0;
+      }
     }
 
     // for each net
@@ -398,10 +403,13 @@ namespace replace
 
   void InitialPlace::updateCoordi()
   {
-    for (auto &inst : pb_->placeInsts())
+    for (Instance* inst : pb_->insts())
     {
-      int idx = inst->extId();
-      inst->setCenterLocation(instLocVecX_(idx), instLocVecY_(idx));
+      if(!inst->isFixed())
+      {
+        int idx = inst->extId();
+        inst->setCenterLocation(instLocVecX_(idx), instLocVecY_(idx));
+      }
     }
   }
 

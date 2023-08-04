@@ -50,7 +50,7 @@ namespace replace
     int maxUtil;
     int rowStartX, rowStartY;
     int rowSizeX, rowSizeY;
-    size_t repeatCount;
+    int repeatCount;
     std::string techName;
   };
 
@@ -353,13 +353,12 @@ namespace replace
     pb->termCost_ = desc.termCost;
 
     // extra space for terminal
-    int extraInsts = desc.nets.size();
-    int extraNets = desc.nets.size();
-    int extraPins = 2 * desc.nets.size();
+    int extraInsts = static_cast<int>(desc.nets.size());
+    int extraNets = static_cast<int>(desc.nets.size());
+    int extraPins = static_cast<int>(2 * desc.nets.size());
     // Process netlist
     pb->instStor_.reserve(desc.insts.size()+extraInsts);
     pb->insts_.reserve(desc.insts.size()+extraInsts);
-    pb->placeInsts_.reserve(desc.insts.size()+extraInsts);
     pb->netStor_.reserve(desc.nets.size()+extraNets);
     pb->nets_.reserve(desc.nets.size()+extraNets);
     size_t numPins = 0;
@@ -389,7 +388,6 @@ namespace replace
 
       pb->instNameMap_.emplace(instDesc.name, &pb->instStor_.back());
       pb->insts_.push_back(&pb->instStor_.back());
-      pb->placeInsts_.push_back(&pb->instStor_.back());
       pb->die("top")->addInstance(&pb->instStor_.back());
       assert(&pb->instStor_[0] == pb->insts_[0]);
     }

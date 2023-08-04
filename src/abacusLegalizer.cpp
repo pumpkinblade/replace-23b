@@ -389,10 +389,10 @@ namespace replace
   void AbacusLegalizer::generateCells()
   {
     // Macros and fixed instances should not be treated as AbacusCell
-    cellStor_.reserve(die_->placeInsts().size());
-    for(Instance* inst : die_->placeInsts())
+    cellStor_.reserve(die_->insts().size());
+    for(Instance* inst : die_->insts())
     {
-      if(inst->isMacro())
+      if(inst->isMacro() || inst->isFixed())
         continue;
       cellStor_.emplace_back(inst);
       switch (lgVars_.weightOpt)

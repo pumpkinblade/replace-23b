@@ -393,14 +393,6 @@ namespace replace
 
       pb->insts_.push_back(&inst);
       pb->dieStor_.back().addInstance(&inst);
-      if(inst.isFixed())
-      {
-        pb->fixedInsts_.push_back(&inst);
-      }
-      else
-      {
-        pb->placeInsts_.push_back(&inst);
-      }
     }
 
     for(auto& pin : pb->pinStor_)

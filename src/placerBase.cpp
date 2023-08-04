@@ -169,7 +169,6 @@ namespace replace
   Die::Die() 
       : dieLx_(0), dieLy_(0), dieUx_(0), dieUy_(0),
         coreLx_(0), coreLy_(0), coreUx_(0), coreUy_(0),
-        fixedInstsArea_(0), placeStdcellsArea_(0), placeMacrosArea_(0),
         rowStartX_(0), rowStartY_(0), rowWidth_(0), rowHeight_(0),
         rowRepeatCount_(0), isSetRow_(false)
   {
@@ -238,71 +237,20 @@ namespace replace
   void Die::addInstance(Instance *inst)
   {
     insts_.push_back(inst);
-    if (inst->isFixed())
-    {
-      fixedInsts_.push_back(inst);
-    }
-    else
-    {
-      placeInsts_.push_back(inst);
-    }
-
-    int64_t area = static_cast<int64_t>(inst->dx()) *
-                   static_cast<int64_t>(inst->dy());
-    if (inst->isFixed())
-    {
-      fixedInstsArea_ += area;
-    }
-    else if (inst->isMacro())
-    {
-      placeMacrosArea_ += area;
-    }
-    else
-    {
-      placeStdcellsArea_ += area;
-    }
   }
 
   void Die::removeInstance(Instance *inst)
   {
     insts_.erase(std::remove(insts_.begin(), insts_.end(), inst), insts_.end());
-    if (inst->isFixed())
-    {
-      fixedInsts_.erase(std::remove(fixedInsts_.begin(), fixedInsts_.end(), inst), fixedInsts_.end());
-    }
-    else
-    {
-      placeInsts_.erase(std::remove(placeInsts_.begin(), placeInsts_.end(), inst), placeInsts_.end());
-    }
-
-    int64_t area = static_cast<int64_t>(inst->dx()) *
-                   static_cast<int64_t>(inst->dy());
-    if (inst->isFixed())
-    {
-      fixedInstsArea_ -= area;
-    }
-    else if (inst->isMacro())
-    {
-      placeMacrosArea_ -= area;
-    }
-    else
-    {
-      placeStdcellsArea_ -= area;
-    }
   }
 
   ////////////////////////////////////////////////////////
   // PlacerBase
 
   PlacerBase::PlacerBase()
-  // : placeInstsArea_(0), nonPlaceInstsArea_(0),
-  //   macroInstsArea_(0), stdInstsArea_(0)
+      : termSizeX_(0), termSizeY_(0),
+        termSpace_(0), termCost_(0)
   {
-  }
-
-  PlacerBase::~PlacerBase()
-  {
-    reset();
   }
 
   Instance& PlacerBase::emplaceInstance(bool isFixed, bool isMacro){
@@ -331,24 +279,7 @@ namespace replace
     }
   }
 
-  void PlacerBase::reset()
-  {
-    instStor_.clear();
-    pinStor_.clear();
-    netStor_.clear();
-
-    pins_.clear();
-    nets_.clear();
-    insts_.clear();
-
-    placeInsts_.clear();
-    fixedInsts_.clear();
-    // dummyInsts_.clear();
-    // nonPlaceInsts_.clear();
-  }
-
-  int64_t
-  PlacerBase::hpwl() const
+  int64_t PlacerBase::hpwl() const
   {
     int64_t hpwl = 0;
     for (auto &net : nets_)
@@ -368,8 +299,8 @@ namespace replace
     }
 
     LOG_DEBUG("NumInstances: {}", instStor_.size());
-    LOG_DEBUG("NumPlaceInstances: {}", placeInsts_.size());
-    LOG_DEBUG("NumFixedInstances: {}", fixedInsts_.size());
+    // LOG_DEBUG("NumPlaceInstances: {}", placeInsts_.size());
+    // LOG_DEBUG("NumFixedInstances: {}", fixedInsts_.size());
     LOG_DEBUG("NumNets: {}", nets_.size());
     LOG_DEBUG("NumPins: {}", pins_.size());
 
@@ -397,10 +328,10 @@ namespace replace
     for (const Die *die : dies_)
     {
       LOG_DEBUG("Die {}", dieIdx);
-      LOG_DEBUG("PlaceInstArea: {}", die->placeInstsArea());
-      LOG_DEBUG("PlaceStdcellsArea: {}", die->placeStdcellsArea());
-      LOG_DEBUG("PlaceMacrosArea: {}", die->placeMacrosArea());
-      LOG_DEBUG("FixedInstArea: {}", die->fixedInstsArea());
+      // LOG_DEBUG("PlaceInstArea: {}", die->placeInstsArea());
+      // LOG_DEBUG("PlaceStdcellsArea: {}", die->placeStdcellsArea());
+      // LOG_DEBUG("PlaceMacrosArea: {}", die->placeMacrosArea());
+      // LOG_DEBUG("FixedInstArea: {}", die->fixedInstsArea());
 
       int numStdCell = 0, numMacro = 0;
       for (Instance* inst : die->insts())
@@ -417,45 +348,45 @@ namespace replace
     }
   }
 
-  int64_t PlacerBase::placeInstsArea() const
-  {
-    int64_t area = 0;
-    for (const Die *die : dies_)
-    {
-      area += die->placeInstsArea();
-    }
-    return area;
-  }
+  // int64_t PlacerBase::placeInstsArea() const
+  // {
+  //   int64_t area = 0;
+  //   for (const Die *die : dies_)
+  //   {
+  //     area += die->placeInstsArea();
+  //   }
+  //   return area;
+  // }
 
-  int64_t PlacerBase::placeStdcellsArea() const
-  {
-    int64_t area = 0;
-    for (const Die *die : dies_)
-    {
-      area += die->placeStdcellsArea();
-    }
-    return area;
-  }
+  // int64_t PlacerBase::placeStdcellsArea() const
+  // {
+  //   int64_t area = 0;
+  //   for (const Die *die : dies_)
+  //   {
+  //     area += die->placeStdcellsArea();
+  //   }
+  //   return area;
+  // }
 
-  int64_t PlacerBase::placeMacrosArea() const
-  {
-    int64_t area = 0;
-    for (const Die *die : dies_)
-    {
-      area += die->placeMacrosArea();
-    }
-    return area;
-  }
+  // int64_t PlacerBase::placeMacrosArea() const
+  // {
+  //   int64_t area = 0;
+  //   for (const Die *die : dies_)
+  //   {
+  //     area += die->placeMacrosArea();
+  //   }
+  //   return area;
+  // }
 
-  int64_t PlacerBase::fixedInstsArea() const
-  {
-    int64_t area = 0;
-    for (const Die *die : dies_)
-    {
-      area += die->fixedInstsArea();
-    }
-    return area;
-  }
+  // int64_t PlacerBase::fixedInstsArea() const
+  // {
+  //   int64_t area = 0;
+  //   for (const Die *die : dies_)
+  //   {
+  //     area += die->fixedInstsArea();
+  //   }
+  //   return area;
+  // }
 
   Instance *PlacerBase::inst(const std::string &name) const
   {
@@ -494,14 +425,14 @@ namespace replace
     for (auto &inst : instStor_)
     {
       insts_.push_back(&inst);
-      if (inst.isFixed())
-      {
-        fixedInsts_.push_back(&inst);
-      }
-      else
-      {
-        placeInsts_.push_back(&inst);
-      }
+      // if (inst.isFixed())
+      // {
+      //   fixedInsts_.push_back(&inst);
+      // }
+      // else
+      // {
+      //   placeInsts_.push_back(&inst);
+      // }
     }
 
     for (auto &pin : pinStor_)

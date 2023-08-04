@@ -100,11 +100,25 @@ int main(int argc, const char *argv[])
     tm.modify();
     Replace rp(1.0);
     rp.setPlacerBase(pb);
-    // rp.doInitialPlace();
-    // rp.doNesterovPlace("postgp");
-    // Plot::plot(pb.get(), "./plot/cell", "after_gp");
+    rp.doInitialPlace();
+    rp.doNesterovPlace("postgp");
+    Plot::plot(pb.get(), "./plot/cell", "after_postgp");
     rp.doMacroLegalization();
+    Plot::plot(pb.get(), "./plot/cell", "after_mlg");
+
+    // fix macros
+    {
+      for(Instance* inst : pb->insts())
+      {
+        if(inst->isMacro())
+          inst->setFixed(true);
+      }
+    }
+
+    rp.doNesterovPlace("finalgp");
+    Plot::plot(pb.get(), "./plot/cell", "after_finalgp");
     rp.doAbacusLegalization();
+    Plot::plot(pb.get(), "./plot/cell", "after_clg");
     tm.recover();
 
     int64_t hpwl = pb->hpwl();
@@ -113,7 +127,7 @@ int main(int argc, const char *argv[])
 
     OutputWriter::write(pb.get(), outputFilename);
   }
-    else if (mode == "latest")
+  else if (mode == "latest")
   {
     LOG_TRACE("Parse 23b Text File Begin");
     std::shared_ptr<PlacerBase> pb = Parser::txtToPlacerBase(txtFilename);
