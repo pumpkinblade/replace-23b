@@ -51,6 +51,7 @@ namespace replace
 
     void cimgDrawArrow(int x1, int y1, int x3, int y3, float thick, const Color &color, float opacity);
     void cimgWriteJpeg(const std::string& name, unsigned int quality);
+    void cimgWritePng(const std::string& name);
 
   private:
     int minLength_;
@@ -369,6 +370,15 @@ namespace replace
     int h = img_->height();
     img_->permute_axes("cxyz");
     stbi_write_jpg(name.c_str(), w, h, 3, img_->data(), 70);
+    img_->permute_axes("yzcx");
+  }
+
+  void Plotter::cimgWritePng(const std::string& name)
+  {
+    int w = img_->width();
+    int h = img_->height();
+    img_->permute_axes("cxyz");
+    stbi_write_png(name.c_str(), w, h, 3, img_->data(), 3 * w);
     img_->permute_axes("yzcx");
   }
 

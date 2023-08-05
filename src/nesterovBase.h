@@ -28,23 +28,18 @@ namespace replace
 
     // instance cells
     GCell(Instance *inst);
-    GCell(std::vector<Instance *> &insts);
 
     // filler cells
     GCell(int cx, int cy, int dx, int dy);
-    ~GCell();
+    ~GCell() = default;
 
-    Instance *instance() const;
-    const std::vector<Instance *> &insts() const { return insts_; }
+    Instance *instance() const { return inst_; }
     const std::vector<GPin *> &gPins() const { return gPins_; }
 
     void addGPin(GPin *gPin);
 
-    void setClusteredInstance(std::vector<Instance *> &insts);
     void setInstance(Instance *inst);
-    void setFiller();
-    void setMacroInstance();
-    void setStdInstance();
+    void setMacro(bool on) { isMacro_ = on; }
 
     // normal coordinates
     int lx() const { return lx_; }
@@ -74,25 +69,23 @@ namespace replace
     void setDensityCenterLocation(int dCx, int dCy);
     void setDensitySize(int dDx, int dDy);
 
-    void setDensityScale(float densityScale);
-    void setGradientX(float gradX);
-    void setGradientY(float gradY);
+    void setDensityScale(float densityScale) { densityScale_ = densityScale; }
+    void setGradientX(float gradX) { gradientX_ = gradX; }
+    void setGradientY(float gradY) { gradientY_ = gradY; }
 
     float gradientX() const { return gradientX_; }
     float gradientY() const { return gradientY_; }
     float densityScale() const { return densityScale_; }
 
-    bool isInstance() const;
-    bool isClusteredInstance() const;
-    bool isFiller() const;
-    bool isMacroInstance() const;
-    bool isStdInstance() const;
+    bool isInstance() const { return inst_ != nullptr; }
+    bool isFiller() const { return inst_ == nullptr; }
+    bool isMacro() const { return isMacro_; }
 
     void setBinGrid(BinGrid *bg) { bg_ = bg; }
     BinGrid *binGrid() const { return bg_; }
 
   private:
-    std::vector<Instance *> insts_;
+    Instance *inst_;
     std::vector<GPin *> gPins_;
     int lx_;
     int ly_;
@@ -110,7 +103,7 @@ namespace replace
 
     // need to be stored for
     // MS replace
-    bool isMacroInstance_;
+    bool isMacro_;
 
     BinGrid *bg_;
   };
@@ -120,11 +113,9 @@ namespace replace
   public:
     GNet();
     GNet(Net *net);
-    GNet(std::vector<Net *> &nets);
-    ~GNet();
+    ~GNet() = default;
 
-    Net *net() const;
-    const std::vector<Net *> &nets() const { return nets_; }
+    Net *net() const { return net_; }
     const std::vector<GPin *> &gPins() const { return gPins_; }
 
     int lx() const { return lx_; }
@@ -132,16 +123,9 @@ namespace replace
     int ux() const { return ux_; }
     int uy() const { return uy_; }
 
-    void setCustomWeight(float customWeight);
-    float customWeight() const { return customWeight_; }
-    float netWeight() const { return weight_; }
-
     void addGPin(GPin *gPin);
     void updateBox();
-    int64_t hpwl();
-
-    void setDontCare();
-    bool isDontCare();
+    int64_t hpwl() const;
 
     // clear WA(Weighted Average) variables.
     void clearWaVars();
@@ -171,15 +155,12 @@ namespace replace
     float waYExpMaxSumY() const { return waYExpMaxSumY_; }
 
   private:
+    Net* net_;
     std::vector<GPin *> gPins_;
-    std::vector<Net *> nets_;
     int lx_;
     int ly_;
     int ux_;
     int uy_;
-
-    float customWeight_;
-    float weight_;
 
     //
     // weighted average WL model stor for better indexing
@@ -217,8 +198,6 @@ namespace replace
 
     float waExpMaxSumY_;
     float waYExpMaxSumY_;
-
-    unsigned char isDontCare_ : 1;
   };
 
   class GPin
@@ -226,17 +205,15 @@ namespace replace
   public:
     GPin();
     GPin(Pin *pin);
-    GPin(std::vector<Pin *> &pins);
-    ~GPin();
+    ~GPin() = default;
 
-    Pin *pin() const;
-    const std::vector<Pin *> &pins() const { return pins_; }
+    Pin *pin() const { return pin_; }
 
     GCell *gCell() const { return gCell_; }
     GNet *gNet() const { return gNet_; }
 
-    void setGCell(GCell *gCell);
-    void setGNet(GNet *gNet);
+    void setGCell(GCell *gCell) { gCell_ = gCell; }
+    void setGNet(GNet *gNet) { gNet_ = gNet; }
 
     int cx() const { return cx_; }
     int cy() const { return cy_; }
@@ -264,9 +241,9 @@ namespace replace
     void updateDensityLocation(const GCell *gCell);
 
   private:
+    Pin* pin_;
     GCell *gCell_;
     GNet *gNet_;
-    std::vector<Pin *> pins_;
 
     int offsetCx_;
     int offsetCy_;
@@ -290,11 +267,10 @@ namespace replace
     //
     // check whether
     // this pin is considered in a WA models.
-    unsigned char hasMaxExpSumX_ : 1;
-    unsigned char hasMaxExpSumY_ : 1;
-
-    unsigned char hasMinExpSumX_ : 1;
-    unsigned char hasMinExpSumY_ : 1;
+    bool hasMaxExpSumX_;
+    bool hasMaxExpSumY_;
+    bool hasMinExpSumX_;
+    bool hasMinExpSumY_;
   };
 
   class Bin
@@ -302,8 +278,7 @@ namespace replace
   public:
     Bin();
     Bin(int x, int y, int lx, int ly, int ux, int uy, float targetDensity);
-
-    ~Bin();
+    ~Bin() = default;
 
     int x() const { return x_; }
     int y() const { return y_; }
@@ -317,16 +292,17 @@ namespace replace
     int dx() const { return (ux_ - lx_); }
     int dy() const { return (uy_ - ly_); }
 
-    float electroPhi() const;
-    float electroForceX() const;
-    float electroForceY() const;
-    float targetDensity() const;
-    float density() const;
+    float electroPhi() const { return electroPhi_; }
+    float electroForceX() const { return electroForceX_; }
+    float electroForceY() const { return electroForceY_; }
+    float targetDensity() const { return targetDensity_; }
+    float density() const { return density_; }
 
-    void setDensity(float density);
-    void setTargetDensity(float density);
-    void setElectroForce(float electroForceX, float electroForceY);
-    void setElectroPhi(float phi);
+    void setDensity(float density) { density_ = density; }
+    void setTargetDensity(float density) { targetDensity_ = density; }
+    void setElectroForceX(float force) { electroForceX_ = force; }
+    void setElectroForceY(float force) { electroForceY_ = force; }
+    void setElectroPhi(float phi) { electroPhi_ = phi; }
 
     void setNonPlaceArea(int64_t area) { nonPlaceArea_ = area; }
     void setInstPlacedArea(int64_t area) { instPlacedArea_ = area; }
@@ -336,10 +312,10 @@ namespace replace
     void addInstPlacedArea(int64_t area) { instPlacedArea_ += area; }
     void addFillerArea(int64_t area) { fillerArea_ += area; }
 
-    const int64_t binArea() const;
-    const int64_t nonPlaceArea() const { return nonPlaceArea_; }
-    const int64_t instPlacedArea() const { return instPlacedArea_; }
-    const int64_t fillerArea() const { return fillerArea_; }
+    int64_t binArea() const { return (int64_t)(ux_ - lx_) * (uy_ - ly_); }
+    int64_t nonPlaceArea() const { return nonPlaceArea_; }
+    int64_t instPlacedArea() const { return instPlacedArea_; }
+    int64_t fillerArea() const { return fillerArea_; }
 
   private:
     // index
@@ -372,10 +348,10 @@ namespace replace
   public:
     BinGrid();
     BinGrid(Die *die);
-    BinGrid(BinGrid&& other);
-    BinGrid& operator=(BinGrid&& other);
-    BinGrid(const BinGrid& other) = delete;
-    BinGrid& operator=(const BinGrid& other) = delete;
+    BinGrid(BinGrid &&other);
+    BinGrid &operator=(BinGrid &&other);
+    BinGrid(const BinGrid &other) = delete;
+    BinGrid &operator=(const BinGrid &other) = delete;
     ~BinGrid() = default;
 
     void setDie(Die *die);
@@ -419,6 +395,11 @@ namespace replace
     void updateDensityForceBin();
     void updateGCellDensityScaleAndSize();
 
+    int placeInstanceCount() const { return placeInstCnt_; }
+    int64_t placeStdCellArea() const { return placeStdCellArea_; }
+    int64_t placeMacroArea() const { return placeMacroArea_; }
+    int64_t fixedInstanceArea() const { return fixedInstArea_; }
+
   private:
     std::vector<Bin> binStor_;
     std::vector<Bin *> bins_;
@@ -439,6 +420,10 @@ namespace replace
     Die *die_;
     std::vector<GCell *> gCells_;
     std::unique_ptr<FFT> fft_;
+    int placeInstCnt_;
+    int64_t placeStdCellArea_;
+    int64_t placeMacroArea_;
+    int64_t fixedInstArea_;
 
     void updateBinsNonPlaceArea();
   };
@@ -464,7 +449,7 @@ namespace replace
   public:
     NesterovBase();
     NesterovBase(NesterovBaseVars nbVars, std::shared_ptr<PlacerBase> pb);
-    ~NesterovBase();
+    ~NesterovBase() = default;
 
     const std::vector<GCell *> &gCells() const { return gCells_; }
     // const std::vector<GCell *> &gCellInsts() const { return gCellInsts_; }
@@ -481,7 +466,7 @@ namespace replace
     GCell *placerToNesterov(Instance *inst);
     GPin *placerToNesterov(Pin *pin);
     GNet *placerToNesterov(Net *net);
-    BinGrid *placerToNesterov(Die* die);
+    BinGrid *placerToNesterov(Die *die);
 
     // update gCells with lx, ly
     void updateGCellLocation(
@@ -528,10 +513,15 @@ namespace replace
 
     FloatPoint getDensityGradient(GCell *gCell);
 
-    int64_t getHpwl();
+    int64_t hpwl();
+    float overflow() const;
 
     // update electrostatic forces within Bin
     void updateDensityForceBin();
+  
+  private:
+    void init();
+    void initFillerGCells(BinGrid* bg);
 
   private:
     NesterovBaseVars nbVars_;
@@ -557,11 +547,6 @@ namespace replace
     std::unordered_map<Die *, BinGrid *> binGridMap_;
 
     float sumPhi_;
-
-    void init();
-    void initFillerGCells(Die* die);
-
-    void reset();
   };
 
 }

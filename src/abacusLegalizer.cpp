@@ -317,6 +317,8 @@ namespace replace
   void AbacusLegalizer::doLegalization()
   {
     int64_t hpwlBeforeLG = pb_->hpwl();
+    LOG_DEBUG("hpwl Before AbacusLegalization: {}", hpwlBeforeLG);
+    Plot::plot(pb_.get(), "./plot/cell", "before_lg");
 
     for(Die* die : pb_->dies())
     {
@@ -378,15 +380,19 @@ namespace replace
         cell.instance()->setLocation(lx, ly);
       }
     }
+
+    int64_t hpwlAfterLG = pb_->hpwl();
+    LOG_DEBUG("hpwl After AbacusLegalization: {}", hpwlAfterLG);
+    Plot::plot(pb_.get(), "./plot/cell", "after_lg");
   }
 
   void AbacusLegalizer::generateCells()
   {
     // Macros and fixed instances should not be treated as AbacusCell
-    cellStor_.reserve(die_->placeInsts().size());
-    for(Instance* inst : die_->placeInsts())
+    cellStor_.reserve(die_->insts().size());
+    for(Instance* inst : die_->insts())
     {
-      if(inst->isMacro())
+      if(inst->isMacro() || inst->isFixed())
         continue;
       cellStor_.emplace_back(inst);
       switch (lgVars_.weightOpt)

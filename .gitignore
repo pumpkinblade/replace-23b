@@ -38,6 +38,7 @@ build/*
 lib
 *.log
 *.jpg
+*.png
 *.code-workspace
 core.[0-9]*
 module/CImg/.github

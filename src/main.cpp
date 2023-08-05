@@ -60,40 +60,79 @@ int main(int argc, const char *argv[])
     return 1;
   }
 
-  LOG_TRACE("Parse 23b Text File Begin");
-  std::shared_ptr<PlacerBase> pb = Parser::txtToPlacerBase(inputFilename);
-  pb->printDebugInfo();
-  LOG_TRACE("Parse 23b Text File End");
+  if (mode == "lefdef")
+  {
+    LOG_TRACE("Parse Lef/Def Begin");
+    std::shared_ptr<PlacerBase> pb = Parser::lefdefToPlacerBase(lefFilename, defFilename);
+    LOG_TRACE("Parse Lef/Def End");
+    pb->printDebugInfo();
 
-  // then we do partition
-  Partitioner partitioner(1.0f);
-  partitioner.partitioning2(pb);
-  Plot::plot(pb.get(), "./plot/cell", "part");
-  
-  // then we do optimization
-  TerminalModifier tm;
-  tm.setPlacerBase(pb);
-  tm.modify();
-  Replace rp(1.0f);
-  rp.setPlacerBase(pb);
-  rp.doInitialPlace();
-  LOG_INFO("HPWL after ip: {}", pb->hpwl());
-  Plot::plot(pb.get(), "./plot/cell", "ip");
-  rp.doNesterovPlace();
-  LOG_INFO("HPWL after gp: {}", pb->hpwl());
-  Plot::plot(pb.get(), "./plot/cell", "gp");
-  rp.doMacroLegalization();
-  LOG_INFO("HPWL after mlg: {}", pb->hpwl());
-  Plot::plot(pb.get(), "./plot/cell", "mlg");
-  rp.doAbacusLegalization();
-  LOG_INFO("HPWL after clg: {}", pb->hpwl());
-  Plot::plot(pb.get(), "./plot/cell", "clg");
-  tm.recover();
+    Replace rp(targetDensity);
+    rp.setPlacerBase(pb);
+    rp.doInitialPlace();
+    rp.doNesterovPlace();
+    rp.doAbacusLegalization();
+  }
+  else if (mode == "23b")
+  {
+    LOG_TRACE("Parse 23b Text File Begin");
+    std::shared_ptr<PlacerBase> pb = Parser::txtToPlacerBase(txtFilename);
+    pb->printDebugInfo();
+    LOG_TRACE("Parse 23b Text File End");
 
-  LOG_INFO("Result HPWL: {}", pb->hpwl());
-  Plot::plot(pb.get(), "./plot/cell", "res");
+    // then we do partition
+    Partitioner partitioner(targetDensity);
+    partitioner.partitioning2(pb);
+    Plot::plot(pb.get(), "./plot/cell", "after_partition");
+    
+    // then we do optimization
+    TerminalModifier tm;
+    tm.setPlacerBase(pb);
+    tm.modify();
+    Replace rp(1.0);
+    rp.setPlacerBase(pb);
+    rp.doInitialPlace();
+    rp.doNesterovPlace("postgp");
+    Plot::plot(pb.get(), "./plot/cell", "after_postgp");
+    rp.doMacroLegalization();
+    Plot::plot(pb.get(), "./plot/cell", "after_mlg");
 
-  OutputWriter::write(pb.get(), outputFilename);
+    // fix macros
+    {
+      for(Instance* inst : pb->insts())
+      {
+        if(inst->isMacro())
+          inst->setFixed(true);
+      }
+    }
+
+    rp.doNesterovPlace("finalgp");
+    Plot::plot(pb.get(), "./plot/cell", "after_finalgp");
+    rp.doAbacusLegalization();
+    Plot::plot(pb.get(), "./plot/cell", "after_clg");
+    tm.recover();
+
+    int64_t hpwl = pb->hpwl();
+    LOG_INFO("Result HPWL: {}", hpwl);
+    Plot::plot(pb.get(), "./plot/cell", "result");
+
+    OutputWriter::write(pb.get(), outputFilename);
+  }
+  else if (mode == "latest")
+  {
+    LOG_TRACE("Parse 23b Text File Begin");
+    std::shared_ptr<PlacerBase> pb = Parser::txtToPlacerBase(txtFilename);
+    pb->printDebugInfo();
+    LOG_TRACE("Parse 23b Text File End");
+
+    Replace rp(targetDensity);
+    rp.setPlacerBase(pb);
+    rp.doInitialPlace();
+    rp.doNesterovPlace("pregp");
+    rp.setTargetDensity(1.0);
+    rp.doNesterovPlace("postgp");
+  }
+
 
   return 0;
 }

@@ -88,8 +88,7 @@ void NesterovPlace::init() {
   // bin update
   nb_->updateGCellDensityCenterLocation(curSLPCoordi_);
   
-  prevHpwl_ 
-    = nb_->getHpwl();
+  prevHpwl_ = nb_->hpwl();
 
   LOG_DEBUG("InitialHPWL: {}", prevHpwl_);
 
@@ -109,10 +108,7 @@ void NesterovPlace::init() {
 
   LOG_DEBUG("BaseWireLengthCoef: {}", baseWireLengthCoef_);
   
-  sumOverflow_ = 
-    static_cast<float>(nb_->overflowArea()) 
-        / static_cast<float>(pb_->placeStdcellsArea() 
-            + pb_->placeMacrosArea() * nb_->targetDensity() );
+  sumOverflow_ = nb_->overflow();
 
   LOG_DEBUG("InitSumOverflow: {}", sumOverflow_);
 
@@ -159,10 +155,7 @@ void NesterovPlace::init() {
   
   LOG_DEBUG("InitDensityPenalty: {}", densityPenalty_);
   
-  sumOverflow_ = 
-    static_cast<float>(nb_->overflowArea()) 
-        / static_cast<float>(pb_->placeStdcellsArea() 
-            + pb_->placeMacrosArea() * nb_->targetDensity() );
+  sumOverflow_ = nb_->overflow();
   
   LOG_DEBUG("PrevSumOverflow: {}", sumOverflow_);
   
@@ -511,17 +504,14 @@ NesterovPlace::updateNextIter() {
 
   std::swap(curCoordi_, nextCoordi_);
 
-  sumOverflow_ = 
-      static_cast<float>(nb_->overflowArea()) 
-        / static_cast<float>(pb_->placeStdcellsArea() 
-            + pb_->placeMacrosArea() * nb_->targetDensity() );
+  sumOverflow_ = nb_->overflow();
 
   LOG_DEBUG("Gradient: {}", getSecondNorm(curSLPSumGrads_));
   LOG_DEBUG("Phi: {}", nb_->sumPhi());
   LOG_DEBUG("Overflow: {}", sumOverflow_);
 
   updateWireLengthCoef(sumOverflow_);
-  int64_t hpwl = nb_->getHpwl();
+  int64_t hpwl = nb_->hpwl();
   
   LOG_DEBUG("PreviousHPWL: {}", prevHpwl_);
   LOG_DEBUG("NewHPWL: {}", hpwl);

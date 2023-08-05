@@ -29,13 +29,14 @@ namespace replace
   public:
     InitialPlace();
     InitialPlace(InitialPlaceVars ipVars, std::shared_ptr<PlacerBase> pb);
-    ~InitialPlace();
+    ~InitialPlace() = default;
 
     void doBicgstabPlace();
 
   private:
     InitialPlaceVars ipVars_;
     std::shared_ptr<PlacerBase> pb_;
+    int placeInstCnt_;
 
     // Solve two SparseMatrix equations here;
     //
@@ -68,7 +69,6 @@ namespace replace
     void updatePinInfo();
     void createSparseMatrix();
     void updateCoordi();
-    void reset();
   };
 
 }

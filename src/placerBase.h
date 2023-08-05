@@ -226,15 +226,13 @@ namespace replace
     int rowRepeatCount() const { return rowRepeatCount_; }
 
     const std::vector<Instance *> &insts() const { return insts_; }
-    const std::vector<Instance *> &placeInsts() const { return placeInsts_; }
-    const std::vector<Instance *> &fixedInsts() const { return fixedInsts_; }
     void addInstance(Instance *inst);
     void removeInstance(Instance *inst);
 
-    int64_t placeInstsArea() const { return placeStdcellsArea_ + placeMacrosArea_; }
-    int64_t placeStdcellsArea() const { return placeStdcellsArea_; }
-    int64_t placeMacrosArea() const { return placeMacrosArea_; }
-    int64_t fixedInstsArea() const { return fixedInstsArea_; }
+    // int64_t placeInstsArea() const { return placeStdcellsArea_ + placeMacrosArea_; }
+    // int64_t placeStdcellsArea() const { return placeStdcellsArea_; }
+    // int64_t placeMacrosArea() const { return placeMacrosArea_; }
+    // int64_t fixedInstsArea() const { return fixedInstsArea_; }
 
     const std::string &name() const { return name_; }
     void setName(const std::string &name) { name_ = name; }
@@ -264,14 +262,6 @@ namespace replace
     int rowRepeatCount_;
 
     std::vector<Instance *> insts_;
-    std::vector<Instance *> placeInsts_;
-    std::vector<Instance *> fixedInsts_;
-
-    // placeInstsArea_ = placeStdcellArea_ + placeMacroArea_
-    int64_t placeStdcellsArea_;
-    int64_t placeMacrosArea_;
-    // fixedInstsArea_ = fixedStdcellArea_ + fixedMacroArea_
-    int64_t fixedInstsArea_;
 
     // For 23b
     std::string name_;
@@ -290,7 +280,7 @@ namespace replace
 
   public:
     PlacerBase();
-    ~PlacerBase();
+    ~PlacerBase() = default;
 
     const std::vector<Instance *> &insts() const
     {
@@ -303,24 +293,8 @@ namespace replace
     const std::vector<Die *> &dies() const { return dies_; }
     const std::vector<Technology *> &techs() const { return techs_; }
 
-    //
-    // placeInsts : a real instance that need to be placed
-    // fixedInsts : a real instance that is fixed (e.g. macros, tapcells)
-    //
-    const std::vector<Instance *> &placeInsts() const { return placeInsts_; }
-    const std::vector<Instance *> &fixedInsts() const { return fixedInsts_; }
-
-    // Note: each die should have the same size
-    // this function will be removed in the future
-    Die *die() { return dies_.front(); }
-
     int64_t hpwl() const;
     void printDebugInfo() const;
-
-    int64_t placeInstsArea() const;
-    int64_t placeStdcellsArea() const;
-    int64_t placeMacrosArea() const;
-    int64_t fixedInstsArea() const;
 
     // query object by name
     Instance *inst(const std::string &name) const;
@@ -342,17 +316,8 @@ namespace replace
     void addNet(const Net &net);
 
   private:
-    void reset();
     void pushToInstsByType(bool isFixed, Instance &inst)
     {
-      if (isFixed)
-      {
-        fixedInsts_.push_back(&inst);
-      }
-      else
-      {
-        placeInsts_.push_back(&inst);
-      }
     }
     // clean vector of pointers
     void cleanIPNs();
@@ -371,9 +336,6 @@ namespace replace
     std::vector<Pin *> pins_;
     std::vector<Net *> nets_;
 
-    std::vector<Instance *> placeInsts_;
-    std::vector<Instance *> fixedInsts_;
-
     // For 23b
     std::vector<std::shared_ptr<Technology>> techStor_;
     std::vector<Technology *> techs_;
@@ -388,7 +350,6 @@ namespace replace
     int termSpace_;
     int termCost_;
   };
-
 }
 
 #endif

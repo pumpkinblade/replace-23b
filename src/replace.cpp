@@ -8,6 +8,7 @@
 #include <iostream>
 #include <memory>
 #include "log.h"
+#include "fft.h"
 
 namespace replace
 {
