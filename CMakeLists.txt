@@ -68,8 +68,10 @@ set(PLACE_SRC
   src/outputWriter.cpp
 )
 
+
 add_executable(replace ${PLACE_SRC} ${PLACE_HEADER})
 
+link_directories(module/hmetis-1.5-linux)
 target_include_directories(replace PRIVATE ${SPDLOG_HOME}/include)
 target_include_directories(replace PRIVATE ${TCLAP_HOME}/include)
 target_include_directories(replace PRIVATE ${EIGEN_HOME}/include)
@@ -78,6 +80,8 @@ target_include_directories(replace PRIVATE ${CIMG_HOME})
 
 target_link_libraries(replace PRIVATE OpenMP::OpenMP_CXX)
 target_link_libraries(replace PRIVATE Threads::Threads)
+
+target_link_libraries(replace PRIVATE hmetis)
 
 target_compile_definitions(replace PRIVATE -Dcimg_display=0)
 target_compile_definitions(replace PRIVATE -DFFT2D_MAX_THREADS=16)

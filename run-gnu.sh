@@ -17,5 +17,5 @@ fi
 
 # RUN
 rm -rf plot/*/*.jpg
-./build/Debug/replace -i test/ProblemB_case${testcase}.txt -o result/ProblemB_case${testcase}_result.txt
+./build/replace -i test/ProblemB_case${testcase}.txt -o result/ProblemB_case${testcase}_result.txt
 
