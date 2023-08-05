@@ -314,7 +314,7 @@ NesterovPlace::doNesterovPlace(string placename) {
     LOG_DEBUG("PreviousA: {}", prevA);
     LOG_DEBUG("CurrentA: {}", curA);
     LOG_DEBUG("Coefficient: {}", coeff);
-    LOG_DEBUG("StepLength", stepLength_);
+    LOG_DEBUG("StepLength: {}", stepLength_);
 
     // Back-Tracking loop
     int numBackTrak = 0;
