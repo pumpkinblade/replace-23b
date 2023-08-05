@@ -17,6 +17,8 @@ namespace replace
     void partitioning(std::shared_ptr<PlacerBase> &pb_);
     void partitioning2(std::shared_ptr<PlacerBase> pb_);
 
+    void hmetistest(std::shared_ptr<PlacerBase> pb_);
+
   private:
     // std::shared_ptr<Placer23b> placer23b_;
     // std::shared_ptr<Technology> technology_;

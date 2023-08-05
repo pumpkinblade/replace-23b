@@ -35,6 +35,7 @@ int main(int argc, const char *argv[])
 
   string inputFilename;
   string outputFilename;
+  string mode;
 
   // Wrap everything in a try block.  Do this every time, because exceptions will be thrown for problems.
   try
@@ -44,8 +45,10 @@ int main(int argc, const char *argv[])
     // Define a value argument and add it to the command line.
     ValueArg<string> inputArg("i", "input", "path to input file", false, "none", "string");
     ValueArg<string> outputArg("o", "output", "path to output file", false, "none", "string");
+    ValueArg<string> modeArg("m", "mode", "lefdef/23b", false, "lefdef", "string");
     cmd.add(inputArg);
     cmd.add(outputArg);
+    cmd.add(modeArg);
 
     // Parse the args.
     cmd.parse(argc, argv);
@@ -53,6 +56,7 @@ int main(int argc, const char *argv[])
     // Get the value parsed by each arg.
     inputFilename = inputArg.getValue();
     outputFilename = outputArg.getValue();
+    mode = modeArg.getValue();
   }
   catch (ArgException &e) // catch any exceptions
   {
@@ -60,28 +64,29 @@ int main(int argc, const char *argv[])
     return 1;
   }
 
-  if (mode == "lefdef")
-  {
-    LOG_TRACE("Parse Lef/Def Begin");
-    std::shared_ptr<PlacerBase> pb = Parser::lefdefToPlacerBase(lefFilename, defFilename);
-    LOG_TRACE("Parse Lef/Def End");
-    pb->printDebugInfo();
+  // if (mode == "lefdef")
+  // {
+  //   LOG_TRACE("Parse Lef/Def Begin");
+  //   std::shared_ptr<PlacerBase> pb = Parser::lefdefToPlacerBase(lefFilename, defFilename);
+  //   LOG_TRACE("Parse Lef/Def End");
+  //   pb->printDebugInfo();
 
-    Replace rp(targetDensity);
-    rp.setPlacerBase(pb);
-    rp.doInitialPlace();
-    rp.doNesterovPlace();
-    rp.doAbacusLegalization();
-  }
-  else if (mode == "23b")
+  //   Replace rp(targetDensity);
+  //   rp.setPlacerBase(pb);
+  //   rp.doInitialPlace();
+  //   rp.doNesterovPlace();
+  //   rp.doAbacusLegalization();
+  // }
+  // else if (mode == "23b")
+  if(mode == "23b")
   {
     LOG_TRACE("Parse 23b Text File Begin");
-    std::shared_ptr<PlacerBase> pb = Parser::txtToPlacerBase(txtFilename);
+    std::shared_ptr<PlacerBase> pb = Parser::txtToPlacerBase(inputFilename);
     pb->printDebugInfo();
     LOG_TRACE("Parse 23b Text File End");
 
     // then we do partition
-    Partitioner partitioner(targetDensity);
+    Partitioner partitioner(1.0);
     partitioner.partitioning2(pb);
     Plot::plot(pb.get(), "./plot/cell", "after_partition");
     
@@ -121,16 +126,20 @@ int main(int argc, const char *argv[])
   else if (mode == "latest")
   {
     LOG_TRACE("Parse 23b Text File Begin");
-    std::shared_ptr<PlacerBase> pb = Parser::txtToPlacerBase(txtFilename);
+    std::shared_ptr<PlacerBase> pb = Parser::txtToPlacerBase(inputFilename);
     pb->printDebugInfo();
     LOG_TRACE("Parse 23b Text File End");
 
-    Replace rp(targetDensity);
-    rp.setPlacerBase(pb);
-    rp.doInitialPlace();
-    rp.doNesterovPlace("pregp");
-    rp.setTargetDensity(1.0);
-    rp.doNesterovPlace("postgp");
+    // then we do partition
+    Partitioner partitioner(1.0);
+    partitioner.hmetistest(pb);
+
+    // Replace rp(targetDensity);
+    // rp.setPlacerBase(pb);
+    // rp.doInitialPlace();
+    // rp.doNesterovPlace("pregp");
+    // rp.setTargetDensity(1.0);
+    // rp.doNesterovPlace("postgp");
   }
 
 
