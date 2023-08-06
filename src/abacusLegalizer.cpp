@@ -168,7 +168,7 @@ namespace replace
   }
 
   /////////////////////////////////////////////
-  // AbacusSubrow
+  // AbacusRow
 
   AbacusRow::AbacusRow()
       : lx_(0.f), ly_(0.f), ux_(0.f), uy_(0.f)
@@ -295,28 +295,6 @@ namespace replace
             }
           }
         }
-        // for(AbacusRow& row : rows_)
-        // {
-        //   if(std::abs(cell.gpLy() - row.ly()) > cbest)
-        //     continue;
-
-        //   for(AbacusSubrow& subrow : row.subrows())
-        //   {
-        //     if(subrow.usedWidth() + cell.width() > subrow.width())
-        //       continue;
-
-        //     cell.setLgLy(row.ly());
-        //     subrow.tryAddCell(&cell);
-        //     float c = std::abs(cell.gpLx() - cell.lgLx()) + std::abs(cell.gpLy() - cell.lgLy());
-        //     if(c < cbest)
-        //     {
-        //       cbest = c;
-        //       rbest = &row;
-        //       srbest = &subrow;
-        //     }
-        //   }
-        // }
-        // assert(rbest != nullptr);
         if(rbest == nullptr)
         {
           LOG_ERROR("Lack of area. Unable to do stdcell legalization on die `{}`", die->name());

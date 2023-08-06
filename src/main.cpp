@@ -10,6 +10,7 @@
 #include "partitioner.h"
 #include "terminalModifier.h"
 #include "outputWriter.h"
+#include "dreamLegalizer.h"
 
 using namespace replace;
 using namespace TCLAP;
@@ -114,10 +115,17 @@ int main(int argc, const char *argv[])
           inst->setFixed(true);
       }
     }
-
+    
+    rp.setTargetOverflow(0.05f);
+    rp.setIncrementalPlaceMode(true);
+    rp.doInitialPlace();
     rp.doNesterovPlace("finalgp");
     Plot::plot(pb.get(), "./plot/cell", "after_finalgp");
     rp.doAbacusLegalization();
+    //{
+    //  DreamLegalizer dlg(DreamLegalizerVars(), pb);
+    //  dlg.doLegalization();
+    //}
     Plot::plot(pb.get(), "./plot/cell", "after_clg");
     tm.recover();
 

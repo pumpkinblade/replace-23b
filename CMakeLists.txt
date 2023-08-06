@@ -49,6 +49,19 @@ set(PLACE_HEADER
   src/macroLegalizer.h
   src/terminalModifier.h
   src/outputWriter.h
+  src/dreamLegalizer.h
+
+  src/dreamplace/abacus_legalize_cpu.h
+  src/dreamplace/bin_assignment_cpu.h
+  src/dreamplace/blank.h
+  src/dreamplace/compare_cpu.h
+  src/dreamplace/function_cpu.h
+  src/dreamplace/legalization_db.h
+  src/dreamplace/math.h
+  src/dreamplace/merge_bin_cpu.h
+  src/dreamplace/msg.h
+  src/dreamplace/namespace.h
+  src/dreamplace/status_summary_cpu.h
 )
 
 set(PLACE_SRC
@@ -73,6 +86,12 @@ set(PLACE_SRC
   src/macroLegalizer.cpp
   src/terminalModifier.cpp
   src/outputWriter.cpp
+  src/dreamLegalizer.cpp
+
+  src/dreamplace/msg.cpp
+  src/dreamplace/greedy_legalize_cpu.cpp
+  src/dreamplace/legalize_bin_cpu.cpp
+  src/dreamplace/merge_bin_cpu.cpp
 )
 
 add_executable(replace ${PLACE_SRC} ${PLACE_HEADER})
