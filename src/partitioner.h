@@ -16,8 +16,7 @@ namespace replace
 
     void partitioning(std::shared_ptr<PlacerBase> &pb_);
     void partitioning2(std::shared_ptr<PlacerBase> pb_);
-
-    void hmetistest(std::shared_ptr<PlacerBase> pb_);
+    void do_run_kahypar();
 
   private:
     // std::shared_ptr<Placer23b> placer23b_;

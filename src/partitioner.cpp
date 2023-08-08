@@ -6,7 +6,8 @@
 #include <unordered_map>
 #include <algorithm>
 #include <unordered_set>
-// #include "hmetics.h"
+#include <libkahypar.h>
+#include <thread>
 
 namespace replace
 {
@@ -151,52 +152,52 @@ namespace replace
     LOG_TRACE("finish partition");
   }
 
-  void Partitioner::hmetistest(std::shared_ptr<PlacerBase> pb_){
-    // 将pb中的instance和net转换为hmetis的数据结构
-    // 1. instance转换为hmetis的hypervertex
-    // 2. net转换为hmetis的edge
-    // 3. 调用hmetis进行partition
-    LOG_INFO("start hmetis partition");
-    // 获得instance数量
-    int nvtxs = pb_->insts().size();
-    // 获得net数量
-    int nhedges = pb_->nets().size();
-    // 获得instance的weight, 目前暂时设为1
-    int *vwgts = new int[nvtxs];
-    // 将net转换为eptr和eind
-    int *eptr = new int[nhedges + 1];
-    int eindnum = 0;
-    for(auto net : pb_->nets()){
-      eindnum += net->pins().size();
-    }
-    int *eind = new int[eindnum];
-    int i=0;
-    for(auto net : pb_->nets()){
-      for(auto pin : net->pins()){
-        eind[i] = pin->instance()->extId();
-        i++;
-      }
-    }
-    // 获得hmetis的参数
-    int *options = new int[10];
-    options[0] = 0;
-    int *part = new int[nvtxs];
-    int *edgecut = new int[1];
-    int nparts = 2;
-    int ubfactor = 10;
-    int *hewgts = new int[nhedges];
-    for(int i=0; i<nhedges; i++){
-      hewgts[i] = 1;
-    }
-    // 调用hmetis进行partition
-    HMETIS_PartRecursive(nvtxs, nhedges, NULL, *eptr, *eind, NULL, nparts, ubfactor, *options, *part, *edgecut);
-    std::string filename = "hmetis.txt";
-    std::ofstream out(filename);
-    for(int i=0; i<nvtxs; i++){
-      out << i << " " << part[i] << std::endl;
-    }
-    LOG_INFO("hmetis partition finished");
-  }
+  // void Partitioner::hmetistest(std::shared_ptr<PlacerBase> pb_){
+  //   // 将pb中的instance和net转换为hmetis的数据结构
+  //   // 1. instance转换为hmetis的hypervertex
+  //   // 2. net转换为hmetis的edge
+  //   // 3. 调用hmetis进行partition
+  //   LOG_INFO("start hmetis partition");
+  //   // 获得instance数量
+  //   int nvtxs = pb_->insts().size();
+  //   // 获得net数量
+  //   int nhedges = pb_->nets().size();
+  //   // 获得instance的weight, 目前暂时设为1
+  //   int *vwgts = new int[nvtxs];
+  //   // 将net转换为eptr和eind
+  //   int *eptr = new int[nhedges + 1];
+  //   int eindnum = 0;
+  //   for(auto net : pb_->nets()){
+  //     eindnum += net->pins().size();
+  //   }
+  //   int *eind = new int[eindnum];
+  //   int i=0;
+  //   for(auto net : pb_->nets()){
+  //     for(auto pin : net->pins()){
+  //       eind[i] = pin->instance()->extId();
+  //       i++;
+  //     }
+  //   }
+  //   // 获得hmetis的参数
+  //   int *options = new int[10];
+  //   options[0] = 0;
+  //   int *part = new int[nvtxs];
+  //   int *edgecut = new int[1];
+  //   int nparts = 2;
+  //   int ubfactor = 10;
+  //   int *hewgts = new int[nhedges];
+  //   for(int i=0; i<nhedges; i++){
+  //     hewgts[i] = 1;
+  //   }
+  //   // 调用hmetis进行partition
+  //   HMETIS_PartRecursive(nvtxs, nhedges, NULL, *eptr, *eind, NULL, nparts, ubfactor, *options, *part, *edgecut);
+  //   std::string filename = "hmetis.txt";
+  //   std::ofstream out(filename);
+  //   for(int i=0; i<nvtxs; i++){
+  //     out << i << " " << part[i] << std::endl;
+  //   }
+  //   LOG_INFO("hmetis partition finished");
+  // }
 
   void moveDecide(int64_t topArea, int64_t botArea, int64_t topCap, int64_t botCap,
                   bool* moveToTop, bool* moveToBot)
@@ -429,4 +430,79 @@ namespace replace
       }
     }
   }
+
+char const *const ini_file =
+        "/home/luxu/replace-local/kahypar-test/cut_rKaHyPar_sea20.ini";
+
+
+// Adapted example from the README to have something to hammer on
+auto run_kahypar() {
+  kahypar_context_t *context = kahypar_context_new();
+  kahypar_configure_context_from_file(context, ini_file);
+
+  const kahypar_hypernode_id_t num_vertices = 7;
+  const kahypar_hyperedge_id_t num_hyperedges = 4;
+
+  std::unique_ptr<kahypar_hyperedge_weight_t[]> hyperedge_weights =
+          std::make_unique<kahypar_hyperedge_weight_t[]>(4);
+
+  // force the cut to contain hyperedge 0 and 2
+  hyperedge_weights[0] = 1;
+  hyperedge_weights[1] = 1000;
+  hyperedge_weights[2] = 1;
+  hyperedge_weights[3] = 1000;
+
+  std::unique_ptr<size_t[]> hyperedge_indices = std::make_unique<size_t[]>(5);
+
+  hyperedge_indices[0] = 0;
+  hyperedge_indices[1] = 2;
+  hyperedge_indices[2] = 6;
+  hyperedge_indices[3] = 9;
+  hyperedge_indices[4] = 12;
+
+  std::unique_ptr<kahypar_hyperedge_id_t[]> hyperedges =
+          std::make_unique<kahypar_hyperedge_id_t[]>(12);
+
+  // hypergraph from hMetis manual page 14
+  hyperedges[0] = 0;
+  hyperedges[1] = 2;
+  hyperedges[2] = 0;
+  hyperedges[3] = 1;
+  hyperedges[4] = 3;
+  hyperedges[5] = 4;
+  hyperedges[6] = 3;
+  hyperedges[7] = 4;
+  hyperedges[8] = 6;
+  hyperedges[9] = 2;
+  hyperedges[10] = 5;
+  hyperedges[11] = 6;
+
+  const double imbalance = 0.03;
+  const kahypar_partition_id_t k = 2;
+
+  kahypar_hyperedge_weight_t objective = 0;
+
+  std::vector<kahypar_partition_id_t> partition(num_vertices, -1);
+
+  kahypar_partition(num_vertices, num_hyperedges, imbalance, k,
+                    /*vertex_weights */ nullptr, hyperedge_weights.get(),
+                    hyperedge_indices.get(), hyperedges.get(), &objective,
+                    context, partition.data());
+
+  kahypar_context_free(context);
+}
+
+void Partitioner::do_run_kahypar(){
+  auto const task = [&] {
+      while (true) { run_kahypar(); }
+  };
+
+  auto threads = std::vector<std::thread>{};
+  for (int i = 0; i < std::thread::hardware_concurrency(); ++i) {
+      threads.emplace_back(task);
+  }
+  for (auto &thread: threads) { thread.join(); }
+  }
+
+
 }

@@ -132,7 +132,8 @@ int main(int argc, const char *argv[])
 
     // then we do partition
     Partitioner partitioner(1.0);
-    partitioner.hmetistest(pb);
+    // partitioner.hmetistest(pb);
+    partitioner.do_run_kahypar();
 
     // Replace rp(targetDensity);
     // rp.setPlacerBase(pb);
