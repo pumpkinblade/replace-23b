@@ -210,6 +210,10 @@ namespace replace
       {
         img_->draw_rectangle(x1, y1, x3, y3, g_cyron.data(), opacity);
       }
+      else if (inst->isFixed())
+      {
+        img_->draw_rectangle(x1, y1, x3, y3, g_blue.data(), opacity);
+      }
       else
       {
         img_->draw_rectangle(x1, y1, x3, y3, g_red.data(), opacity);

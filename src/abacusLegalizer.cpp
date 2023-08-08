@@ -47,7 +47,7 @@ namespace replace
   {
     endIdx_++;
     ec_ += cell->weight();
-    qc_ += cell->weight() * (cell->lgLx() - wc_);
+    qc_ += cell->weight() * (cell->gpLx() - wc_);
     wc_ += cell->width();
   }
 
@@ -250,7 +250,7 @@ namespace replace
         AbacusRow tmp(cell.gpLx(), cell.gpLy(), 0.f, 0.f);
         auto it = std::upper_bound(rows_.begin(), rows_.end(), tmp, 
                                    [](const AbacusRow& left, const AbacusRow& right)
-                                   { return left.lx() < right.lx(); });
+                                   { return left.ly() < right.ly(); });
         int idx = static_cast<int>(it - rows_.begin());
         bool ascend = true;
         int step = 0;

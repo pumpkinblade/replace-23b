@@ -10,7 +10,8 @@
 #include "partitioner.h"
 #include "terminalModifier.h"
 #include "outputWriter.h"
-#include "dreamLegalizer.h"
+// #include "dreamLegalizer.h"
+#include "abaxLegalizer.h"
 
 using namespace replace;
 using namespace TCLAP;
@@ -81,7 +82,18 @@ int main(int argc, const char *argv[])
     rp.setPlacerBase(pb);
     rp.doInitialPlace();
     rp.doNesterovPlace();
+    for (int i = 0; i < 100; i++)
+    {
+      int idx = rand() % pb->insts().size();
+      pb->insts()[idx]->setMacro(true);
+    }
+    Plot::plot(pb.get(), "./plot/cell", "before_clg");
     rp.doAbacusLegalization();
+    //{
+    //  AbaxLegalizer abax(pb);
+    //  abax.doLegalization();
+    //}
+    Plot::plot(pb.get(), "./plot/cell", "result");
   }
   else if (mode == "23b")
   {
@@ -121,11 +133,15 @@ int main(int argc, const char *argv[])
     rp.doInitialPlace();
     rp.doNesterovPlace("finalgp");
     Plot::plot(pb.get(), "./plot/cell", "after_finalgp");
-    rp.doAbacusLegalization();
+    //rp.doAbacusLegalization();
     //{
     //  DreamLegalizer dlg(DreamLegalizerVars(), pb);
     //  dlg.doLegalization();
     //}
+    {
+      AbaxLegalizer abax(pb);
+      abax.doLegalization();
+    }
     Plot::plot(pb.get(), "./plot/cell", "after_clg");
     tm.recover();
 

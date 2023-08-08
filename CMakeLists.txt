@@ -49,6 +49,7 @@ set(PLACE_HEADER
   src/macroLegalizer.h
   src/terminalModifier.h
   src/outputWriter.h
+  src/abaxLegalizer.h
   src/dreamLegalizer.h
 
   src/dreamplace/abacus_legalize_cpu.h
@@ -86,6 +87,7 @@ set(PLACE_SRC
   src/macroLegalizer.cpp
   src/terminalModifier.cpp
   src/outputWriter.cpp
+  src/abaxLegalizer.cpp
   src/dreamLegalizer.cpp
 
   src/dreamplace/msg.cpp

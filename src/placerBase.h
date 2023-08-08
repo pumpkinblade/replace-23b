@@ -226,6 +226,7 @@ namespace replace
     int rowRepeatCount() const { return rowRepeatCount_; }
 
     const std::vector<Instance *> &insts() const { return insts_; }
+    std::vector<Instance *> &insts() { return insts_; }
     void addInstance(Instance *inst);
     void removeInstance(Instance *inst);
 
