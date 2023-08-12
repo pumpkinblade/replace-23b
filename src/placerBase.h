@@ -3,9 +3,10 @@
 
 #include <vector>
 #include <unordered_map>
+#include <map>
 #include <memory>
-#include "technology.h"
 #include <cassert>
+#include "technology.h"
 
 namespace replace
 {
@@ -169,18 +170,12 @@ namespace replace
     void addPin(Pin *pin);
     void removePin(Pin *pin);
 
-    const std::string &name() const { return name_; }
-    void setName(const std::string &name) { name_ = name; }
-
   private:
     std::vector<Pin *> pins_;
     int lx_;
     int ly_;
     int ux_;
     int uy_;
-
-    // for 23b
-    std::string name_;
   };
 
   // Die class containes shape info, row params, instances placed on it
@@ -315,13 +310,18 @@ namespace replace
     std::vector<Net> netStor_;
     std::vector<Technology> techStor_;
 
+    // For partition
+    std::vector<Instance> extraInstStor_;
+    std::vector<Pin> extraPinStor_;
+    std::vector<Net> extraNetStor_;
+    std::vector<std::string> netNameStor_;
+
     std::vector<Die *> dies_;
     std::vector<Instance *> insts_;
     std::vector<Pin *> pins_;
     std::vector<Net *> nets_;
     std::vector<Technology*> techs_;
 
-    // For 23b
     std::unordered_map<std::string, Die *> dieNameMap_;
     std::unordered_map<std::string, Technology *> techNameMap_;
 

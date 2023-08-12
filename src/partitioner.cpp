@@ -323,10 +323,10 @@ namespace replace
     }
 
     // generate terminals
+    int numTerms = 0;
     for(int i = 0, ie = pb->nets().size(); i < ie; i++)
     {
       Net* net = pb->nets()[i];
-
       bool hasTopPin = false;
       bool hasBotPin = false;
       for(Pin* pin : net->pins())
@@ -335,30 +335,55 @@ namespace replace
         hasTopPin |= !isBot[inst->extId()];
         hasBotPin |= isBot[inst->extId()];
       }
+      numTerms += (hasTopPin && hasBotPin);
+    }
+    pb->extraInstStor_.reserve(numTerms);
+    pb->extraNetStor_.reserve(numTerms);
+    pb->extraPinStor_.reserve(2*numTerms);
+    pb->insts_.reserve(pb->insts_.size() + numTerms);
+    pb->nets_.reserve(pb->nets_.size() + numTerms);
+    pb->pins_.reserve(pb->pins_.size() + 2 * numTerms);
 
+    for(int i = 0, ie = pb->nets().size(); i < ie; i++)
+    {
+      Net* net = pb->nets()[i];
+      bool hasTopPin = false;
+      bool hasBotPin = false;
+      for(Pin* pin : net->pins())
+      {
+        Instance* inst = pin->instance();
+        hasTopPin |= !isBot[inst->extId()];
+        hasBotPin |= isBot[inst->extId()];
+      }
       // need to split net and generate net
       if(hasTopPin && hasBotPin)
       {
-        // add terminal
-        Instance &term = pb->emplaceInstance(false, false);
-        term.setSize(pb->terminalSizeX(), pb->terminalSizeY());
-        term.setLocation(2 * pb->terminalSizeX(), 2 * pb->terminalSizeY());
-        term.setFixed(false);
-        // set term's name using net name
-        term.setName(net->name());
+        // generate terminal
+        pb->extraInstStor_.emplace_back();
+        Instance* term = &pb->extraInstStor_.back();
+        term->setFixed(false);
+        term->setMacro(false);
+        term->setSize(pb->terminalSizeX(), pb->terminalSizeY());
+        term->setLocation(2 * pb->terminalSizeX(), 2 * pb->terminalSizeY());
+        term->setName(pb->netNameStor_[i]);
+        pb->die("terminal")->addInstance(term);
+        pb->insts_.push_back(term);
+
         // generate pin for term
-        Pin &pinTop = pb->emplacePin();
-        Pin &pinBot = pb->emplacePin();
-        term.addPin(&pinTop);
-        term.addPin(&pinBot);
+        pb->extraPinStor_.emplace_back();
+        Pin* pinTop = &pb->extraPinStor_.back();
+        pb->extraPinStor_.emplace_back();
+        Pin* pinBot = &pb->extraPinStor_.back();
+        term->addPin(pinTop);
+        term->addPin(pinBot);
+        pb->pins_.push_back(pinTop);
+        pb->pins_.push_back(pinBot);
         // add instance to die
-        pb->die("terminal")->addInstance(&term);
         
         // generate another net
-        pb->netStor_.emplace_back();
-        Net* net2 = &pb->netStor_.back();
+        pb->extraNetStor_.emplace_back();
+        Net* net2 = &pb->extraNetStor_.back();
         pb->nets_.push_back(net2);
-
         // add pin to net
         for(Pin* pin : net->pins())
         {
@@ -369,9 +394,12 @@ namespace replace
             net2->addPin(pin);
           }
         }
-        net->addPin(&pinTop);
-        net2->addPin(&pinBot);
+        net->addPin(pinTop);
+        net2->addPin(pinBot);
       }
     }
+
+    // clear net name
+    pb->netNameStor_ = std::vector<string>();
   }
 }

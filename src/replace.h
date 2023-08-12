@@ -36,8 +36,6 @@ namespace replace
     void doAbacusLegalization();
     void doMacroLegalization();
 
-    void doSAMacroLegalization();
-
     // Initial Place param settings
     void setInitialPlaceMaxIter(int iter);
     void setInitialPlaceMinDiffLength(int length);
@@ -64,12 +62,6 @@ namespace replace
 
   private:
     std::shared_ptr<PlacerBase> pb_;
-    std::shared_ptr<NesterovBase> nb_;
-
-    std::unique_ptr<InitialPlace> ip_;
-    std::unique_ptr<NesterovPlace> np_;
-    std::unique_ptr<AbacusLegalizer> alg_;
-    std::unique_ptr<MacroLegalizer> mlg_;
 
     int initialPlaceMaxIter_;
     int initialPlaceMinDiffLength_;

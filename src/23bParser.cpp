@@ -304,6 +304,9 @@ namespace replace
     {
       pb->techStor_.emplace_back(desc.techs[i].name);
       Technology* tech = &pb->techStor_.back();
+      pb->techs_.push_back(tech);
+      pb->techNameMap_.emplace(tech->name(), tech);
+
       TECH_DESC *techDesc = &desc.techs[i];
       size_t numPins = 0;
       size_t numCells = techDesc->cells.size();
@@ -330,8 +333,6 @@ namespace replace
           cell->pins_[pinId] = &tech->pinStor_.back();
         }
       }
-
-      pb->techNameMap_.emplace(tech->name(), &pb->techStor_.back());
     }
 
     // Process dies
@@ -368,6 +369,9 @@ namespace replace
     pb->dieNameMap_.emplace("terminal", &pb->dieStor_.back());
     // Note that if a die is in pb->dies_, then it will participate in global placement
     // therefore, we only push top die into pb->dies_
+    pb->dies_.push_back(pb->die("top"));
+    pb->dies_.push_back(pb->die("bottom"));
+    pb->dies_.push_back(pb->die("terminal"));
 
     // Process terminal
     pb->termSizeX_ = desc.termSizeX;
@@ -375,52 +379,53 @@ namespace replace
     pb->termSpace_ = desc.termSpace;
     pb->termCost_ = desc.termCost;
 
-    // extra space for terminal
-    int extraInsts = static_cast<int>(desc.nets.size());
-    int extraNets = static_cast<int>(desc.nets.size());
-    int extraPins = static_cast<int>(2 * desc.nets.size());
-    //int extraInsts = 0;
-    //int extraNets = 0;
-    //int extraPins = 0;
     // Process netlist
-    pb->instStor_.reserve(desc.insts.size()+extraInsts);
-    pb->netStor_.reserve(desc.nets.size()+extraNets);
+    pb->instStor_.reserve(desc.insts.size());
+    pb->insts_.reserve(desc.insts.size());
+    pb->netStor_.reserve(desc.nets.size());
+    pb->nets_.reserve(desc.nets.size());
+    pb->netNameStor_.reserve(desc.nets.size());
     size_t numPins = 0;
     for(const auto& netDesc : desc.nets)
     {
       numPins += netDesc.pins.size();
     }
-    pb->pinStor_.reserve(numPins+extraPins);
+    pb->pinStor_.reserve(numPins);
+    pb->pins_.reserve(numPins);
 
     // Process inst
     std::unordered_map<std::string, Instance*> instNameMap;
     for (const auto& instDesc : desc.insts)
     {
       pb->instStor_.emplace_back();
+      Instance* inst = &pb->instStor_.back();
+      pb->insts_.push_back(inst);
+      pb->die("top")->addInstance(inst);
+      instNameMap.emplace(instDesc.name, inst);
+
       // find libcell
       // assume than all insts are on top die
       int libcellId = libCellNameIdMap[instDesc.cellName];
       LibCell* libcell = pb->die("top")->tech()->libCell(libcellId);
 
       // inst init
-      pb->instStor_.back().setName(instDesc.name);
-      pb->instStor_.back().setLibCellId(libcellId);
-      pb->instStor_.back().setFixed(false);
-      pb->instStor_.back().setMacro(libcell->isMacro());
+      inst->setName(instDesc.name);
+      inst->setLibCellId(libcellId);
+      inst->setFixed(false);
+      inst->setMacro(libcell->isMacro());
       int lx = pb->die("top")->coreLx();
       int ly = pb->die("top")->coreLy();
-      pb->instStor_.back().setBox(lx, ly, lx + libcell->sizeX(), ly + libcell->sizeY());
-
-      instNameMap.emplace(instDesc.name, &pb->instStor_.back());
-      pb->die("top")->addInstance(&pb->instStor_.back());
+      inst->setBox(lx, ly, lx + libcell->sizeX(), ly + libcell->sizeY());
     }
     
     // Process net
-    pb->netStor_.reserve(desc.nets.size()+extraNets);
     for (const auto& netDesc : desc.nets)
     {
       pb->netStor_.emplace_back();
-      pb->netStor_.back().setName(netDesc.name);
+      pb->netNameStor_.emplace_back(netDesc.name);
+      Net* net = &pb->netStor_.back();
+      pb->nets_.push_back(net);
+
       for (const auto& pinDesc : netDesc.pins)
       {
         // find instance
@@ -433,20 +438,20 @@ namespace replace
 
         // add pin
         pb->pinStor_.emplace_back();
-        pb->pinStor_.back().setLibPinId(libPinId);
-        pb->pinStor_.back().setInstance(inst);
-        pb->pinStor_.back().setNet(&pb->netStor_.back());
-        pb->pinStor_.back().updateLocation(inst, libpin->x(), libpin->y());
+        Pin* pin = &pb->pinStor_.back();
+        pb->pins_.push_back(pin);
+        pin->setLibPinId(libPinId);
+        pin->setInstance(inst);
+        pin->setNet(net);
+        pin->updateLocation(inst, libpin->x(), libpin->y());
 
         // assign inst & net
-        pb->netStor_.back().addPin(&pb->pinStor_.back());
-        inst->addPin(&pb->pinStor_.back());
+        net->addPin(pin);
+        inst->addPin(pin);
       }
-      pb->netStor_.back().updateBox();
+      net->updateBox();
     }
 
-    pb->cleanIPNs();
-    pb->deriveIPNs();
     return pb;
   }
 }

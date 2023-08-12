@@ -1,6 +1,7 @@
 #ifndef __PARTITIONER__
 #define __PARTITIONER__
 
+#include <vector>
 #include "technology.h"
 #include "placerBase.h"
 
@@ -15,7 +16,7 @@ namespace replace
     ~Partitioner() = default;
 
     void partitioning(std::shared_ptr<PlacerBase> &pb_);
-    void partitioning2(std::shared_ptr<PlacerBase> pb_);
+    void partitioning2(std::shared_ptr<PlacerBase> pb);
 
   private:
     // std::shared_ptr<Placer23b> placer23b_;
