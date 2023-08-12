@@ -89,7 +89,7 @@ namespace replace
                      const std::string &imgDir,
                      const std::string &prefix)
   {
-    for (Die *die : pb->dies())
+    for (const Die* die : pb->dies())
     {
       initContext(die);
 

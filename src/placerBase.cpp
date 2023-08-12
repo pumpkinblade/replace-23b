@@ -38,13 +38,12 @@ namespace replace
 
   void Instance::setSize(Technology &tech)
   {
-    auto& libcell = *tech.libCell(libCellName());
+    auto& libcell = *tech.libCell(libCellId());
     setSize(libcell.sizeX(), libcell.sizeY());
     for(Pin* pin : pins_)
     {
-      LibPin* libpin = libcell.libPin(pin->name());
-      if(libpin != nullptr)
-        pin->setOffset(libpin->x(), libpin->y());
+      LibPin* libpin = libcell.libPin(pin->libPinId());
+      pin->setOffset(libpin->x(), libpin->y());
     }
   }
 
@@ -64,14 +63,7 @@ namespace replace
   void Instance::addPin(Pin *pin)
   {
     pins_.push_back(pin);
-    pinNameMap_.emplace(pin->name(), pin);
     pin->setInstance(this);
-  }
-
-  Pin* Instance::pin(const std::string& name) const
-  {
-    auto it = pinNameMap_.find(name);
-    return it == pinNameMap_.end() ? nullptr : it->second;
   }
 
   ////////////////////////////////////////////////////////
@@ -259,7 +251,6 @@ namespace replace
     Instance& inst = instStor_.back();
     inst.setFixed(isFixed); inst.setMacro(isMacro);
     insts_.push_back(&inst);
-    pushToInstsByType(isFixed, inst);
     return inst;
   }
 
@@ -279,7 +270,7 @@ namespace replace
     }
   }
 
-  int64_t PlacerBase::hpwl() const
+  int64_t PlacerBase::hpwl()
   {
     int64_t hpwl = 0;
     for (auto &net : nets_)
@@ -328,10 +319,6 @@ namespace replace
     for (const Die *die : dies_)
     {
       LOG_DEBUG("Die {}", dieIdx);
-      // LOG_DEBUG("PlaceInstArea: {}", die->placeInstsArea());
-      // LOG_DEBUG("PlaceStdcellsArea: {}", die->placeStdcellsArea());
-      // LOG_DEBUG("PlaceMacrosArea: {}", die->placeMacrosArea());
-      // LOG_DEBUG("FixedInstArea: {}", die->fixedInstsArea());
 
       int numStdCell = 0, numMacro = 0;
       for (Instance* inst : die->insts())
@@ -348,62 +335,10 @@ namespace replace
     }
   }
 
-  // int64_t PlacerBase::placeInstsArea() const
-  // {
-  //   int64_t area = 0;
-  //   for (const Die *die : dies_)
-  //   {
-  //     area += die->placeInstsArea();
-  //   }
-  //   return area;
-  // }
-
-  // int64_t PlacerBase::placeStdcellsArea() const
-  // {
-  //   int64_t area = 0;
-  //   for (const Die *die : dies_)
-  //   {
-  //     area += die->placeStdcellsArea();
-  //   }
-  //   return area;
-  // }
-
-  // int64_t PlacerBase::placeMacrosArea() const
-  // {
-  //   int64_t area = 0;
-  //   for (const Die *die : dies_)
-  //   {
-  //     area += die->placeMacrosArea();
-  //   }
-  //   return area;
-  // }
-
-  // int64_t PlacerBase::fixedInstsArea() const
-  // {
-  //   int64_t area = 0;
-  //   for (const Die *die : dies_)
-  //   {
-  //     area += die->fixedInstsArea();
-  //   }
-  //   return area;
-  // }
-
-  Instance *PlacerBase::inst(const std::string &name) const
-  {
-    auto it = instNameMap_.find(name);
-    return it == instNameMap_.end() ? nullptr : it->second;
-  }
-
   Die *PlacerBase::die(const std::string &name) const
   {
     auto it = dieNameMap_.find(name);
     return it == dieNameMap_.end() ? nullptr : it->second;
-  }
-
-  Net *PlacerBase::net(const std::string &name) const
-  {
-    auto it = netNameMap_.find(name);
-    return it == netNameMap_.end() ? nullptr : it->second;
   }
 
   Technology *PlacerBase::tech(const std::string &name) const
@@ -412,8 +347,13 @@ namespace replace
     return it == techNameMap_.end() ? nullptr : it->second;
   }
 
-  void PlacerBase::cleanIPNs(){
-    insts_.clear(); pins_.clear(); nets_.clear();
+  void PlacerBase::cleanIPNs()
+  {
+    insts_.clear();
+    pins_.clear();
+    nets_.clear();
+    dies_.clear();
+    techs_.clear();
   }
 
   void PlacerBase::deriveIPNs()
@@ -421,18 +361,12 @@ namespace replace
     insts_.reserve(instStor_.size());
     pins_.reserve(pinStor_.size());
     nets_.reserve(netStor_.size());
+    dies_.reserve(dieStor_.size());
+    techs_.reserve(techStor_.size());
 
     for (auto &inst : instStor_)
     {
       insts_.push_back(&inst);
-      // if (inst.isFixed())
-      // {
-      //   fixedInsts_.push_back(&inst);
-      // }
-      // else
-      // {
-      //   placeInsts_.push_back(&inst);
-      // }
     }
 
     for (auto &pin : pinStor_)
@@ -444,6 +378,15 @@ namespace replace
     {
       nets_.push_back(&net);
     }
-  }
 
+    for (auto& die : dieStor_)
+    {
+      dies_.push_back(&die);
+    }
+
+    for (auto& tech : techStor_)
+    {
+      techs_.push_back(&tech);
+    }
+  }
 }
