@@ -9,8 +9,9 @@ namespace replace {
 class FFT {
   public:
     FFT();
-    FFT(int binCntX, int binCntY, int binSizeX, int binSizeY);
     ~FFT() = default;
+
+    void init(int binCntX, int binCntY, prec binSizeX, prec binSizeY);
 
     // input func
     void updateDensity(int x, int y, prec density);
@@ -60,40 +61,10 @@ class FFT {
 
     int binCntX_;
     int binCntY_;
-    int binSizeX_;
-    int binSizeY_;
-
-    void init();
+    prec binSizeX_;
+    prec binSizeY_;
 };
 
 }
-
-//
-// The following FFT library came from
-// http://www.kurims.kyoto-u.ac.jp/~ooura/fft.html
-//
-//
-/// 1D FFT ////////////////////////////////////////////////////////////////
-void cdft(int n, int isgn, prec *a, int *ip, prec *w);
-void ddct(int n, int isgn, prec *a, int *ip, prec *w);
-void ddst(int n, int isgn, prec *a, int *ip, prec *w);
-
-/// 2D FFT ////////////////////////////////////////////////////////////////
-void cdft2d(int, int, int, prec **, prec *, int *, prec *);
-void rdft2d(int, int, int, prec **, prec *, int *, prec *);
-void ddct2d(int, int, int, prec **, prec *, int *, prec *);
-void ddst2d(int, int, int, prec **, prec *, int *, prec *);
-void ddsct2d(int n1, int n2, int isgn, prec **a, prec *t, int *ip, prec *w);
-void ddcst2d(int n1, int n2, int isgn, prec **a, prec *t, int *ip, prec *w);
-
-/// 3D FFT ////////////////////////////////////////////////////////////////
-void cdft3d(int, int, int, int, prec ***, prec *, int *, prec *);
-void rdft3d(int, int, int, int, prec ***, prec *, int *, prec *);
-void ddct3d(int, int, int, int, prec ***, prec *, int *, prec *);
-void ddst3d(int, int, int, int, prec ***, prec *, int *, prec *);
-void ddscct3d(int, int, int, int isgn, prec ***, prec *, int *, prec *);
-void ddcsct3d(int, int, int, int isgn, prec ***, prec *, int *, prec *);
-void ddccst3d(int, int, int, int isgn, prec ***, prec *, int *, prec *);
-
 
 #endif

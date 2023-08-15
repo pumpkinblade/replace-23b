@@ -103,11 +103,11 @@ private:
   prec wireLengthCoefY_;
 
   // phi is described in ePlace paper.
-  prec sumPhi_;
-  prec sumOverflow_;
+  double sumPhi_;
+  double sumOverflow_;
 
   // half-parameter-wire-length
-  int64_t prevHpwl_;
+  double prevHpwl_;
 
   prec isDiverged_;
 };

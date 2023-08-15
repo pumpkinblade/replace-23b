@@ -49,7 +49,7 @@ NesterovPlace::NesterovPlace(NesterovPlaceVars npVars, std::shared_ptr<NesterovB
 void NesterovPlace::init() {
   LOG_TRACE("NesterovInit Begin");
 
-  const int gCellSize = nb_->gCells().size();
+  size_t gCellSize = nb_->gCells().size();
   curSLPCoordi_.resize(gCellSize, Point());
   curSLPWireLengthGrads_.resize(gCellSize, Point());
   curSLPDensityGrads_.resize(gCellSize, Point());
@@ -74,11 +74,11 @@ void NesterovPlace::init() {
     curSLPCoordi_[i] 
       = prevSLPCoordi_[i] 
       = curCoordi_[i] 
-      = Point(nb_->gCells()[i]->dCx(), nb_->gCells()[i]->dCy());
+      = Point(nb_->gCells()[i]->cx(), nb_->gCells()[i]->cy());
   }
 
   // bin update
-  nb_->updateGCellDensityCenterLocation(curSLPCoordi_);
+  nb_->updateGCellCenterLocation(curSLPCoordi_);
   
   prevHpwl_ = nb_->hpwl();
 
@@ -125,7 +125,7 @@ void NesterovPlace::init() {
   updateInitialPrevSLPCoordi();
 
   // bin, FFT, wlen update with prevSLPCoordi.
-  nb_->updateGCellDensityCenterLocation(prevSLPCoordi_);
+  nb_->updateGCellCenterLocation(prevSLPCoordi_);
   nb_->updateDensityForceBin();
   nb_->updateWireLengthForceWA(wireLengthCoefX_, wireLengthCoefY_);
   
@@ -318,7 +318,7 @@ NesterovPlace::doNesterovPlace(string placename) {
       }
  
 
-      nb_->updateGCellDensityCenterLocation(nextSLPCoordi_);
+      nb_->updateGCellCenterLocation(nextSLPCoordi_);
       nb_->updateDensityForceBin();
       nb_->updateWireLengthForceWA(wireLengthCoefX_, wireLengthCoefY_);
 
@@ -480,7 +480,7 @@ NesterovPlace::updateNextIter() {
   LOG_DEBUG("Overflow: {}", sumOverflow_);
 
   updateWireLengthCoef(sumOverflow_);
-  int64_t hpwl = nb_->hpwl();
+  double hpwl = nb_->hpwl();
   
   LOG_DEBUG("PreviousHPWL: {}", prevHpwl_);
   LOG_DEBUG("NewHPWL: {}", hpwl);
@@ -529,7 +529,9 @@ void
 NesterovPlace::updatePlacerBase() {
   for(auto& gCell : nb_->gCells()) {
     if(gCell->isInstance()) {
-      gCell->instance()->setLocation(gCell->dLx(), gCell->dLy());
+      int lx = static_cast<int>(std::round(gCell->lx()));
+      int ly = static_cast<int>(std::round(gCell->ly()));
+      gCell->instance()->setLocation(lx, ly);
     }
   }
 }

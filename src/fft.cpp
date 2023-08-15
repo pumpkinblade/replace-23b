@@ -9,44 +9,51 @@
 
 #define REPLACE_FFT_PI 3.141592653589793238462L 
 
+//
+// The following FFT library came from
+// http://www.kurims.kyoto-u.ac.jp/~ooura/fft.html
+//
+//
+/// 1D FFT ////////////////////////////////////////////////////////////////
+void cdft(int n, int isgn, prec *a, int *ip, prec *w);
+void ddct(int n, int isgn, prec *a, int *ip, prec *w);
+void ddst(int n, int isgn, prec *a, int *ip, prec *w);
+
+/// 2D FFT ////////////////////////////////////////////////////////////////
+void cdft2d(int, int, int, prec **, prec *, int *, prec *);
+void rdft2d(int, int, int, prec **, prec *, int *, prec *);
+void ddct2d(int, int, int, prec **, prec *, int *, prec *);
+void ddst2d(int, int, int, prec **, prec *, int *, prec *);
+void ddsct2d(int n1, int n2, int isgn, prec **a, prec *t, int *ip, prec *w);
+void ddcst2d(int n1, int n2, int isgn, prec **a, prec *t, int *ip, prec *w);
+
+/// 3D FFT ////////////////////////////////////////////////////////////////
+void cdft3d(int, int, int, int, prec ***, prec *, int *, prec *);
+void rdft3d(int, int, int, int, prec ***, prec *, int *, prec *);
+void ddct3d(int, int, int, int, prec ***, prec *, int *, prec *);
+void ddst3d(int, int, int, int, prec ***, prec *, int *, prec *);
+void ddscct3d(int, int, int, int isgn, prec ***, prec *, int *, prec *);
+void ddcsct3d(int, int, int, int isgn, prec ***, prec *, int *, prec *);
+void ddccst3d(int, int, int, int isgn, prec ***, prec *, int *, prec *);
+
 namespace replace {
 
-
 FFT::FFT()
-    : binCntX_(0), binCntY_(0), binSizeX_(0), binSizeY_(0) {}
-
-FFT::FFT(int binCntX, int binCntY, int binSizeX, int binSizeY)
-    : binCntX_(binCntX), binCntY_(binCntY), binSizeX_(binSizeX), binSizeY_(binSizeY) 
+    : binCntX_(0), binCntY_(0), binSizeX_(0), binSizeY_(0)
 {
-  init();   
 }
 
-void
-FFT::init() {
-  //binDensity_ = new prec*[binCntX_];
-  //electroPhi_ = new prec*[binCntX_];
-  //electroForceX_ = new prec*[binCntX_];
-  //electroForceY_ = new prec*[binCntX_];
+void 
+FFT::init(int binCntX, int binCntY, prec binSizeX, prec binSizeY) {
+  binCntX_ = binCntX;
+  binCntY_ = binCntY;
+  binSizeX_ = binSizeX;
+  binSizeY_ = binSizeY;
 
-  //for(int i=0; i<binCntX_; i++) {
-  //  binDensity_[i] = new prec[binCntY_];
-  //  electroPhi_[i] = new prec[binCntY_];
-  //  electroForceX_[i] = new prec[binCntY_];
-  //  electroForceY_[i] = new prec[binCntY_];
-
-  //  for(int j=0; j<binCntY_; j++) {
-  //    binDensity_[i][j] 
-  //      = electroPhi_[i][j] 
-  //      = electroForceX_[i][j] 
-  //      = electroForceY_[i][j] 
-  //      = 0.0f;  
-  //  }
-  //}
-
-  binDensityStor_.resize(binCntX_ * binCntY_, (prec)0);
-  electroPhiStor_.resize(binCntX_ * binCntY_, (prec)0);
-  electroForceXStor_.resize(binCntX_ * binCntY_, (prec)0);
-  electroForceYStor_.resize(binCntX_ * binCntY_, (prec)0);
+  binDensityStor_.resize(binCntX_ * binCntY_, 0);
+  electroPhiStor_.resize(binCntX_ * binCntY_, 0);
+  electroForceXStor_.resize(binCntX_ * binCntY_, 0);
+  electroForceYStor_.resize(binCntX_ * binCntY_, 0);
 
   binDensity_.resize(binCntX_, nullptr);
   electroPhi_.resize(binCntX_, nullptr);

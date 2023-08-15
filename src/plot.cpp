@@ -225,8 +225,8 @@ namespace replace
   {
     for (const GCell *cell : bg->gCells())
     {
-      int cx = cell->dCx();
-      int cy = cell->dCy();
+      int cx = cell->cx();
+      int cy = cell->cy();
       int x1 = getImageX(cx - cell->dx() / 2);
       int y1 = getImageY(cy - cell->dy() / 2);
       int x2 = getImageX(cx + cell->dx() / 2);
@@ -286,8 +286,8 @@ namespace replace
         int signX = (bin->electroForceX() > 0) ? 1 : -1;
         int signY = (bin->electroForceY() > 0) ? 1 : -1;
 
-        float newVx = fabs(bin->electroForceX());
-        float newVy = fabs(bin->electroForceY());
+        float newVx = std::fabs(bin->electroForceX());
+        float newVy = std::fabs(bin->electroForceY());
 
         int x1 = bin->cx();
         int y1 = bin->cy();
