@@ -64,7 +64,7 @@ int main(int argc, const char *argv[])
   pb->printDebugInfo();
   LOG_TRACE("Parse 23b Text File End");
 
-  //// then we do partition
+  // then we do partition
   Partitioner partitioner(targetDensity);
   partitioner.partitioning2(pb);
   Plot::plot(pb.get(), "./plot/cell", "after_partition");
@@ -75,7 +75,6 @@ int main(int argc, const char *argv[])
   tm.modify();
   Replace rp(1.0);
   rp.setPlacerBase(pb);
-  rp.setInitialPlaceMaxIter(5);
   rp.doInitialPlace();
   rp.doNesterovPlace("postgp");
   Plot::plot(pb.get(), "./plot/cell", "after_postgp");
@@ -91,20 +90,12 @@ int main(int argc, const char *argv[])
     }
   }
 
-  rp.setTargetOverflow(0.05f);
-  rp.setIncrementalPlaceMode(true);
   rp.doInitialPlace();
   rp.doNesterovPlace("finalgp");
   Plot::plot(pb.get(), "./plot/cell", "after_finalgp");
   // rp.doAbacusLegalization();
-  //{
-  //   DreamLegalizer dlg(DreamLegalizerVars(), pb);
-  //   dlg.doLegalization();
-  // }
-  {
-    AbaxLegalizer abax(pb);
-    abax.doLegalization();
-  }
+  AbaxLegalizer abax(pb);
+  abax.doLegalization();
   Plot::plot(pb.get(), "./plot/cell", "after_clg");
   tm.recover();
 

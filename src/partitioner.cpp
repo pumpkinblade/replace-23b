@@ -161,7 +161,8 @@ namespace replace
     *moveToTop = *moveToBot = false;
     if(topCanContain && botCanContain)
     {
-      *moveToTop = ((float)rand() / RAND_MAX) < 0.5;
+      float thres = static_cast<float>(botArea) / static_cast<float>(botArea + topArea);
+      *moveToTop = ((float)rand() / RAND_MAX) < thres;
       *moveToBot = !(*moveToTop);
     }
     else if(topCanContain)
@@ -197,40 +198,40 @@ namespace replace
     std::vector<bool> hasAssigned(pb->insts().size(), false);
     std::vector<bool> isBot(pb->insts().size(), false);
 
-    // using zjl's method to assign macros
-    std::vector<Instance*> macros;
-    for(Instance* inst : pb->insts())
-    {
-      if(inst->isMacro())
-        macros.push_back(inst);
-    }
-    std::sort(macros.begin(), macros.end(), [](const Instance* left, const Instance* right)
-              { return left->size() > right->size(); });
-    // A greedy macro partition method, which may be not optimal.
-    int topMacroSize = 0;
-    int bottomMacroSize = 0;
-    for(Instance* macro : macros)
-    {
-      if(topMacroSize > bottomMacroSize)
-      {
-        topdie->removeInstance(macro);
-        macro->setSize(*botdie->tech());
-        botdie->addInstance(macro);
+    //// using zjl's method to assign macros
+    //std::vector<Instance*> macros;
+    //for(Instance* inst : pb->insts())
+    //{
+    //  if(inst->isMacro())
+    //    macros.push_back(inst);
+    //}
+    //std::sort(macros.begin(), macros.end(), [](const Instance* left, const Instance* right)
+    //          { return left->size() > right->size(); });
+    //// A greedy macro partition method, which may be not optimal.
+    //int topMacroSize = 0;
+    //int bottomMacroSize = 0;
+    //for(Instance* macro : macros)
+    //{
+    //  if(topMacroSize > bottomMacroSize)
+    //  {
+    //    topdie->removeInstance(macro);
+    //    macro->setSize(*botdie->tech());
+    //    botdie->addInstance(macro);
 
-        bottomMacroSize += macro->size();
-        botCap -= macro->size();
-        hasAssigned[macro->extId()] = true;
-        isBot[macro->extId()] = true;
-      }
-      else
-      {
-        topMacroSize += macro->size();
-        topCap -= macro->size();
-        hasAssigned[macro->extId()] = true;
-        isBot[macro->extId()] = false;
-      }
-    }
-    LOG_DEBUG("partition macros, top: {} bottom: {}", topMacroSize, bottomMacroSize);
+    //    bottomMacroSize += macro->size();
+    //    botCap -= macro->size();
+    //    hasAssigned[macro->extId()] = true;
+    //    isBot[macro->extId()] = true;
+    //  }
+    //  else
+    //  {
+    //    topMacroSize += macro->size();
+    //    topCap -= macro->size();
+    //    hasAssigned[macro->extId()] = true;
+    //    isBot[macro->extId()] = false;
+    //  }
+    //}
+    //LOG_DEBUG("partition macros, top: {} bottom: {}", topMacroSize, bottomMacroSize);
 
     // enumerating net
     for(Net* net : pb->nets())
@@ -337,9 +338,17 @@ namespace replace
       }
       numTerms += (hasTopPin && hasBotPin);
     }
+    LOG_INFO("TopDie remaining capactiy: {}", topCap);
+    LOG_INFO("BotDie remaining capactiy: {}", botCap);
+    LOG_INFO("numTerms : {}", numTerms);
+    if (topCap < 0 || botCap < 0)
+    {
+      LOG_CRITICAL("Violated max utilization!!");
+      exit(0);
+    }
     pb->extraInstStor_.reserve(numTerms);
     pb->extraNetStor_.reserve(numTerms);
-    pb->extraPinStor_.reserve(2*numTerms);
+    pb->extraPinStor_.reserve(2 * numTerms);
     pb->insts_.reserve(pb->insts_.size() + numTerms);
     pb->nets_.reserve(pb->nets_.size() + numTerms);
     pb->pins_.reserve(pb->pins_.size() + 2 * numTerms);

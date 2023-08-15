@@ -69,13 +69,13 @@ namespace replace
     void setDensityCenterLocation(int dCx, int dCy);
     void setDensitySize(int dDx, int dDy);
 
-    void setDensityScale(float densityScale) { densityScale_ = densityScale; }
-    void setGradientX(float gradX) { gradientX_ = gradX; }
-    void setGradientY(float gradY) { gradientY_ = gradY; }
+    void setDensityScale(prec densityScale) { densityScale_ = densityScale; }
+    void setGradientX(prec gradX) { gradientX_ = gradX; }
+    void setGradientY(prec gradY) { gradientY_ = gradY; }
 
-    float gradientX() const { return gradientX_; }
-    float gradientY() const { return gradientY_; }
-    float densityScale() const { return densityScale_; }
+    prec gradientX() const { return gradientX_; }
+    prec gradientY() const { return gradientY_; }
+    prec densityScale() const { return densityScale_; }
 
     bool isInstance() const { return inst_ != nullptr; }
     bool isFiller() const { return inst_ == nullptr; }
@@ -97,9 +97,9 @@ namespace replace
     int dUx_;
     int dUy_;
 
-    float densityScale_;
-    float gradientX_;
-    float gradientY_;
+    prec densityScale_;
+    prec gradientX_;
+    prec gradientY_;
 
     // need to be stored for
     // MS replace
@@ -130,29 +130,29 @@ namespace replace
     // clear WA(Weighted Average) variables.
     void clearWaVars();
 
-    void addWaExpMinSumX(float waExpMinX) { waExpMinSumX_ += waExpMinX; }
-    void addWaXExpMinSumX(float waXExpMinX) { waXExpMinSumX_ += waXExpMinX; }
+    void addWaExpMinSumX(prec waExpMinX) { waExpMinSumX_ += waExpMinX; }
+    void addWaXExpMinSumX(prec waXExpMinX) { waXExpMinSumX_ += waXExpMinX; }
 
-    void addWaExpMinSumY(float waExpMinY) { waExpMinSumY_ += waExpMinY; }
-    void addWaYExpMinSumY(float waYExpMinY) { waYExpMinSumY_ += waYExpMinY; }
+    void addWaExpMinSumY(prec waExpMinY) { waExpMinSumY_ += waExpMinY; }
+    void addWaYExpMinSumY(prec waYExpMinY) { waYExpMinSumY_ += waYExpMinY; }
 
-    void addWaExpMaxSumX(float waExpMaxX) { waExpMaxSumX_ += waExpMaxX; }
-    void addWaXExpMaxSumX(float waXExpMaxX) { waXExpMaxSumX_ += waXExpMaxX; }
+    void addWaExpMaxSumX(prec waExpMaxX) { waExpMaxSumX_ += waExpMaxX; }
+    void addWaXExpMaxSumX(prec waXExpMaxX) { waXExpMaxSumX_ += waXExpMaxX; }
 
-    void addWaExpMaxSumY(float waExpMaxY) { waExpMaxSumY_ += waExpMaxY; }
-    void addWaYExpMaxSumY(float waYExpMaxY) { waYExpMaxSumY_ += waYExpMaxY; }
+    void addWaExpMaxSumY(prec waExpMaxY) { waExpMaxSumY_ += waExpMaxY; }
+    void addWaYExpMaxSumY(prec waYExpMaxY) { waYExpMaxSumY_ += waYExpMaxY; }
 
-    float waExpMinSumX() const { return waExpMinSumX_; }
-    float waXExpMinSumX() const { return waXExpMinSumX_; }
+    prec waExpMinSumX() const { return waExpMinSumX_; }
+    prec waXExpMinSumX() const { return waXExpMinSumX_; }
 
-    float waExpMinSumY() const { return waExpMinSumY_; }
-    float waYExpMinSumY() const { return waYExpMinSumY_; }
+    prec waExpMinSumY() const { return waExpMinSumY_; }
+    prec waYExpMinSumY() const { return waYExpMinSumY_; }
 
-    float waExpMaxSumX() const { return waExpMaxSumX_; }
-    float waXExpMaxSumX() const { return waXExpMaxSumX_; }
+    prec waExpMaxSumX() const { return waExpMaxSumX_; }
+    prec waXExpMaxSumX() const { return waXExpMaxSumX_; }
 
-    float waExpMaxSumY() const { return waExpMaxSumY_; }
-    float waYExpMaxSumY() const { return waYExpMaxSumY_; }
+    prec waExpMaxSumY() const { return waExpMaxSumY_; }
+    prec waYExpMaxSumY() const { return waYExpMaxSumY_; }
 
   private:
     Net* net_;
@@ -179,11 +179,11 @@ namespace replace
     // waExpMaxSumX_ : store sigma {exp(-x_i/gamma)}
     // waXExpMaxSumX_: store sigma {x_i*exp(-x_i/gamma)}
     //
-    float waExpMinSumX_;
-    float waXExpMinSumX_;
+    prec waExpMinSumX_;
+    prec waXExpMinSumX_;
 
-    float waExpMaxSumX_;
-    float waXExpMaxSumX_;
+    prec waExpMaxSumX_;
+    prec waXExpMaxSumX_;
 
     //
     // Y forces.
@@ -193,11 +193,11 @@ namespace replace
     // waExpMaxSumY_ : store sigma {exp(-y_i/gamma)}
     // waYExpMaxSumY_: store sigma {y_i*exp(-y_i/gamma)}
     //
-    float waExpMinSumY_;
-    float waYExpMinSumY_;
+    prec waExpMinSumY_;
+    prec waYExpMinSumY_;
 
-    float waExpMaxSumY_;
-    float waYExpMaxSumY_;
+    prec waExpMaxSumY_;
+    prec waYExpMaxSumY_;
   };
 
   class GPin
@@ -221,15 +221,15 @@ namespace replace
     // clear WA(Weighted Average) variables.
     void clearWaVars();
 
-    void setMaxExpSumX(float maxExpSumX);
-    void setMaxExpSumY(float maxExpSumY);
-    void setMinExpSumX(float minExpSumX);
-    void setMinExpSumY(float minExpSumY);
+    void setMaxExpSumX(prec maxExpSumX);
+    void setMaxExpSumY(prec maxExpSumY);
+    void setMinExpSumX(prec minExpSumX);
+    void setMinExpSumY(prec minExpSumY);
 
-    float maxExpSumX() const { return maxExpSumX_; }
-    float maxExpSumY() const { return maxExpSumY_; }
-    float minExpSumX() const { return minExpSumX_; }
-    float minExpSumY() const { return minExpSumY_; }
+    prec maxExpSumX() const { return maxExpSumX_; }
+    prec maxExpSumY() const { return maxExpSumY_; }
+    prec minExpSumX() const { return minExpSumX_; }
+    prec minExpSumY() const { return minExpSumY_; }
 
     bool hasMaxExpSumX() const { return (hasMaxExpSumX_ == 1); }
     bool hasMaxExpSumY() const { return (hasMaxExpSumY_ == 1); }
@@ -257,11 +257,11 @@ namespace replace
     // minExpSum_: holds exp(-x_i/gamma)
     // the x_i is equal to cx_ variable.
     //
-    float maxExpSumX_;
-    float maxExpSumY_;
+    prec maxExpSumX_;
+    prec maxExpSumY_;
 
-    float minExpSumX_;
-    float minExpSumY_;
+    prec minExpSumX_;
+    prec minExpSumY_;
 
     // flag variables
     //
@@ -277,7 +277,7 @@ namespace replace
   {
   public:
     Bin();
-    Bin(int x, int y, int lx, int ly, int ux, int uy, float targetDensity);
+    Bin(int x, int y, int lx, int ly, int ux, int uy, prec targetDensity);
     ~Bin() = default;
 
     int x() const { return x_; }
@@ -292,17 +292,17 @@ namespace replace
     int dx() const { return (ux_ - lx_); }
     int dy() const { return (uy_ - ly_); }
 
-    float electroPhi() const { return electroPhi_; }
-    float electroForceX() const { return electroForceX_; }
-    float electroForceY() const { return electroForceY_; }
-    float targetDensity() const { return targetDensity_; }
-    float density() const { return density_; }
+    prec electroPhi() const { return electroPhi_; }
+    prec electroForceX() const { return electroForceX_; }
+    prec electroForceY() const { return electroForceY_; }
+    prec targetDensity() const { return targetDensity_; }
+    prec density() const { return density_; }
 
-    void setDensity(float density) { density_ = density; }
-    void setTargetDensity(float density) { targetDensity_ = density; }
-    void setElectroForceX(float force) { electroForceX_ = force; }
-    void setElectroForceY(float force) { electroForceY_ = force; }
-    void setElectroPhi(float phi) { electroPhi_ = phi; }
+    void setDensity(prec density) { density_ = density; }
+    void setTargetDensity(prec density) { targetDensity_ = density; }
+    void setElectroForceX(prec force) { electroForceX_ = force; }
+    void setElectroForceY(prec force) { electroForceY_ = force; }
+    void setElectroPhi(prec phi) { electroPhi_ = phi; }
 
     void setNonPlaceArea(int64_t area) { nonPlaceArea_ = area; }
     void setInstPlacedArea(int64_t area) { instPlacedArea_ = area; }
@@ -332,11 +332,11 @@ namespace replace
     int64_t instPlacedArea_;
     int64_t fillerArea_;
 
-    float density_;
-    float targetDensity_; // will enable bin-wise density screening
-    float electroPhi_;
-    float electroForceX_;
-    float electroForceY_;
+    prec density_;
+    prec targetDensity_; // will enable bin-wise density screening
+    prec electroPhi_;
+    prec electroForceX_;
+    prec electroForceY_;
   };
 
   //
@@ -357,7 +357,7 @@ namespace replace
     void setDie(Die *die);
     void setBinCntX(int binCntX);
     void setBinCntY(int binCntY);
-    void setTargetDensity(float density);
+    void setTargetDensity(prec density);
     void updateBinsGCellDensityArea();
 
     void initBins();
@@ -389,7 +389,7 @@ namespace replace
     const std::vector<Bin *> &bins() const { return bins_; }
     Die *die() const { return die_; }
     const std::vector<GCell *> gCells() const { return gCells_; }
-    float sumPhi() const { return sumPhi_; }
+    prec sumPhi() const { return sumPhi_; }
 
     void addGCell(GCell *gc);
     void updateDensityForceBin();
@@ -411,11 +411,11 @@ namespace replace
     int binCntY_;
     int binSizeX_;
     int binSizeY_;
-    float targetDensity_;
+    prec targetDensity_;
     int64_t overflowArea_;
     bool isSetBinCntX_;
     bool isSetBinCntY_;
-    float sumPhi_;
+    prec sumPhi_;
 
     Die *die_;
     std::vector<GCell *> gCells_;
@@ -431,12 +431,12 @@ namespace replace
   class NesterovBaseVars
   {
   public:
-    float targetDensity;
-    float minAvgCut;
-    float maxAvgCut;
+    prec targetDensity;
+    prec minAvgCut;
+    prec maxAvgCut;
     int binCntX;
     int binCntY;
-    float minWireLengthForceBar;
+    prec minWireLengthForceBar;
     unsigned char isSetBinCntX : 1;
     unsigned char isSetBinCntY : 1;
 
@@ -460,33 +460,33 @@ namespace replace
     const std::vector<BinGrid *> &binGrids() const { return binGrids_; }
     const std::shared_ptr<PlacerBase> &pb() const { return pb_; }
 
-    //
-    // placerBase To NesterovBase functions
-    //
-    GCell *placerToNesterov(Instance *inst);
-    GPin *placerToNesterov(Pin *pin);
-    GNet *placerToNesterov(Net *net);
-    BinGrid *placerToNesterov(Die *die);
+    ////
+    //// placerBase To NesterovBase functions
+    ////
+    //GCell *placerToNesterov(Instance *inst);
+    //GPin *placerToNesterov(Pin *pin);
+    //GNet *placerToNesterov(Net *net);
+    //BinGrid *placerToNesterov(Die *die);
 
     // update gCells with lx, ly
     void updateGCellLocation(
-        std::vector<FloatPoint> &points);
+        std::vector<Point> &points);
 
     // update gCells with cx, cy
     void updateGCellCenterLocation(
-        std::vector<FloatPoint> &points);
+        std::vector<Point> &points);
 
     void updateGCellDensityCenterLocation(
-        std::vector<FloatPoint> &points);
+        std::vector<Point> &points);
 
     int64_t overflowArea() const;
-    float sumPhi() const;
-    float targetDensity() const;
+    prec sumPhi() const;
+    prec targetDensity() const;
 
     void updateDensityCoordiLayoutInside(GCell *gcell);
 
-    float getDensityCoordiLayoutInsideX(GCell *gCell, float cx);
-    float getDensityCoordiLayoutInsideY(GCell *gCell, float cy);
+    prec getDensityCoordiLayoutInsideX(GCell *gCell, prec cx);
+    prec getDensityCoordiLayoutInsideY(GCell *gCell, prec cy);
 
     // WL force update based on WeightedAverage model
     // wlCoeffX : WireLengthCoefficient for X.
@@ -497,24 +497,24 @@ namespace replace
     // Gamma is described in the ePlaceMS paper.
     //
     void updateWireLengthForceWA(
-        float wlCoeffX,
-        float wlCoeffY);
+        prec wlCoeffX,
+        prec wlCoeffY);
 
-    FloatPoint getWireLengthGradientPinWA(
-        GPin *gPin, float wlCoeffX, float wlCoeffY);
+    Point getWireLengthGradientPinWA(
+        GPin *gPin, prec wlCoeffX, prec wlCoeffY);
 
-    FloatPoint getWireLengthGradientWA(
-        GCell *gCell, float wlCoeffX, float wlCoeffY);
+    Point getWireLengthGradientWA(
+        GCell *gCell, prec wlCoeffX, prec wlCoeffY);
 
     // for preconditioner
-    FloatPoint getWireLengthPreconditioner(GCell *gCell);
+    Point getWireLengthPreconditioner(GCell *gCell);
 
-    FloatPoint getDensityPreconditioner(GCell *gCell);
+    Point getDensityPreconditioner(GCell *gCell);
 
-    FloatPoint getDensityGradient(GCell *gCell);
+    Point getDensityGradient(GCell *gCell);
 
     int64_t hpwl();
-    float overflow() const;
+    prec overflow() const;
 
     // update electrostatic forces within Bin
     void updateDensityForceBin();
@@ -541,12 +541,12 @@ namespace replace
     std::vector<GNet *> gNets_;
     std::vector<GPin *> gPins_;
 
-    std::unordered_map<Instance *, GCell *> gCellMap_;
-    std::unordered_map<Pin *, GPin *> gPinMap_;
-    std::unordered_map<Net *, GNet *> gNetMap_;
-    std::unordered_map<Die *, BinGrid *> binGridMap_;
+    //std::unordered_map<Instance *, GCell *> gCellMap_;
+    //std::unordered_map<Pin *, GPin *> gPinMap_;
+    //std::unordered_map<Net *, GNet *> gNetMap_;
+    //std::unordered_map<Die *, BinGrid *> binGridMap_;
 
-    float sumPhi_;
+    prec sumPhi_;
   };
 
 }

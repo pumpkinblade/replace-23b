@@ -55,7 +55,6 @@ set(PLACE_SRC
   src/fftsg3d.cpp
   src/nesterovBase.cpp
   src/nesterovPlace.cpp
-  src/point.cpp
   src/plot.cpp
   src/technology.cpp
   src/23bParser.cpp

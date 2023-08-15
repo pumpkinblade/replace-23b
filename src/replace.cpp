@@ -9,6 +9,7 @@
 #include <memory>
 #include "log.h"
 #include "fft.h"
+#include "plot.h"
 
 namespace replace
 {
@@ -114,8 +115,9 @@ namespace replace
     npVars.targetOverflow = overflow_;
     npVars.maxNesterovIter = nesterovPlaceMaxIter_;
 
-    std::unique_ptr<NesterovPlace> np(new NesterovPlace(npVars, pb_, nb));
-    np->doNesterovPlace(placename);
+    NesterovPlace np(npVars, nb);
+    np.init();
+    np.doNesterovPlace(placename);
   }
 
   void Replace::doAbacusLegalization()
