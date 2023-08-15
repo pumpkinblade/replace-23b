@@ -10,7 +10,6 @@
 #include "partitioner.h"
 #include "terminalModifier.h"
 #include "outputWriter.h"
-// #include "dreamLegalizer.h"
 #include "abaxLegalizer.h"
 
 using namespace replace;

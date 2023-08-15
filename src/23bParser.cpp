@@ -332,7 +332,6 @@ namespace replace
           int offsetCx = pinDesc.x - cellDesc->sizeX / 2;
           int offsetCy = pinDesc.y - cellDesc->sizeY / 2;
           tech->pinStor_.emplace_back(pinId, offsetCx, offsetCy);
-          //tech->pinStor_.emplace_back(pinId, pinDesc.x, pinDesc.y);
           cell->pins_[pinId] = &tech->pinStor_.back();
         }
       }

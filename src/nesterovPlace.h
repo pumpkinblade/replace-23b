@@ -104,7 +104,7 @@ private:
 
   // phi is described in ePlace paper.
   double sumPhi_;
-  double sumOverflow_;
+  prec sumOverflow_;
 
   // half-parameter-wire-length
   double prevHpwl_;

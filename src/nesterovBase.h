@@ -376,7 +376,7 @@ namespace replace
     const std::vector<Bin *> &bins() const { return bins_; }
     Die *die() const { return die_; }
     const std::vector<GCell *> gCells() const { return gCells_; }
-    prec sumPhi() const { return sumPhi_; }
+    double sumPhi() const { return sumPhi_; }
 
     void addGCell(GCell *gc);
     void updateDensityForceBin();
@@ -410,13 +410,13 @@ namespace replace
     prec binSizeY_;
 
     prec targetDensity_;
-    prec sumPhi_;
-    prec overflowArea_;
+    double sumPhi_;
+    double overflowArea_;
 
     int placeInstCnt_;
-    prec placeStdCellArea_;
-    prec placeMacroArea_;
-    prec fixedInstArea_;
+    double placeStdCellArea_;
+    double placeMacroArea_;
+    double fixedInstArea_;
   };
 
   class NesterovBaseVars
@@ -483,7 +483,7 @@ namespace replace
 
     Point getDensityGradient(GCell *gCell);
 
-    prec hpwl();
+    double hpwl();
     prec overflow() const;
 
     // update electrostatic forces within Bin

@@ -258,7 +258,7 @@ NesterovPlace::doNesterovPlace(string placename) {
 
   // divergence detection
   prec minSumOverflow = 1e30;
-  prec hpwlWithMinSumOverflow = 1e30;
+  double hpwlWithMinSumOverflow = 1e30;
 
   // dynamic adjustment of max_phi_coef
   bool isMaxPhiCoefChanged = false;

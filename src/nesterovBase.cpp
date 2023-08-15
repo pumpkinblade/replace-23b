@@ -409,7 +409,9 @@ void BinGrid::updateBinsNonPlaceArea()
           // target density. 
           // See MS-replace paper
           //
-          bin->addNonPlaceArea(getOverlapArea(bin, inst) * bin->targetDensity());
+          double overlap = getOverlapArea(bin, inst);
+          overlap *= bin->targetDensity();
+          bin->addNonPlaceArea(static_cast<prec>(overlap));
         }
       }
     }
@@ -448,7 +450,7 @@ void BinGrid::updateBinsGCellDensityArea()
             Bin* bin = bins_[j * binCntX_ + i];
             double overlapArea = getOverlapDensityArea(bin, cell);
             overlapArea *= cell->densityScale() * bin->targetDensity();
-            bin->addInstPlacedArea(overlapArea);
+            bin->addInstPlacedArea(static_cast<prec>(overlapArea));
           }
         }
       }
@@ -462,7 +464,7 @@ void BinGrid::updateBinsGCellDensityArea()
             Bin* bin = bins_[j * binCntX_ + i];
             double overlapArea = getOverlapDensityArea(bin, cell);
             overlapArea *= cell->densityScale();
-            bin->addInstPlacedArea(overlapArea); 
+            bin->addInstPlacedArea(static_cast<prec>(overlapArea));
           }
         }
       }
@@ -476,7 +478,7 @@ void BinGrid::updateBinsGCellDensityArea()
           Bin* bin = bins_[j * binCntX_ + i];
           double overlapArea = getOverlapDensityArea(bin, cell);
           overlapArea *= cell->densityScale();
-          bin->addFillerArea(overlapArea);
+          bin->addFillerArea(static_cast<prec>(overlapArea));
         }
       }
     }
@@ -571,7 +573,7 @@ void BinGrid::updateGCellDensityScaleAndSize()
     if(gCell->dx() < REPLACE_SQRT2 * binSizeX_)
     {
       scaleX = static_cast<prec>(gCell->dx()) / static_cast<prec>(REPLACE_SQRT2 * binSizeX_);
-      densitySizeX = REPLACE_SQRT2 * static_cast<prec>(binSizeX_);
+      densitySizeX = static_cast<prec>(REPLACE_SQRT2 * binSizeX_);
     }
     else
     {
@@ -582,7 +584,7 @@ void BinGrid::updateGCellDensityScaleAndSize()
     if(gCell->dy() < REPLACE_SQRT2 * binSizeY_)
     {
       scaleY = static_cast<prec>(gCell->dy()) / static_cast<prec>(REPLACE_SQRT2 * binSizeY_);
-      densitySizeY = REPLACE_SQRT2 * static_cast<prec>(binSizeY_);
+      densitySizeY = static_cast<prec>(REPLACE_SQRT2 * binSizeY_);
     }
     else
     {
@@ -1178,9 +1180,9 @@ void NesterovBase::updateDensityForceBin()
   }
 }
 
-prec NesterovBase::hpwl()
+double NesterovBase::hpwl()
 {
-  prec hpwl = 0;
+  double hpwl = 0;
   for(auto& gNet : gNets_)
   {
     gNet->updateBox();
