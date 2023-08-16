@@ -60,21 +60,7 @@ namespace replace
     void setSize(prec dx, prec dy);
 
     prec densityScale() const { return densityScale_; }
-    //prec densityGradientX() const { return densityGradX_; }
-    //prec densityGradientY() const { return densityGradY_; }
-    //prec netGradientX() const { return netGradX_; }
-    //prec netGradientY() const { return netGradY_; }
-
     void setDensityScale(prec densityScale) { densityScale_ = densityScale; }
-    //void setDensityGradientX(prec grad) { densityGradX_ = grad; }
-    //void setDensityGradientY(prec grad) { densityGradY_ = grad; }
-    //void setNetGradientX(prec grad) { netGradX_ = grad; }
-    //void setNetGradientY(prec grad) { netGradX_ = grad; }
-
-    void setGradientX(prec gradX) { gradX_ = gradX; }
-    void setGradientY(prec gradY) { gradY_ = gradY; }
-    prec gradientX() const { return gradX_; }
-    prec gradientY() const { return gradY_; }
 
     BinGrid* binGrid() const { return bg_; }
     void setBinGrid(BinGrid* bg) { bg_ = bg; }
@@ -91,13 +77,6 @@ namespace replace
     prec uy_;
 
     prec densityScale_;
-    //prec densityGradX_;
-    //prec densityGradY_;
-    //prec netGradX_;
-    //prec netGradY_;
-
-    prec gradX_;
-    prec gradY_;
     BinGrid* bg_;
   };
 

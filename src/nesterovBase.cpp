@@ -26,7 +26,7 @@ static prec fastExp(prec exp);
 GCell::GCell() 
     : inst_(nullptr), isMacro_(false),
       lx_(0), ly_(0), ux_(0), uy_(0),
-      densityScale_(0), gradX_(0), gradY_(0)
+      densityScale_(0)
 {
 }
 

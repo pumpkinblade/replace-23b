@@ -13,7 +13,9 @@ namespace replace
   // Instance
 
   Instance::Instance()
-      : lx_(0), ly_(0), ux_(0), uy_(0), extId_(INT_MIN)
+      : lx_(0), ly_(0), ux_(0), uy_(0), 
+        isMacro_(false), isFixed_(false),
+        libCellId_(-1), extId_(-1)
   {
   }
 

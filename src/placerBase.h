@@ -314,6 +314,8 @@ namespace replace
     std::vector<Instance> extraInstStor_;
     std::vector<Pin> extraPinStor_;
     std::vector<Net> extraNetStor_;
+
+    // cheat: Save memory. After partition, it will be clear.
     std::vector<std::string> netNameStor_;
 
     std::vector<Die *> dies_;
