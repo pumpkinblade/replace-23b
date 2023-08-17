@@ -1,4 +1,5 @@
 #include "parser.h"
+#include "placerBase.h"
 #include "log.h"
 #include <fstream>
 #include <memory>
@@ -70,6 +71,11 @@ namespace replace
   {
     std::ifstream in(txtFilename);
     std::string token;
+    if(in.bad())
+    {
+      LOG_CRITICAL("Couldn't open file `{}`", txtFilename);
+      exit(-1);
+    }
 
     while (!(in >> token).eof())
     {
@@ -273,39 +279,62 @@ namespace replace
     txtToDesc(txtFilename, &desc);
     LOG_TRACE("Parse txt file end");
 
+    // Init libCellId & libPinId
+    std::unordered_map<std::string, int> libCellNameIdMap;
+    std::vector<std::unordered_map<std::string, int>> libPinNameIdMaps;
+    {
+      TECH_DESC* techDesc = &desc.techs.front();
+      libCellNameIdMap.reserve(techDesc->cells.size());
+      libPinNameIdMaps.reserve(techDesc->cells.size());
+      for(int i = 0; i < techDesc->cells.size(); i++)
+      {
+        LIBCELL_DESC* cellDesc = &techDesc->cells[i];
+        libCellNameIdMap.emplace(cellDesc->name, i);
+        libPinNameIdMaps.emplace_back();
+        for(int j = 0; j < cellDesc->pins.size(); j++)
+        {
+          libPinNameIdMaps[i].emplace(cellDesc->pins[j].name, j);
+        }
+      }
+    }
+
     // Process technology
     pb->techStor_.reserve(desc.techs.size());
     for (size_t i = 0; i < desc.techs.size(); i++)
     {
-      auto tech = std::make_shared<Technology>(desc.techs[i].name);
+      pb->techStor_.emplace_back(desc.techs[i].name);
+      Technology* tech = &pb->techStor_.back();
+      pb->techs_.push_back(tech);
+      pb->techNameMap_.emplace(tech->name(), tech);
+
       TECH_DESC *techDesc = &desc.techs[i];
       size_t numPins = 0;
       size_t numCells = techDesc->cells.size();
       for (const auto &cell : desc.techs[i].cells)
         numPins += cell.pins.size();
       tech->cellStor_.reserve(numCells);
+      tech->cells_.resize(numCells);
       tech->pinStor_.reserve(numPins);
 
       for (size_t j = 0; j < numCells; j++)
       {
         LIBCELL_DESC *cellDesc = &techDesc->cells[j];
-        tech->cellStor_.emplace_back(cellDesc->name, cellDesc->sizeX, cellDesc->sizeY, cellDesc->isMacro);
+        int cellId = libCellNameIdMap.at(cellDesc->name);
+        tech->cellStor_.emplace_back(cellId, cellDesc->sizeX, cellDesc->sizeY, cellDesc->isMacro);
         LibCell *cell = &tech->cellStor_.back();
+        cell->pins_.resize(cellDesc->pins.size());
 
-        tech->cellNameMap_.emplace(cell->name(), cell);
-        tech->cells_.push_back(cell);
-        tech->siteSizeX_ = tech->siteSizeY_ = 0;
+        tech->cells_[cellId] = cell;
 
         for (const auto &pinDesc : cellDesc->pins)
         {
-          tech->pinStor_.emplace_back(pinDesc.name, pinDesc.x, pinDesc.y);
-          cell->addLibPin(&tech->pinStor_.back());
+          int pinId = libPinNameIdMaps[cellId].at(pinDesc.name);
+          int offsetCx = pinDesc.x - cellDesc->sizeX / 2;
+          int offsetCy = pinDesc.y - cellDesc->sizeY / 2;
+          tech->pinStor_.emplace_back(pinId, offsetCx, offsetCy);
+          cell->pins_[pinId] = &tech->pinStor_.back();
         }
       }
-
-      pb->techStor_.push_back(tech);
-      pb->techs_.push_back(tech.get());
-      pb->techNameMap_.emplace(tech->name(), tech.get());
     }
 
     // Process dies
@@ -352,75 +381,77 @@ namespace replace
     pb->termSpace_ = desc.termSpace;
     pb->termCost_ = desc.termCost;
 
-    // extra space for terminal
-    int extraInsts = static_cast<int>(desc.nets.size());
-    int extraNets = static_cast<int>(desc.nets.size());
-    int extraPins = static_cast<int>(2 * desc.nets.size());
     // Process netlist
-    pb->instStor_.reserve(desc.insts.size()+extraInsts);
-    pb->insts_.reserve(desc.insts.size()+extraInsts);
-    pb->netStor_.reserve(desc.nets.size()+extraNets);
-    pb->nets_.reserve(desc.nets.size()+extraNets);
+    pb->instStor_.reserve(desc.insts.size());
+    pb->insts_.reserve(desc.insts.size());
+    pb->netStor_.reserve(desc.nets.size());
+    pb->nets_.reserve(desc.nets.size());
+    pb->netNameStor_.reserve(desc.nets.size());
     size_t numPins = 0;
     for(const auto& netDesc : desc.nets)
     {
       numPins += netDesc.pins.size();
     }
-    pb->pinStor_.reserve(numPins+extraPins);
-    pb->pins_.reserve(numPins+extraPins);
+    pb->pinStor_.reserve(numPins);
+    pb->pins_.reserve(numPins);
 
     // Process inst
+    std::unordered_map<std::string, Instance*> instNameMap;
     for (const auto& instDesc : desc.insts)
     {
       pb->instStor_.emplace_back();
+      Instance* inst = &pb->instStor_.back();
+      pb->insts_.push_back(inst);
+      pb->die("top")->addInstance(inst);
+      instNameMap.emplace(instDesc.name, inst);
+
       // find libcell
       // assume than all insts are on top die
-      LibCell* libcell = pb->die("top")->tech()->libCell(instDesc.cellName);
+      int libcellId = libCellNameIdMap[instDesc.cellName];
+      LibCell* libcell = pb->die("top")->tech()->libCell(libcellId);
 
       // inst init
-      pb->instStor_.back().setName(instDesc.name);
-      pb->instStor_.back().setLibCellName(instDesc.cellName);
-      pb->instStor_.back().setFixed(false);
-      pb->instStor_.back().setMacro(libcell->isMacro());
+      inst->setName(instDesc.name);
+      inst->setLibCellId(libcellId);
+      inst->setFixed(false);
+      inst->setMacro(libcell->isMacro());
       int lx = pb->die("top")->coreLx();
       int ly = pb->die("top")->coreLy();
-      pb->instStor_.back().setBox(lx, ly, lx + libcell->sizeX(), ly + libcell->sizeY());
-
-      pb->instNameMap_.emplace(instDesc.name, &pb->instStor_.back());
-      pb->insts_.push_back(&pb->instStor_.back());
-      pb->die("top")->addInstance(&pb->instStor_.back());
-      assert(&pb->instStor_[0] == pb->insts_[0]);
+      inst->setBox(lx, ly, lx + libcell->sizeX(), ly + libcell->sizeY());
     }
     
     // Process net
-    pb->netStor_.reserve(desc.nets.size()+extraNets);
     for (const auto& netDesc : desc.nets)
     {
       pb->netStor_.emplace_back();
-      pb->netStor_.back().setName(netDesc.name);
-      pb->netNameMap_.emplace(netDesc.name, &pb->netStor_.back());
-      pb->nets_.push_back(&pb->netStor_.back());
+      pb->netNameStor_.emplace_back(netDesc.name);
+      Net* net = &pb->netStor_.back();
+      pb->nets_.push_back(net);
+
       for (const auto& pinDesc : netDesc.pins)
       {
         // find instance
-        Instance* inst = pb->inst(pinDesc.instName);
+        Instance* inst = instNameMap.at(pinDesc.instName);
         // find libcell & libpin
-        LibCell* libcell = pb->die("top")->tech()->libCell(inst->libCellName());
-        LibPin* libpin = libcell->libPin(pinDesc.pinName);
+        int libCellId = inst->libCellId();
+        int libPinId = libPinNameIdMaps[libCellId].at(pinDesc.pinName);
+        LibCell* libcell = pb->die("top")->tech()->libCell(libCellId);
+        LibPin* libpin = libcell->libPin(libPinId);
 
         // add pin
         pb->pinStor_.emplace_back();
-        pb->pinStor_.back().setName(pinDesc.pinName);
-        pb->pinStor_.back().setInstance(inst);
-        pb->pinStor_.back().setNet(&pb->netStor_.back());
-        pb->pinStor_.back().updateLocation(inst, libpin->x(), libpin->y());
-        pb->pins_.push_back(&pb->pinStor_.back());
+        Pin* pin = &pb->pinStor_.back();
+        pb->pins_.push_back(pin);
+        pin->setLibPinId(libPinId);
+        pin->setInstance(inst);
+        pin->setNet(net);
+        pin->updateLocation(inst, libpin->x(), libpin->y());
 
         // assign inst & net
-        pb->netStor_.back().addPin(&pb->pinStor_.back());
-        inst->addPin(&pb->pinStor_.back());
+        net->addPin(pin);
+        inst->addPin(pin);
       }
-      pb->netStor_.back().updateBox();
+      net->updateBox();
     }
 
     return pb;

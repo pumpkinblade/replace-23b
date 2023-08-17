@@ -1,0 +1,293 @@
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
++                    _  __     _   _       ____                               + 
++                   | |/ /__ _| | | |_   _|  _ \ __ _ _ __                    + 
++                   | ' // _` | |_| | | | | |_) / _` | '__|                   + 
++                   | . \ (_| |  _  | |_| |  __/ (_| | |                      + 
++                   |_|\_\__,_|_| |_|\__, |_|   \__,_|_|                      + 
++                                    |___/                                    + 
++                 Karlsruhe Hypergraph Partitioning Framework                 + 
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
+
+Generic Options:
+  --help                                show help message
+  -v [ --verbose ] <bool>               Verbose main partitioning output
+  --vip <bool>                          Verbose initial partitioning output
+  -q [ --quiet ] <bool>                 Quiet Mode: Completely suppress console output
+  --time-limit <int>                    Sets a time limit in seconds. default: disabled. We stop refinement once a large part (default 99%) is 
+                                        exceeded.It is never triggered before an initial partition is available, so you should still provide an 
+                                        external timeout (only now you might get a solution).
+  --time-limit-factor <double>          Controls the refinement time limit. default: 0.99
+  --time-limit-check-frequency <int>    After how many uncontractions the soft time limit shall be checked. default 10000
+  --time-limited-repeated-partitioning <bool>
+                                        Use repeated partitioning with the strict time limit set using --time-limit. This also uses the soft time 
+                                        limit.
+  -s [ --sp-process ] <bool>            Summarize partitioning results in RESULT line compatible with sqlplottools 
+                                        (https://github.com/bingmann/sqlplottools)
+  -w [ --write-partition ] <bool>       Write output partition. Default: false
+
+Required Options:
+  -h [ --hypergraph ] <string>          Hypergraph filename
+  -k [ --blocks ] <int>                 Number of blocks
+  -e [ --epsilon ] <double>             Imbalance parameter epsilon
+
+Preset Options:
+  -p [ --preset ] <string>              Context Presets (see config directory):
+                                         - km1_direct_kway_sea18.ini
+                                         - km1_direct_kway_sea17.ini
+                                         - direct_kway_km1_alenex17.ini
+                                         - rb_cut_alenex16.ini
+                                         - <path-to-custom-ini-file>
+
+General Options:
+  --seed <int>                          Seed for random number generator 
+                                        (default: -1)
+  -f [ --fixed-vertices ] <string>      Fixed vertex filename
+  --part-file <string>                  Input Partition filename. The input partition is then refined using direct k-way V-cycles.
+  --cmaxnet <uint32_t>                  Hyperedges larger than cmaxnet are ignored during partitioning process.
+  --vcycles <uint32_t>                  # V-cycle iterations for direct k-way partitioning
+  --use-individual-part-weights <bool>  # Use individual part weights specified with --partweights= option
+  --part-weights arg                    Individual target part weights
+  -o [ --objective ] <string>           Objective: 
+                                         - cut : cut-net metric 
+                                         - km1 : (lambda-1) metric
+  -m [ --mode ] <string>                Partitioning mode: 
+                                         - (recursive) bisection 
+                                         - (direct) k-way
+
+Preprocessing Options:
+  --p-enable-deduplication <bool>       Remove identical vertices and parallel nets before partitioning
+  --p-use-sparsifier <bool>             Use min-hash pin sparsifier before partitioning
+  --p-sparsifier-min-median-he-size <int>
+                                        Minimum median hyperedge size necessary for sparsifier application
+  --p-sparsifier-max-hyperedge-size <int>
+                                        Max hyperedge size allowed considered by sparsifier
+  --p-sparsifier-max-cluster-size <int> Max cluster size which is built by sparsifier
+  --p-sparsifier-min-cluster-size <int> Min cluster size which is built by sparsifier
+  --p-sparsifier-num-hash-func <int>    Number of hash functions
+  --p-sparsifier-combined-num-hash-func <int>
+                                        Number of combined hash functions
+  --p-detect-communities <bool>         Using louvain community detection for coarsening
+  --p-detect-communities-in-ip <bool>   Using louvain community detection for coarsening during initial partitioning
+  --p-max-louvain-pass-iterations <uint32_t>
+                                        Maximum number of iterations over all nodes of one louvain pass
+  --p-min-eps-improvement <long double> Minimum improvement of quality during a louvain pass which leads to further passes
+  --p-louvain-edge-weight <string>      Weights:
+                                         - hybrid 
+                                         - uniform
+                                         - non_uniform
+                                         - degree
+  --p-reuse-communities <bool>          Reuse the community structure identified in the first bisection for all other bisections.
+  --p-large-he-threshold <uint32_t>     For hypergraphs with a density < 2 and a maximum HE size greater than this threshold, we use non_uniform
+                                        instead of uniform edge weights in the bipartite graph representation for community detection. This was 
+                                        introduced since
+                                        we found some instances where the previous weighting scheme leads to poor community structures for instances
+                                        with low
+                                        density and power-law edge size distribution.
+  --p-smallest-maxnet-threshold <uint32_t>
+                                        No hyperedge whose size is smaller than this threshold is removed in the large hyperedge removal step (see 
+                                        p-maxnet-removal-factor)
+  --p-maxnet-removal-factor <double>    Hyperedges larger than max(|V| * (this factor), p-smallest-maxnet-threshold) are removed before 
+                                        partitioning.
+
+Coarsening Options:
+  --c-type <string>                     Coarsening Algorithm:
+                                         - ml_style
+                                         - heavy_full
+                                         - heavy_lazy
+  --c-s <double>                        The maximum weight of a vertex in the coarsest hypergraph H is:
+                                        (s * w(H)) / (t * k)
+                                        
+  --c-t <int>                           Coarsening stops when there are no more than t * k hypernodes left
+  --c-rating-score <string>             Rating function used to calculate scores for vertex pairs:
+                                        - heavy_edge
+  --c-rating-use-communities <bool>     Use community information during rating. If c-rating-use-communities=true ,
+                                        only neighbors belonging to the same community will be considered as contraction partner.
+  --c-rating-heavy_node_penalty <string>
+                                        Penalty function to discourage heavy vertices:
+                                        - multiplicative
+                                        - no_penalty
+  --c-rating-acceptance-criterion <string>
+                                        Acceptance/Tiebreaking criterion for contraction partners having the same score:
+                                        - best
+                                        - best_prefer_unmatched
+  --c-fixed-vertex-acceptance-criterion <string>
+                                        Acceptance criterion for fixed vertex contractions:
+                                        - free_vertex_only     : Allows (free, free) and (fixed, free)
+                                        - fixed_vertex_allowed : Allows (free, free), (fixed, free), and (fixed, fixed) 
+                                        - equivalent_vertices  : Allows (free, free), (fixed, fixed)
+
+Initial Partitioning Options:
+  --i-mode <string>                     IP mode: 
+                                         - (recursive) bisection  
+                                         - (direct) k-way
+  --i-technique <string>                IP Technique:
+                                         - flat
+                                         - (multi)level
+  --i-algo <string>                     Algorithm used to create initial partition: pool 
+  --i-bp-algorithm <string>             Bin packing algorithm:
+                                         - worst_fit
+                                         - first_fit(default: worst_fit)
+  --i-bp-early-restart <bool>           Enable early restart with prepacking of current bisection if infeasible(default: false)
+  --i-bp-late-restart <bool>            Enable late restart with prepacking of bisections, i.e. if the resulting partition is imbalanced(default: 
+                                        false)
+  --i-bp-heuristic-prepacking <bool>    Try a heuristic prepacking berfore using the one with balance guarantees(default: true)
+  --i-runs <uint32_t>                   # initial partition trials
+
+Initial Partitioning Coarsening Options:
+  --i-c-type <string>                   Coarsening Algorithm:
+                                         - ml_style
+                                         - heavy_full
+                                         - heavy_lazy
+  --i-c-s <double>                      The maximum weight of a vertex in the coarsest hypergraph H is:
+                                        (s * w(H)) / (t * k)
+                                        
+  --i-c-t <int>                         Coarsening stops when there are no more than t * k hypernodes left
+  --i-c-rating-score <string>           Rating function used to calculate scores for vertex pairs:
+                                        - heavy_edge
+  --i-c-rating-use-communities <bool>   Use community information during rating. If c-rating-use-communities=true ,
+                                        only neighbors belonging to the same community will be considered as contraction partner.
+  --i-c-rating-heavy_node_penalty <string>
+                                        Penalty function to discourage heavy vertices:
+                                        - multiplicative
+                                        - no_penalty
+  --i-c-rating-acceptance-criterion <string>
+                                        Acceptance/Tiebreaking criterion for contraction partners having the same score:
+                                        - best
+                                        - best_prefer_unmatched
+  --i-c-fixed-vertex-acceptance-criterion <string>
+                                        Acceptance criterion for fixed vertex contractions:
+                                        - free_vertex_only     : Allows (free, free) and (fixed, free)
+                                        - fixed_vertex_allowed : Allows (free, free), (fixed, free), and (fixed, fixed) 
+                                        - equivalent_vertices  : Allows (free, free), (fixed, fixed)
+
+Initial Partitioning Refinement Options:
+  --i-r-type <string>                   Local Search Algorithm:
+                                         - twoway_fm                    : 2-way FM algorithm         (recursive bisection : cut & km1)
+                                         - twoway_hyperflow_cutter      : 2-way HyperFlowCutter      (recursive bisection : cut & km1)
+                                         - twoway_fm_hyperflow_cutter   : 2-way FM + HyperFlowCutter (recursive bisection : cut & km1)
+                                         - kway_fm                      : k-way FM algorithm         (direct k-way        : cut)
+                                         - kway_fm_hyperflow_cutter     : k-way FM + HyperFlowCutter (direct k-way        : cut)
+                                         - kway_fm_km1                  : k-way FM algorithm         (direct k-way        : km1)
+                                         - kway_fm_hyperflow_cutter_km1 : k-way FM + HyperFlowCutter (direct k-way        : km1)
+                                         - kway_hyperflow_cutter        : k-way HyperFlowCutter      (direct k-way        : cut & km1)
+                                        
+  --i-r-runs <int>                      Max. # local search repetitions on each level
+                                        (no limit:-1)
+  --i-r-fm-stop <string>                Stopping Rule for Local Search: 
+                                         - adaptive_opt: ALENEX'17 adaptive stopping rule 
+                                         - simple:       ALENEX'16 threshold based on r-fm-stop-i
+  --i-r-fm-stop-i <uint32_t>            Max. # fruitless moves before stopping local search using simple stopping rule
+  --i-r-fm-stop-alpha <double>          Parameter alpha for adaptive stopping rule 
+                                        (infinity: -1)
+
+Initial Partitioning Flow Refinement Options:
+  --i-r-flow-execution-policy <string>  Flow Execution Modes:
+                                         - constant    : Execute flows in each level i with i = beta * j (j \in {1,2,...})
+                                         - exponential : Execute flows in each level i with i = 2^j (j \in {1,2,...})
+                                         - multilevel  : Execute flows in each level i with i = |V|/2^j (j \in {1,2,...})
+                                        (default: exponential)
+  --i-r-flow-beta <size_t>              Beta of CONSTANT flow execution policy 
+                                        (default: 128)
+
+HyperFlowCutter Refinement Options:
+  --i-r-hfc-size-constraint <string>    Size Constraints:
+                                         - mpw            : |N_0| <= max_part_weight[b0] * alpha 
+                                         - pw             : |N_0| <= |V_0| * alpha 
+                                         - mf-style       : |N_0| <= (1 + alpha * epsilon) * perfect_part_weight[b0] - |V_1|. Same as KaHyPar-MF. 
+                                        Default scaling is 16. 
+                                        (default: pw)
+  --i-r-hfc-scaling <double>            Scaling parameter for flow hypergraph sizes for HFC refinement. see size constraints for semantics.
+                                        (default: 0.2)
+  --i-r-hfc-distance-based-piercing <bool>
+                                        Preferably pierce vertices further away from the old cut 
+                                        (default: true)
+  --i-r-hfc-mbc <bool>                  Keep piercing after the first balanced partition to improve balance 
+                                        (default: true)
+
+Refinement Options:
+  --r-type <string>                     Local Search Algorithm:
+                                         - twoway_fm                    : 2-way FM algorithm         (recursive bisection : cut & km1)
+                                         - twoway_hyperflow_cutter      : 2-way HyperFlowCutter      (recursive bisection : cut & km1)
+                                         - twoway_fm_hyperflow_cutter   : 2-way FM + HyperFlowCutter (recursive bisection : cut & km1)
+                                         - kway_fm                      : k-way FM algorithm         (direct k-way        : cut)
+                                         - kway_fm_hyperflow_cutter     : k-way FM + HyperFlowCutter (direct k-way        : cut)
+                                         - kway_fm_km1                  : k-way FM algorithm         (direct k-way        : km1)
+                                         - kway_fm_hyperflow_cutter_km1 : k-way FM + HyperFlowCutter (direct k-way        : km1)
+                                         - kway_hyperflow_cutter        : k-way HyperFlowCutter      (direct k-way        : cut & km1)
+                                        
+  --r-runs <int>                        Max. # local search repetitions on each level
+                                        (no limit:-1)
+  --r-fm-stop <string>                  Stopping Rule for Local Search: 
+                                         - adaptive_opt: ALENEX'17 adaptive stopping rule 
+                                         - simple:       ALENEX'16 threshold based on r-fm-stop-i
+  --r-fm-stop-i <uint32_t>              Max. # fruitless moves before stopping local search using simple stopping rule
+  --r-fm-stop-alpha <double>            Parameter alpha for adaptive stopping rule 
+                                        (infinity: -1)
+
+Flow Refinement Options:
+  --r-flow-execution-policy <string>    Flow Execution Modes:
+                                         - constant    : Execute flows in each level i with i = beta * j (j \in {1,2,...})
+                                         - exponential : Execute flows in each level i with i = 2^j (j \in {1,2,...})
+                                         - multilevel  : Execute flows in each level i with i = |V|/2^j (j \in {1,2,...})
+                                        (default: exponential)
+  --r-flow-beta <size_t>                Beta of CONSTANT flow execution policy 
+                                        (default: 128)
+
+HyperFlowCutter Refinement Options:
+  --r-hfc-size-constraint <string>      Size Constraints:
+                                         - mpw            : |N_0| <= max_part_weight[b0] * alpha 
+                                         - pw             : |N_0| <= |V_0| * alpha 
+                                         - mf-style       : |N_0| <= (1 + alpha * epsilon) * perfect_part_weight[b0] - |V_1|. Same as KaHyPar-MF. 
+                                        Default scaling is 16. 
+                                        (default: pw)
+  --r-hfc-scaling <double>              Scaling parameter for flow hypergraph sizes for HFC refinement. see size constraints for semantics.
+                                        (default: 0.2)
+  --r-hfc-distance-based-piercing <bool>
+                                        Preferably pierce vertices further away from the old cut 
+                                        (default: true)
+  --r-hfc-mbc <bool>                    Keep piercing after the first balanced partition to improve balance 
+                                        (default: true)
+
+Evolutionary Options:
+  --partition-evolutionary <bool>       Use memetic algorithm for partitioning
+  --population-size <size_t>            Population Size for Evolutionary Partitioning
+                                        (default 10)
+  --gamma <double>                      The dampening factor for edge frequency
+                                        (default 0.5)
+  --replace-strategy <string>           Replacement Strategy for Population Management
+                                        - worst: new partitions replace the current worst partition in the population
+                                        - diverse: new partitions replace the most similar partition based on cut difference
+                                        - strong-diverse: new partitions replace the most similar partition based on connectivity difference
+                                        (for diverse/strong-diverse better partitions are not considered for replacement)
+                                        (default: strong-diverse)
+  --combine-strategy <string>           Combine Strategy to be used for a regular combine operation
+                                        - basic: takes two partitions and contracts nodes u & v only if they are in the same block for both 
+                                        partitions 
+                                        - with-edge-frequency: similar to basic, but the edge frequency information of the best 
+                                        "edge_frequency_amount" partitions is added top the rating
+                                        - edge-frequency: creating a new partition under consideration of the "edge_frequency_amount" best 
+                                        partitions for edge frequency
+                                        (default: basic)
+  --mutate-strategy <string>            Mutation Strategy for the mutation operation 
+                                        - new-initial-partitioning-vcycle: coarsening of a partition with completely new initial partitioning
+                                        - vcycle: a regular vcycle on an existing partition
+                                        (default: new-initial-partitioning-vcycle)
+  --diversify-interval <int>            The Frequency in which diversfication should be performed
+                                        (default: -1)(-1 disables)
+  --random-vcycles <bool>               Whether vcycle mutations should be randomized
+  --dynamic-population-size <bool>      Whether the population size should be determined by runtime
+                                        default: on)
+  --dynamic-population-time <float>     The amount of total runtime allocated for initial population
+                                        default: 0.15)
+  --random-combine <bool>               Whether random combines should be picked
+                                        default: off)
+  --unlimited-coarsening <bool>         Whether combine operations should not be limited in contraction
+                                        default: on)
+  --mutate-chance <float>               The Chance of a mutation being selected as operation
+                                        default: 0.5)
+  --edge-frequency-chance <float>       The Chance of a mutation being selected as operation
+                                        default: 0.5)
+
+write snapshot:
+  --snapshot-path <string>              Path for flow hypergraph snapshots. Default: None (don't write them)
+ 

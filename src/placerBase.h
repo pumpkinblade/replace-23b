@@ -3,9 +3,10 @@
 
 #include <vector>
 #include <unordered_map>
+#include <map>
 #include <memory>
-#include "technology.h"
 #include <cassert>
+#include "technology.h"
 
 namespace replace
 {
@@ -54,12 +55,11 @@ namespace replace
 
     void addPin(Pin *pin);
     const std::vector<Pin *> &pins() const { return pins_; }
-    Pin *pin(const std::string &name) const;
 
     const std::string &name() const { return name_; }
     void setName(const std::string &name) { name_ = name; }
-    const std::string &libCellName() const { return libCellName_; }
-    void setLibCellName(const std::string &libCellName) { libCellName_ = libCellName; }
+    int libCellId() const { return libCellId_; }
+    void setLibCellId(int id) { libCellId_ = id; }
 
   private:
     std::vector<Pin *> pins_;
@@ -75,8 +75,7 @@ namespace replace
 
     // For 23b
     std::string name_;
-    std::string libCellName_;
-    std::unordered_map<std::string, Pin *> pinNameMap_;
+    int libCellId_;
   };
 
   // A Pin belongs to one instance, can be connected to no more than one net,
@@ -116,8 +115,8 @@ namespace replace
     Instance *instance() const { return inst_; }
     Net *net() const { return net_; }
 
-    const std::string &name() const { return name_; }
-    void setName(const std::string &name) { name_ = name; }
+    int libPinId() const { return libPinId_; }
+    void setLibPinId(int id) { libPinId_ = id; }
 
   private:
     Instance *inst_;
@@ -142,7 +141,7 @@ namespace replace
     bool maxPinY_;
 
     // For 23b
-    std::string name_;
+    int libPinId_;
   };
 
   // Net can have name, a vector of pins,
@@ -171,18 +170,12 @@ namespace replace
     void addPin(Pin *pin);
     void removePin(Pin *pin);
 
-    const std::string &name() const { return name_; }
-    void setName(const std::string &name) { name_ = name; }
-
   private:
     std::vector<Pin *> pins_;
     int lx_;
     int ly_;
     int ux_;
     int uy_;
-
-    // for 23b
-    std::string name_;
   };
 
   // Die class containes shape info, row params, instances placed on it
@@ -229,11 +222,6 @@ namespace replace
     std::vector<Instance *> &insts() { return insts_; }
     void addInstance(Instance *inst);
     void removeInstance(Instance *inst);
-
-    // int64_t placeInstsArea() const { return placeStdcellsArea_ + placeMacrosArea_; }
-    // int64_t placeStdcellsArea() const { return placeStdcellsArea_; }
-    // int64_t placeMacrosArea() const { return placeMacrosArea_; }
-    // int64_t fixedInstsArea() const { return fixedInstsArea_; }
 
     const std::string &name() const { return name_; }
     void setName(const std::string &name) { name_ = name; }
@@ -283,24 +271,17 @@ namespace replace
     PlacerBase();
     ~PlacerBase() = default;
 
-    const std::vector<Instance *> &insts() const
-    {
-      // check whether first pointer is valid
-      assert(insts_[0] == &instStor_[0]);
-      return insts_;
-    }
-    const std::vector<Pin *> &pins() const { return pins_; }
-    const std::vector<Net *> &nets() const { return nets_; }
-    const std::vector<Die *> &dies() const { return dies_; }
-    const std::vector<Technology *> &techs() const { return techs_; }
+    const std::vector<Instance*>& insts() const { return insts_; }
+    const std::vector<Die*>& dies() const { return dies_; }
+    const std::vector<Technology*>& techs() const { return techs_; }
+    const std::vector<Net*>& nets() const { return nets_; }
+    const std::vector<Pin*>& pins() const { return pins_; }
 
-    int64_t hpwl() const;
+    int64_t hpwl();
     void printDebugInfo() const;
 
     // query object by name
-    Instance *inst(const std::string &name) const;
     Die *die(const std::string &name) const;
-    Net *net(const std::string &name) const;
     Technology *tech(const std::string &name) const;
 
     // terminal params
@@ -317,33 +298,33 @@ namespace replace
     void addNet(const Net &net);
 
   private:
-    void pushToInstsByType(bool isFixed, Instance &inst)
-    {
-    }
     // clean vector of pointers
     void cleanIPNs();
     // derive insts_, pins_ and nets_ from XXXStor_. Assuming vector is empty
     // before call this method
     void deriveIPNs();
-
   private:
     std::vector<Die> dieStor_;
     std::vector<Instance> instStor_;
     std::vector<Pin> pinStor_;
     std::vector<Net> netStor_;
+    std::vector<Technology> techStor_;
+
+    // For partition
+    std::vector<Instance> extraInstStor_;
+    std::vector<Pin> extraPinStor_;
+    std::vector<Net> extraNetStor_;
+
+    // cheat: Save memory. After partition, it will be clear.
+    std::vector<std::string> netNameStor_;
 
     std::vector<Die *> dies_;
     std::vector<Instance *> insts_;
     std::vector<Pin *> pins_;
     std::vector<Net *> nets_;
+    std::vector<Technology*> techs_;
 
-    // For 23b
-    std::vector<std::shared_ptr<Technology>> techStor_;
-    std::vector<Technology *> techs_;
-
-    std::unordered_map<std::string, Instance *> instNameMap_;
     std::unordered_map<std::string, Die *> dieNameMap_;
-    std::unordered_map<std::string, Net *> netNameMap_;
     std::unordered_map<std::string, Technology *> techNameMap_;
 
     int termSizeX_;
