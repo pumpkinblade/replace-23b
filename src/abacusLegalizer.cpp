@@ -247,11 +247,7 @@ namespace replace
         AbacusRow* rbest = nullptr;
 
         // find nearest row
-        AbacusRow tmp(cell.gpLx(), cell.gpLy(), 0.f, 0.f);
-        auto it = std::upper_bound(rows_.begin(), rows_.end(), tmp, 
-                                   [](const AbacusRow& left, const AbacusRow& right)
-                                   { return left.ly() < right.ly(); });
-        int idx = static_cast<int>(it - rows_.begin());
+        int idx = (static_cast<int>(cell.gpLy()) - die->coreLy()) / die->rowHeight();
         bool ascend = true;
         int step = 0;
         int touchBound = 0;

@@ -18,111 +18,98 @@ class NesterovPlaceVars {
   public:
   int maxNesterovIter;
   int maxBackTrack;
-  float initDensityPenalty; // INIT_LAMBDA
-  float initWireLengthCoef; // base_wcof
-  float targetOverflow; // overflow
-  float minPhiCoef; // pcof_min
-  float maxPhiCoef; // pcof_max
-  float minPreconditioner; // MIN_PRE
-  float initialPrevCoordiUpdateCoef; // z_ref_alpha
-  float referenceHpwl; // refDeltaHpwl
+  prec initDensityPenalty; // INIT_LAMBDA
+  prec initWireLengthCoef; // base_wcof
+  prec targetOverflow; // overflow
+  prec minPhiCoef; // pcof_min
+  prec maxPhiCoef; // pcof_max
+  prec minPreconditioner; // MIN_PRE
+  prec initialPrevCoordiUpdateCoef; // z_ref_alpha
+  prec referenceHpwl; // refDeltaHpwl
   NesterovPlaceVars();
 };
 
 class NesterovPlace {
 public:
   NesterovPlace();
-  NesterovPlace(NesterovPlaceVars npVars,
-      std::shared_ptr<PlacerBase> pb,
-      std::shared_ptr<NesterovBase> nb);
-  ~NesterovPlace();
+  NesterovPlace(NesterovPlaceVars npVars, std::shared_ptr<NesterovBase> nb);
+  ~NesterovPlace() = default;
 
+  void init();
   void doNesterovPlace(string placename = "");
 
-  void updateCoordi(
-      std::vector<FloatPoint>& coordi);
-  void updateBins();
-  void updateWireLength();
-
   void updateGradients(
-      std::vector<FloatPoint>& sumGrads,
-      std::vector<FloatPoint>& wireLengthGrads,
-      std::vector<FloatPoint>& densityGrads );
+      std::vector<Point>& sumGrads,
+      std::vector<Point>& wireLengthGrads,
+      std::vector<Point>& densityGrads );
 
-  void updateWireLengthCoef(float overflow);
+  void updateWireLengthCoef(prec overflow);
 
   void updateInitialPrevSLPCoordi();
 
-  float getStepLength(
-      std::vector<FloatPoint>& prevCoordi_,
-      std::vector<FloatPoint>& prevSumGrads_,
-      std::vector<FloatPoint>& curCoordi_,
-      std::vector<FloatPoint>& curSumGrads_ );
+  prec getStepLength(
+      std::vector<Point>& prevCoordi_,
+      std::vector<Point>& prevSumGrads_,
+      std::vector<Point>& curCoordi_,
+      std::vector<Point>& curSumGrads_ );
 
   void updateNextIter();
-  float getPhiCoef(float scaledDiffHpwl);
+  prec getPhiCoef(prec scaledDiffHpwl);
 
   void updatePlacerBase();
 
 private:
-  std::shared_ptr<PlacerBase> pb_;
   std::shared_ptr<NesterovBase> nb_;
   NesterovPlaceVars npVars_;
 
   // SLP is Step Length Prediction.
   //
   // y_st, y_dst, y_wdst, w_pdst
-  std::vector<FloatPoint> curSLPCoordi_;
-  std::vector<FloatPoint> curSLPWireLengthGrads_;
-  std::vector<FloatPoint> curSLPDensityGrads_;
-  std::vector<FloatPoint> curSLPSumGrads_;
+  std::vector<Point> curSLPCoordi_;
+  std::vector<Point> curSLPWireLengthGrads_;
+  std::vector<Point> curSLPDensityGrads_;
+  std::vector<Point> curSLPSumGrads_;
 
   // y0_st, y0_dst, y0_wdst, y0_pdst
-  std::vector<FloatPoint> nextSLPCoordi_;
-  std::vector<FloatPoint> nextSLPWireLengthGrads_;
-  std::vector<FloatPoint> nextSLPDensityGrads_;
-  std::vector<FloatPoint> nextSLPSumGrads_;
+  std::vector<Point> nextSLPCoordi_;
+  std::vector<Point> nextSLPWireLengthGrads_;
+  std::vector<Point> nextSLPDensityGrads_;
+  std::vector<Point> nextSLPSumGrads_;
 
   // z_st, z_dst, z_wdst, z_pdst
-  std::vector<FloatPoint> prevSLPCoordi_;
-  std::vector<FloatPoint> prevSLPWireLengthGrads_;
-  std::vector<FloatPoint> prevSLPDensityGrads_;
-  std::vector<FloatPoint> prevSLPSumGrads_;
+  std::vector<Point> prevSLPCoordi_;
+  std::vector<Point> prevSLPWireLengthGrads_;
+  std::vector<Point> prevSLPDensityGrads_;
+  std::vector<Point> prevSLPSumGrads_;
 
   // x_st and x0_st
-  std::vector<FloatPoint> curCoordi_;
-  std::vector<FloatPoint> nextCoordi_;
+  std::vector<Point> curCoordi_;
+  std::vector<Point> nextCoordi_;
 
-  float wireLengthGradSum_;
-  float densityGradSum_;
+  prec wireLengthGradSum_;
+  prec densityGradSum_;
 
   // alpha
-  float stepLength_;
+  prec stepLength_;
 
   // opt_phi_cof
-  float densityPenalty_;
+  prec densityPenalty_;
 
   // base_wcof
-  float baseWireLengthCoef_;
+  prec baseWireLengthCoef_;
 
   // wlen_cof
-  float wireLengthCoefX_;
-  float wireLengthCoefY_;
+  prec wireLengthCoefX_;
+  prec wireLengthCoefY_;
 
   // phi is described in ePlace paper.
-  float sumPhi_;
-  float sumOverflow_;
+  double sumPhi_;
+  prec sumOverflow_;
 
   // half-parameter-wire-length
-  int64_t prevHpwl_;
+  double prevHpwl_;
 
-  float isDiverged_;
-
-  float getWireLengthCoef(float overflow);
-
-  void init();
-  void reset();
-
+  prec isDiverged_;
 };
 }
 

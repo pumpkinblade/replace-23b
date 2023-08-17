@@ -9,6 +9,7 @@
 #include <memory>
 #include "log.h"
 #include "fft.h"
+#include "plot.h"
 
 namespace replace
 {
@@ -16,8 +17,7 @@ namespace replace
   using namespace std;
 
   Replace::Replace(float targetDensity)
-      : pb_(nullptr), nb_(nullptr),
-        ip_(nullptr), np_(nullptr), alg_(nullptr),
+      : pb_(nullptr), 
         initialPlaceMaxIter_(20),
         initialPlaceMinDiffLength_(1500),
         initialPlaceMaxSolverIter_(100),
@@ -82,8 +82,7 @@ namespace replace
     ipVars.incrementalPlaceMode = incrementalPlaceMode_;
 
     std::unique_ptr<InitialPlace> ip(new InitialPlace(ipVars, pb_));
-    ip_ = std::move(ip);
-    ip_->doBicgstabPlace();
+    ip->doBicgstabPlace();
   }
 
   void Replace::doNesterovPlace(string placename)
@@ -104,7 +103,7 @@ namespace replace
       nbVars.binCntY = binGridCntY_;
     }
 
-    nb_ = std::make_shared<NesterovBase>(nbVars, pb_);
+    std::shared_ptr<NesterovBase> nb = std::make_shared<NesterovBase>(nbVars, pb_);
 
     NesterovPlaceVars npVars;
 
@@ -116,10 +115,9 @@ namespace replace
     npVars.targetOverflow = overflow_;
     npVars.maxNesterovIter = nesterovPlaceMaxIter_;
 
-    std::unique_ptr<NesterovPlace> np(new NesterovPlace(npVars, pb_, nb_));
-    np_ = std::move(np);
-
-    np_->doNesterovPlace(placename);
+    NesterovPlace np(npVars, nb);
+    np.init();
+    np.doNesterovPlace(placename);
   }
 
   void Replace::doAbacusLegalization()
@@ -130,8 +128,8 @@ namespace replace
 
     // make_unique is C++14 std
     // alg_ = std::make_unique<AbacusLegalizer>(algVars, pb_);
-    alg_.reset(new AbacusLegalizer(algVars, pb_));
-    alg_->doLegalization();
+    AbacusLegalizer alg(algVars, pb_);
+    alg.doLegalization();
     LOG_TRACE("end Replace::doAbacusLegalization");
   }
 
@@ -142,21 +140,8 @@ namespace replace
     MacroLegalizerVars mlgVars;
     mlgVars.maxPostLegalizeIter = 10000;
 
-    mlg_.reset(new MacroLegalizer(mlgVars, pb_));
-    mlg_->doLegalization();
-
-    LOG_TRACE("end Replace::doMacorLegalization");
-  }
-
-  void Replace::doSAMacroLegalization()
-  {
-    LOG_TRACE("start Replace::doSAMacroLegalization");
-
-    MacroLegalizerVars mlgVars;
-    mlgVars.maxPostLegalizeIter = 1000;
-
-    mlg_.reset(new MacroLegalizer(mlgVars, pb_));
-    mlg_->doLegalization();
+    MacroLegalizer mlg(mlgVars, pb_);
+    mlg.doLegalization();
 
     LOG_TRACE("end Replace::doMacorLegalization");
   }

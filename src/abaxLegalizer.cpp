@@ -354,13 +354,9 @@ namespace replace
         int subrowIdxBest = -1;
 
         // find nearest row
-        AbaxRow tmp(0.f, static_cast<float>(inst->ly()), 0.f, 0.f);
-        auto it = std::upper_bound(rows_.begin(), rows_.end(), tmp, 
-                                   [](const AbaxRow& left, const AbaxRow& right)
-                                   { return left.ly() < right.ly(); });
-        int idx = static_cast<int>(it - rows_.begin());
+        int idx = (inst->ly() - die->coreLy()) / die->rowHeight();
 
-        bool ascend = true;
+        bool ascend = false;
         int step = 0;
         int touchBound = 0;
         while(true)

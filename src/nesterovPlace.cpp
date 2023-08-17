@@ -9,11 +9,11 @@ using namespace std;
 
 namespace replace {
 
-static float
-getDistance(vector<FloatPoint>& a, vector<FloatPoint>& b);
+static prec
+getDistance(vector<Point>& a, vector<Point>& b);
 
-static float
-getSecondNorm(vector<FloatPoint>& a);
+static prec
+getSecondNorm(vector<Point>& a);
 
 NesterovPlaceVars::NesterovPlaceVars()
   : maxNesterovIter(2000), 
@@ -28,65 +28,57 @@ NesterovPlaceVars::NesterovPlaceVars()
   referenceHpwl(446000000) {}
 
 NesterovPlace::NesterovPlace() 
-  : pb_(nullptr), nb_(nullptr), npVars_(), 
-  wireLengthGradSum_(0), 
-  densityGradSum_(0),
-  stepLength_(0),
-  densityPenalty_(0),
-  baseWireLengthCoef_(0), 
-  wireLengthCoefX_(0), 
-  wireLengthCoefY_(0),
-  prevHpwl_(0),
-  isDiverged_(false) {}
+  : nb_(nullptr), npVars_(), 
+    wireLengthGradSum_(0), 
+    densityGradSum_(0),
+    stepLength_(0),
+    densityPenalty_(0),
+    baseWireLengthCoef_(0), 
+    wireLengthCoefX_(0), 
+    wireLengthCoefY_(0),
+    prevHpwl_(0),
+    isDiverged_(false) {}
 
-NesterovPlace::NesterovPlace(
-    NesterovPlaceVars npVars,
-    std::shared_ptr<PlacerBase> pb, 
-    std::shared_ptr<NesterovBase> nb) 
-: NesterovPlace() {
+NesterovPlace::NesterovPlace(NesterovPlaceVars npVars, std::shared_ptr<NesterovBase> nb) 
+    : NesterovPlace() 
+{
   npVars_ = npVars;
-  pb_ = pb;
   nb_ = nb;
-  init();
-}
-
-NesterovPlace::~NesterovPlace() {
-  reset();
 }
 
 void NesterovPlace::init() {
   LOG_TRACE("NesterovInit Begin");
 
-  const int gCellSize = nb_->gCells().size();
-  curSLPCoordi_.resize(gCellSize, FloatPoint());
-  curSLPWireLengthGrads_.resize(gCellSize, FloatPoint());
-  curSLPDensityGrads_.resize(gCellSize, FloatPoint());
-  curSLPSumGrads_.resize(gCellSize, FloatPoint());
+  size_t gCellSize = nb_->gCells().size();
+  curSLPCoordi_.resize(gCellSize, Point());
+  curSLPWireLengthGrads_.resize(gCellSize, Point());
+  curSLPDensityGrads_.resize(gCellSize, Point());
+  curSLPSumGrads_.resize(gCellSize, Point());
 
-  nextSLPCoordi_.resize(gCellSize, FloatPoint());
-  nextSLPWireLengthGrads_.resize(gCellSize, FloatPoint());
-  nextSLPDensityGrads_.resize(gCellSize, FloatPoint());
-  nextSLPSumGrads_.resize(gCellSize, FloatPoint());
+  nextSLPCoordi_.resize(gCellSize, Point());
+  nextSLPWireLengthGrads_.resize(gCellSize, Point());
+  nextSLPDensityGrads_.resize(gCellSize, Point());
+  nextSLPSumGrads_.resize(gCellSize, Point());
   
-  prevSLPCoordi_.resize(gCellSize, FloatPoint());
-  prevSLPWireLengthGrads_.resize(gCellSize, FloatPoint());
-  prevSLPDensityGrads_.resize(gCellSize, FloatPoint());
-  prevSLPSumGrads_.resize(gCellSize, FloatPoint());
+  prevSLPCoordi_.resize(gCellSize, Point());
+  prevSLPWireLengthGrads_.resize(gCellSize, Point());
+  prevSLPDensityGrads_.resize(gCellSize, Point());
+  prevSLPSumGrads_.resize(gCellSize, Point());
 
-  curCoordi_.resize(gCellSize, FloatPoint());
-  nextCoordi_.resize(gCellSize, FloatPoint());
+  curCoordi_.resize(gCellSize, Point());
+  nextCoordi_.resize(gCellSize, Point());
 
-  for(auto& gCell : nb_->gCells()) {
-    nb_->updateDensityCoordiLayoutInside( gCell );
-    int idx = &gCell - &nb_->gCells()[0];
-    curSLPCoordi_[idx] 
-      = prevSLPCoordi_[idx] 
-      = curCoordi_[idx] 
-      = FloatPoint(gCell->dCx(), gCell->dCy()); 
+  for(int i = 0; i < gCellSize; i++)
+  {
+    nb_->updateDensityCoordiLayoutInside(nb_->gCells()[i]);
+    curSLPCoordi_[i] 
+      = prevSLPCoordi_[i] 
+      = curCoordi_[i] 
+      = Point(nb_->gCells()[i]->cx(), nb_->gCells()[i]->cy());
   }
 
   // bin update
-  nb_->updateGCellDensityCenterLocation(curSLPCoordi_);
+  nb_->updateGCellCenterLocation(curSLPCoordi_);
   
   prevHpwl_ = nb_->hpwl();
 
@@ -95,15 +87,15 @@ void NesterovPlace::init() {
   // FFT update
   nb_->updateDensityForceBin();
 
-  float avgBinSizeX = 0.f; 
-  float avgBinSizeY = 0.f;
+  prec avgBinSizeX = 0.f; 
+  prec avgBinSizeY = 0.f;
   for(BinGrid* bg : nb_->binGrids())
   {
-    avgBinSizeX += static_cast<float>(bg->binSizeX());
-    avgBinSizeY += static_cast<float>(bg->binSizeY());
+    avgBinSizeX += static_cast<prec>(bg->binSizeX());
+    avgBinSizeY += static_cast<prec>(bg->binSizeY());
   }
-  avgBinSizeX /= static_cast<float>(nb_->binGrids().size());
-  avgBinSizeY /= static_cast<float>(nb_->binGrids().size());
+  avgBinSizeX /= static_cast<prec>(nb_->binGrids().size());
+  avgBinSizeY /= static_cast<prec>(nb_->binGrids().size());
   baseWireLengthCoef_  = npVars_.initWireLengthCoef / (0.5f * (avgBinSizeX + avgBinSizeY));
 
   LOG_DEBUG("BaseWireLengthCoef: {}", baseWireLengthCoef_);
@@ -133,7 +125,7 @@ void NesterovPlace::init() {
   updateInitialPrevSLPCoordi();
 
   // bin, FFT, wlen update with prevSLPCoordi.
-  nb_->updateGCellDensityCenterLocation(prevSLPCoordi_);
+  nb_->updateGCellCenterLocation(prevSLPCoordi_);
   nb_->updateDensityForceBin();
   nb_->updateWireLengthForceWA(wireLengthCoefX_, wireLengthCoefY_);
   
@@ -167,28 +159,6 @@ void NesterovPlace::init() {
   LOG_TRACE("NesterovInit End");
 }
 
-// clear reset
-void NesterovPlace::reset() {
-
-  curSLPCoordi_.clear();
-  curSLPWireLengthGrads_.clear();
-  curSLPDensityGrads_.clear();
-  curSLPSumGrads_.clear();
-  
-  nextSLPCoordi_.clear();
-  nextSLPWireLengthGrads_.clear();
-  nextSLPDensityGrads_.clear();
-  nextSLPSumGrads_.clear();
-  
-  prevSLPCoordi_.clear();
-  prevSLPWireLengthGrads_.clear();
-  prevSLPDensityGrads_.clear();
-  prevSLPSumGrads_.clear();
-  
-  curCoordi_.clear();
-  nextCoordi_.clear();
-}
-
 // to execute following function,
 // 
 // nb_->updateGCellDensityCenterLocation(coordi); // bin update
@@ -198,14 +168,14 @@ void NesterovPlace::reset() {
 //
 void
 NesterovPlace::updateGradients(
-    std::vector<FloatPoint>& sumGrads,
-    std::vector<FloatPoint>& wireLengthGrads,
-    std::vector<FloatPoint>& densityGrads) {
+    std::vector<Point>& sumGrads,
+    std::vector<Point>& wireLengthGrads,
+    std::vector<Point>& densityGrads) {
 
   wireLengthGradSum_ = 0;
   densityGradSum_ = 0;
 
-  float gradSum = 0;
+  prec gradSum = 0;
 
   LOG_DEBUG("Density Penalty: {}", densityPenalty_);
 
@@ -230,12 +200,12 @@ NesterovPlace::updateGradients(
     sumGrads[i].x = wireLengthGrads[i].x + densityPenalty_ * densityGrads[i].x;
     sumGrads[i].y = wireLengthGrads[i].y + densityPenalty_ * densityGrads[i].y;
 
-    FloatPoint wireLengthPreCondi 
+    Point wireLengthPreCondi 
       = nb_->getWireLengthPreconditioner(gCell);
-    FloatPoint densityPrecondi
+    Point densityPrecondi
       = nb_->getDensityPreconditioner(gCell);
 
-    FloatPoint sumPrecondi(
+    Point sumPrecondi(
         wireLengthPreCondi.x + densityPenalty_ * densityPrecondi.x,
         wireLengthPreCondi.y + densityPenalty_ * densityPrecondi.y);
 
@@ -268,6 +238,7 @@ NesterovPlace::updateGradients(
 void
 NesterovPlace::doNesterovPlace(string placename) {
   LOG_TRACE("start NesterovPlace::doNesterovPlace");
+
   // if replace diverged in init() function, 
   // replace must be skipped.
   if( isDiverged_ ) {
@@ -275,20 +246,19 @@ NesterovPlace::doNesterovPlace(string placename) {
     return;
   }
 
-  if(placename!="" && placename[placename.length() - 1] != '_'){ 
+  if (placename != "" && placename[placename.length() - 1] != '_') {
     placename.push_back('_');
   }
   Plot::plot(nb_.get(), PlotNesterovType::GCell, "./plot/cell", placename + "cell_0");
   Plot::plot(nb_.get(), PlotNesterovType::Bin, "./plot/bin", placename + "bin_0");
   Plot::plot(nb_.get(), PlotNesterovType::Arrow, "./plot/arrow", placename + "arrow_0");
 
-
   // backTracking variable.
-  float curA = 1.0;
+  prec curA = 1.0;
 
   // divergence detection
-  float minSumOverflow = 1e30;
-  float hpwlWithMinSumOverflow = 1e30;
+  prec minSumOverflow = 1e30;
+  double hpwlWithMinSumOverflow = 1e30;
 
   // dynamic adjustment of max_phi_coef
   bool isMaxPhiCoefChanged = false;
@@ -301,7 +271,7 @@ NesterovPlace::doNesterovPlace(string placename) {
   for(int i=0; i<npVars_.maxNesterovIter; i++) {
     LOG_DEBUG("Iter: {}", i+1);
     
-    float prevA = curA;
+    prec prevA = curA;
 
     // here, prevA is a_(k), curA is a_(k+1)
     // See, the papers' Algorithm 4 section
@@ -309,7 +279,7 @@ NesterovPlace::doNesterovPlace(string placename) {
     curA = (1.0 + sqrt(4.0 * prevA * prevA + 1.0)) * 0.5;
 
     // coeff is (a_k -1) / ( a_(k+1)) in paper.
-    float coeff = (prevA - 1.0)/curA;
+    prec coeff = (prevA - 1.0)/curA;
     
     LOG_DEBUG("PreviousA: {}", prevA);
     LOG_DEBUG("CurrentA: {}", curA);
@@ -322,25 +292,25 @@ NesterovPlace::doNesterovPlace(string placename) {
       
       // fill in nextCoordinates with given stepLength_
       for(size_t k=0; k<nb_->gCells().size(); k++) {
-        FloatPoint nextCoordi(
+        Point nextCoordi(
           curSLPCoordi_[k].x + stepLength_ * curSLPSumGrads_[k].x,
           curSLPCoordi_[k].y + stepLength_ * curSLPSumGrads_[k].y );
 
-        FloatPoint nextSLPCoordi(
+        Point nextSLPCoordi(
           nextCoordi.x + coeff * (nextCoordi.x - curCoordi_[k].x),
           nextCoordi.y + coeff * (nextCoordi.y - curCoordi_[k].y));
 
         GCell* curGCell = nb_->gCells()[k];
 
         nextCoordi_[k] 
-          = FloatPoint( 
+          = Point( 
               nb_->getDensityCoordiLayoutInsideX( 
                 curGCell, nextCoordi.x),
               nb_->getDensityCoordiLayoutInsideY(
                 curGCell, nextCoordi.y));
         
         nextSLPCoordi_[k]
-          = FloatPoint(
+          = Point(
               nb_->getDensityCoordiLayoutInsideX(
                 curGCell, nextSLPCoordi.x),
               nb_->getDensityCoordiLayoutInsideY(
@@ -348,7 +318,7 @@ NesterovPlace::doNesterovPlace(string placename) {
       }
  
 
-      nb_->updateGCellDensityCenterLocation(nextSLPCoordi_);
+      nb_->updateGCellCenterLocation(nextSLPCoordi_);
       nb_->updateDensityForceBin();
       nb_->updateWireLengthForceWA(wireLengthCoefX_, wireLengthCoefY_);
 
@@ -359,7 +329,7 @@ NesterovPlace::doNesterovPlace(string placename) {
         break;
       }
   
-      float newStepLength  
+      prec newStepLength  
         = getStepLength (curSLPCoordi_, curSLPSumGrads_, nextSLPCoordi_, nextSLPSumGrads_);
      
       LOG_DEBUG("NetStepLength: {}", newStepLength);
@@ -449,7 +419,7 @@ NesterovPlace::doNesterovPlace(string placename) {
 }
 
 void
-NesterovPlace::updateWireLengthCoef(float overflow) {
+NesterovPlace::updateWireLengthCoef(prec overflow) {
   if( overflow > 1.0 ) {
     wireLengthCoefX_ = wireLengthCoefY_ = 0.1;
   }
@@ -472,15 +442,15 @@ NesterovPlace::updateInitialPrevSLPCoordi() {
     GCell* curGCell = nb_->gCells()[i];
 
 
-    float prevCoordiX 
+    prec prevCoordiX 
       = curSLPCoordi_[i].x + npVars_.initialPrevCoordiUpdateCoef 
       * curSLPSumGrads_[i].x;
   
-    float prevCoordiY
+    prec prevCoordiY
       = curSLPCoordi_[i].y + npVars_.initialPrevCoordiUpdateCoef
       * curSLPSumGrads_[i].y;
     
-    FloatPoint newCoordi( 
+    Point newCoordi( 
       nb_->getDensityCoordiLayoutInsideX( curGCell, prevCoordiX),
       nb_->getDensityCoordiLayoutInsideY( curGCell, prevCoordiY) );
 
@@ -510,13 +480,13 @@ NesterovPlace::updateNextIter() {
   LOG_DEBUG("Overflow: {}", sumOverflow_);
 
   updateWireLengthCoef(sumOverflow_);
-  int64_t hpwl = nb_->hpwl();
+  double hpwl = nb_->hpwl();
   
   LOG_DEBUG("PreviousHPWL: {}", prevHpwl_);
   LOG_DEBUG("NewHPWL: {}", hpwl);
 
-  float phiCoef = getPhiCoef( 
-      static_cast<float>(hpwl - prevHpwl_) 
+  prec phiCoef = getPhiCoef( 
+      static_cast<prec>(hpwl - prevHpwl_) 
       / npVars_.referenceHpwl );
   
   prevHpwl_ = hpwl;
@@ -525,16 +495,16 @@ NesterovPlace::updateNextIter() {
   LOG_DEBUG("PhiCoef: {}", phiCoef);
 }
 
-float
+prec
 NesterovPlace::getStepLength(
-    std::vector<FloatPoint>& prevSLPCoordi_,
-    std::vector<FloatPoint>& prevSLPSumGrads_,
-    std::vector<FloatPoint>& curSLPCoordi_,
-    std::vector<FloatPoint>& curSLPSumGrads_ ) {
+    std::vector<Point>& prevSLPCoordi_,
+    std::vector<Point>& prevSLPSumGrads_,
+    std::vector<Point>& curSLPCoordi_,
+    std::vector<Point>& curSLPSumGrads_ ) {
 
-  float coordiDistance 
+  prec coordiDistance 
     = getDistance(prevSLPCoordi_, curSLPCoordi_);
-  float gradDistance 
+  prec gradDistance 
     = getDistance(prevSLPSumGrads_, curSLPSumGrads_);
 
   LOG_DEBUG("CoordinateDistance: {}", coordiDistance);
@@ -543,11 +513,11 @@ NesterovPlace::getStepLength(
   return coordiDistance / gradDistance;
 }
 
-float
-NesterovPlace::getPhiCoef(float scaledDiffHpwl) {
+prec
+NesterovPlace::getPhiCoef(prec scaledDiffHpwl) {
   LOG_DEBUG("Input ScaleDiffHPWL", scaledDiffHpwl);
 
-  float retCoef 
+  prec retCoef 
     = (scaledDiffHpwl < 0)? 
     npVars_.maxPhiCoef: 
     npVars_.maxPhiCoef * pow( npVars_.maxPhiCoef, scaledDiffHpwl * -1.0 );
@@ -559,14 +529,16 @@ void
 NesterovPlace::updatePlacerBase() {
   for(auto& gCell : nb_->gCells()) {
     if(gCell->isInstance()) {
-      gCell->instance()->setLocation(gCell->dLx(), gCell->dLy());
+      int lx = static_cast<int>(std::round(gCell->lx()));
+      int ly = static_cast<int>(std::round(gCell->ly()));
+      gCell->instance()->setLocation(lx, ly);
     }
   }
 }
 
-static float
-getDistance(vector<FloatPoint>& a, vector<FloatPoint>& b) {
-  float sumDistance = 0.0f;
+static prec
+getDistance(vector<Point>& a, vector<Point>& b) {
+  prec sumDistance = 0.0f;
   for(size_t i=0; i<a.size(); i++) {
     sumDistance += (a[i].x - b[i].x) * (a[i].x - b[i].x);
     sumDistance += (a[i].y - b[i].y) * (a[i].y - b[i].y);
@@ -575,9 +547,9 @@ getDistance(vector<FloatPoint>& a, vector<FloatPoint>& b) {
   return sqrt( sumDistance / (2.0 * a.size()) );
 }
 
-static float
-getSecondNorm(vector<FloatPoint>& a) {
-  float norm = 0;
+static prec
+getSecondNorm(vector<Point>& a) {
+  prec norm = 0;
   for(auto& coordi : a) {
     norm += coordi.x * coordi.x + coordi.y * coordi.y;
   }

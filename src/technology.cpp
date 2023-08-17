@@ -7,12 +7,12 @@ namespace replace
   // LibPin
 
   LibPin::LibPin()
-      : name_(), x_(0), y_(0)
+      : id_(0), x_(0), y_(0)
   {
   }
 
-  LibPin::LibPin(const std::string& name, int x, int y)
-      : name_(name), x_(x), y_(y)
+  LibPin::LibPin(int id, int x, int y)
+      : id_(id), x_(x), y_(y)
   {
   }
 
@@ -24,40 +24,17 @@ namespace replace
   {
   }
 
-  LibCell::LibCell(const std::string& name, int sizeX, int sizeY, bool isMacro)
-      : name_(name), sizeX_(sizeX), sizeY_(sizeY), isMacro_(isMacro)
+  LibCell::LibCell(int id, int sizeX, int sizeY, bool isMacro)
+      : id_(id), sizeX_(sizeX), sizeY_(sizeY), isMacro_(isMacro)
   {
   }
-
-  LibPin* LibCell::libPin(const std::string& name) const
-  {
-    auto it = pinNameMap_.find(name);
-    return it == pinNameMap_.end() ? nullptr : it->second;
-  }
-
-  void LibCell::addLibPin(LibPin* pin)
-  {
-    pins_.push_back(pin);
-    pinNameMap_.emplace(pin->name(), pin);
-  }
-
+  
   /////////////////////////////////////////////////////////
   // Technology
 
-  Technology::Technology()
-      : siteSizeX_(0), siteSizeY_(0)
-  {
-  }
-
   Technology::Technology(const std::string& name)
-      : name_(name), siteSizeX_(0), siteSizeY_(0)
+      : name_(name)
   {
-  }
-
-  LibCell* Technology::libCell(const std::string& name) const
-  {
-    auto it = cellNameMap_.find(name);
-    return it == cellNameMap_.end() ? nullptr : it->second;
   }
 
   void Technology::printDebugInfo() const

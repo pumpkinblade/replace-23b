@@ -1,6 +1,7 @@
 #ifndef __PARTITIONER__
 #define __PARTITIONER__
 
+#include <vector>
 #include "technology.h"
 #include "placerBase.h"
 
