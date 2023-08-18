@@ -15,8 +15,8 @@ namespace replace {
 
 using namespace std;
 
-static double getOverlapArea(Bin* bin, Instance* inst);
-static double getOverlapDensityArea(Bin* bin, GCell* cell);
+static prec getOverlapArea(const Bin* bin, const Instance* inst);
+static prec getOverlapDensityArea(const Bin* bin, const GCell* cell);
 static prec fastExp(prec exp);
 static prec bellShape(prec theta_i, prec theta);
 static prec bellShape1(prec theta_i);
@@ -74,16 +74,8 @@ void GCell::setLocation(prec lx, prec ly)
   lx = lx_;
   ly = ly_;
 
-  if(isMacro_)
-  {
-    for(GPin* pin : gPins_)
-      pin->updateLocationWithTheta(this);
-  }
-  else
-  {
-    for(GPin* pin : gPins_)
-      pin->updateLocation(this);
-  }
+  for(GPin* pin : gPins_)
+    pin->updateLocation(this);
 }
 
 void GCell::setCenterLocation(prec cx, prec cy)
@@ -96,16 +88,8 @@ void GCell::setCenterLocation(prec cx, prec cy)
   ux_ = cx + halfDx;
   uy_ = cy + halfDy;
 
-  if(isMacro_)
-  {
-    for(GPin* pin : gPins_)
-      pin->updateLocationWithTheta(this);
-  }
-  else
-  {
-    for(GPin* pin : gPins_)
-      pin->updateLocation(this);
-  }
+  for(GPin* pin : gPins_)
+    pin->updateLocation(this);
 }
 
 // changing size and preserve center coordinates
@@ -120,9 +104,19 @@ void GCell::setSize(prec dx, prec dy)
   uy_ = centerY + dy / 2;
 }
 
-void GCell::setThetaNoUpdatePin(prec theta)
+void GCell::setCenterLocationTheta(prec cx, prec cy, prec theta)
 {
+  prec halfDx = dx() / 2;
+  prec halfDy = dy() / 2;
+
+  lx_ = cx - halfDx;
+  ly_ = cy - halfDy;
+  ux_ = cx + halfDx;
+  uy_ = cy + halfDy;
   theta_ = theta;
+
+  for(GPin* pin : gPins_)
+    pin->updateLocationWithTheta(this);
 }
 
 ////////////////////////////////////////////////
@@ -465,57 +459,13 @@ void BinGrid::updateBinsGCellDensityArea()
 
   for(auto& cell : gCells_)
   {
-    std::pair<int, int> pairX = getMinMaxIdxX(cell->lx(), cell->ux());
-    std::pair<int, int> pairY = getMinMaxIdxY(cell->ly(), cell->uy());
-
-    // The following function is critical runtime hotspot 
-    // for global placer.
-    //
-    if(cell->isInstance())
-    {
-      // macro should have 
-      // scale-down with target-density
-      if(cell->isMacro())
-      {
-        for(int i = pairX.first; i < pairX.second; i++)
-        {
-          for(int j = pairY.first; j < pairY.second; j++)
-          {
-            Bin* bin = bins_[j * binCntX_ + i];
-            double overlapArea = getOverlapDensityArea(bin, cell);
-            overlapArea *= (cell->densityScale() * bin->targetDensity());
-            bin->addInstPlacedArea(static_cast<prec>(overlapArea));
-          }
-        }
-      }
-      // normal cells
-      else
-      {
-        for(int i = pairX.first; i < pairX.second; i++)
-        {
-          for(int j = pairY.first; j < pairY.second; j++)
-          {
-            Bin* bin = bins_[j * binCntX_ + i];
-            double overlapArea = getOverlapDensityArea(bin, cell);
-            overlapArea *= cell->densityScale();
-            bin->addInstPlacedArea(static_cast<prec>(overlapArea));
-          }
-        }
-      }
-    }
+    // The following function is critical runtime hotspot for global placer.
+    if(cell->isInstance() && cell->isMacro())
+      addMacroBinArea(cell);
+    else if(cell->isInstance())
+      addStdCellBinArea(cell);
     else
-    {
-      for(int i = pairX.first; i < pairX.second; i++)
-      {
-        for(int j = pairY.first; j < pairY.second; j++)
-        {
-          Bin* bin = bins_[j * binCntX_ + i];
-          double overlapArea = getOverlapDensityArea(bin, cell);
-          overlapArea *= cell->densityScale();
-          bin->addFillerArea(static_cast<prec>(overlapArea));
-        }
-      }
-    }
+      addFillerBinArea(cell);
   }
 
   overflowArea_ = 0;
@@ -536,6 +486,95 @@ void BinGrid::updateBinsGCellDensityArea()
   }
 }
 
+void BinGrid::addFillerBinArea(const GCell* gcell)
+{
+  std::pair<int, int> pairX = getMinMaxIdxX(gcell->lx(), gcell->ux());
+  std::pair<int, int> pairY = getMinMaxIdxY(gcell->ly(), gcell->uy());
+  for(int i = pairX.first; i < pairX.second; i++)
+  {
+    for(int j = pairY.first; j < pairY.second; j++)
+    {
+      Bin* bin = bins_[j * binCntX_ + i];
+      double overlapArea = getOverlapDensityArea(bin, gcell);
+      overlapArea *= gcell->densityScale();
+      bin->addFillerArea(static_cast<prec>(overlapArea));
+    }
+  }
+}
+
+void BinGrid::addStdCellBinArea(const GCell* gcell)
+{
+  std::pair<int, int> pairX = getMinMaxIdxX(gcell->lx(), gcell->ux());
+  std::pair<int, int> pairY = getMinMaxIdxY(gcell->ly(), gcell->uy());
+  for(int i = pairX.first; i < pairX.second; i++)
+  {
+    for(int j = pairY.first; j < pairY.second; j++)
+    {
+      Bin* bin = bins_[j * binCntX_ + i];
+      double overlapArea = getOverlapDensityArea(bin, gcell);
+      overlapArea *= gcell->densityScale();
+      bin->addInstPlacedArea(static_cast<prec>(overlapArea));
+    }
+  }
+}
+
+void BinGrid::addMacroBinArea(const GCell* gcell)
+{
+  std::pair<int, int> pairX = getMinMaxIdxX(gcell->lx(), gcell->ux());
+  std::pair<int, int> pairY = getMinMaxIdxY(gcell->ly(), gcell->uy());
+  for(int i = pairX.first; i < pairX.second; i++)
+  {
+    for(int j = pairY.first; j < pairY.second; j++)
+    {
+      Bin* bin = bins_[j * binCntX_ + i];
+      double overlapArea = getOverlapDensityArea(bin, gcell);
+      overlapArea *= (gcell->densityScale() * bin->targetDensity());
+      bin->addInstPlacedArea(static_cast<prec>(overlapArea));
+    }
+  }
+}
+
+void BinGrid::addMacroBinAreaWithTheta(const GCell* gcell)
+{
+  std::pair<int, int> pairX = getMinMaxIdxX(gcell->lx(), gcell->ux());
+  std::pair<int, int> pairY = getMinMaxIdxY(gcell->ly(), gcell->uy());
+  prec scale = gcell->densityScale() * bellShape1(gcell->theta());
+  for(int i = pairX.first; i < pairX.second; i++)
+  {
+    for(int j = pairY.first; j < pairY.second; j++)
+    {
+      Bin* bin = bins_[j * binCntX_ + i];
+      double overlapArea = getOverlapDensityArea(bin, gcell);
+      overlapArea *= (scale * bin->targetDensity());
+      bin->addInstPlacedArea(static_cast<prec>(overlapArea));
+    }
+  }
+
+  prec rlx = gcell->cx() - 0.5f * gcell->dy();
+  prec rux = gcell->cx() + 0.5f * gcell->dx();
+  prec rly = gcell->cy() - 0.5f * gcell->dy();
+  prec ruy = gcell->cy() + 0.5f * gcell->dy();
+  pairX = getMinMaxIdxX(rlx, rux);
+  pairY = getMinMaxIdxY(rly, ruy);
+  scale = gcell->densityScale() * bellShape2(gcell->theta());
+  for(int i = pairX.first; i < pairX.second; i++)
+  {
+    for(int j = pairY.first; j < pairY.second; j++)
+    {
+      Bin* bin = bins_[j * binCntX_ + i];
+      prec overlapLx = std::max(rlx, bin->lx());
+      prec overlapLy = std::max(rly, bin->ly());
+      prec overlapUx = std::min(rux, bin->ux());
+      prec overlapUy = std::min(ruy, bin->uy());
+      if(overlapLx < overlapUx && overlapLy < overlapUy)
+      {
+        prec overlapArea = (overlapUx - overlapLx) * (overlapUy - overlapLy);
+        overlapArea *= (scale * bin->targetDensity());
+        bin->addInstPlacedArea(static_cast<prec>(overlapArea));
+      }
+    }
+  }
+}
 
 std::pair<int, int> BinGrid::getMinMaxIdxX(prec lx1, prec ux1)
 {
@@ -1068,6 +1107,26 @@ Point NesterovBase::getWireLengthGradientWA(GCell* gCell, prec wlCoeffX, prec wl
   return gradientPair;
 }
 
+Point NesterovBase::getWireLengthGradientWAWithTheta(GCell* gCell, prec wlCoeffX, prec wlCoeffY, prec& gradTheta)
+{
+  Point gradientPair;
+  gradTheta = 0.0f;
+  
+  prec cosTheta = std::cos(gCell->theta());
+  prec sinTheta = std::sin(gCell->theta());
+  for(auto& gPin : gCell->gPins())
+  {
+    auto tmpPair = getWireLengthGradientPinWA(gPin, wlCoeffX, wlCoeffY);
+    gradientPair.x += tmpPair.x;
+    gradientPair.y += tmpPair.y;
+    gradTheta += tmpPair.x * (-gPin->offsetCx() * sinTheta - gPin->offsetCy() * cosTheta);
+    gradTheta += tmpPair.y * ( gPin->offsetCx() * cosTheta - gPin->offsetCy() * sinTheta);
+  }
+
+  // return sum
+  return gradientPair;
+}
+
 // get x,y WA Gradient values from GPin
 // Please check the JingWei's Ph.D. thesis full paper, 
 // Equation (4.13)
@@ -1173,6 +1232,57 @@ Point NesterovBase::getDensityGradient(GCell* gCell)
   return electroForce;
 }
 
+Point NesterovBase::getDensityGradientWithTheta(GCell* gCell, prec& gradTheta)
+{
+  BinGrid* bg = gCell->binGrid();
+  Point electroForce;
+  gradTheta = 0.0f;
+  
+  auto pairX = bg->getMinMaxIdxX(gCell->lx(), gCell->ux());
+  auto pairY = bg->getMinMaxIdxY(gCell->ly(), gCell->uy());
+  prec bell = bellShape1(gCell->theta());
+  prec derive = bellShapeDerive1(gCell->theta());
+  for(int i = pairX.first; i < pairX.second; i++)
+  {
+    for(int j = pairY.first; j < pairY.second; j++)
+    {
+      Bin* bin = bg->bins()[j * bg->binCntX() + i];
+      prec overlapArea = getOverlapDensityArea(bin, gCell) * gCell->densityScale();
+      electroForce.x += bell * overlapArea * bin->electroForceX();
+      electroForce.y += bell * overlapArea * bin->electroForceY();
+      gradTheta += derive * overlapArea * bin->electroPhi();
+    }
+  }
+
+  prec rlx = gCell->cx() - 0.5f * gCell->dy();
+  prec rux = gCell->cx() + 0.5f * gCell->dx();
+  prec rly = gCell->cy() - 0.5f * gCell->dy();
+  prec ruy = gCell->cy() + 0.5f * gCell->dy();
+  pairX = bg->getMinMaxIdxX(rlx, rux);
+  pairY = bg->getMinMaxIdxY(rly, ruy);
+  bell = bellShape2(gCell->theta());
+  derive = bellShapeDerive2(gCell->theta());
+  for(int i = pairX.first; i < pairX.second; i++)
+  {
+    for(int j = pairY.first; j < pairY.second; j++)
+    {
+      Bin* bin = bg->bins()[j * bg->binCntX() + i];
+      prec overlapLx = std::max(rlx, bin->lx());
+      prec overlapLy = std::max(rly, bin->ly());
+      prec overlapUx = std::min(rux, bin->ux());
+      prec overlapUy = std::min(ruy, bin->uy());
+      if(overlapLx < overlapUx && overlapLy < overlapUy)
+      {
+        prec overlapArea = (overlapUx - overlapLx) * (overlapUy - overlapLy) * gCell->densityScale();
+        electroForce.x += bell * overlapArea * bin->electroForceX();
+        electroForce.y += bell * overlapArea * bin->electroForceY();
+        gradTheta += derive * overlapArea * bin->electroPhi();
+      }
+    }
+  }
+  return electroForce;
+}
+
 Point NesterovBase::getDensityGradientLocal(GCell *gCell, prec alpha, prec beta, prec& cellDelta)
 {
   BinGrid* bg = gCell->binGrid();
@@ -1223,6 +1333,105 @@ Point NesterovBase::getDensityGradientLocal(GCell *gCell, prec alpha, prec beta,
   return grad;
 }
 
+Point NesterovBase::getDensityGradientLocalWithTheta(GCell *gCell, prec alpha, prec beta, prec& cellDelta, prec& gradTheta)
+{
+  BinGrid* bg = gCell->binGrid();
+  auto pairX = bg->getMinMaxIdxX(gCell->lx(), gCell->ux());
+  auto pairY = bg->getMinMaxIdxY(gCell->ly(), gCell->uy());
+  Point grad;
+
+  prec binArea = bg->binSizeX() * bg->binSizeY();
+  prec invTotalCellArea = static_cast<prec>(1.0 / bg->totalCellArea());
+  prec bell = bellShape1(gCell->theta());
+  prec derive = bellShapeDerive1(gCell->theta());
+  for(int i = pairX.first; i < pairX.second; i++)
+  {
+    for(int j = pairY.first; j < pairY.second; j++)
+    {
+      Bin* bin = bg->bins()[j * bg->binCntX() + i];
+      prec binCellArea = bin->density() * binArea;
+      if(binCellArea > binArea)
+        cellDelta += beta * (binCellArea - binArea) * invTotalCellArea;
+
+      prec overlapLx = std::max(bin->lx(), gCell->lx());
+      prec overlapLy = std::max(bin->ly(), gCell->ly());
+      prec overlapUx = std::min(bin->ux(), gCell->ux());
+      prec overlapUy = std::min(bin->uy(), gCell->uy());
+      prec shareArea = 0.0f, dAdx = 0.0f, dAdy = 0.0f;
+      if(overlapLx < overlapUx && overlapLy < overlapUy)
+      {
+        shareArea = (overlapUx - overlapLx) * (overlapUy - overlapLy);
+        if(bin->lx() < gCell->lx() && bin->ux() < gCell->ux())
+          dAdx = -(overlapUy - overlapLy);
+        else if(bin->lx() > gCell->lx() && bin->ux() > gCell->ux())
+          dAdx = (overlapUy - overlapLy);
+        if(bin->ly() < gCell->ly() && bin->uy() < gCell->uy())
+          dAdy = -(overlapUx - overlapLx);
+        else if(bin->ly() > gCell->ly() && bin->uy() > gCell->uy())
+          dAdy = (overlapUx - overlapLx);
+      }
+      prec commonDiv = alpha / binArea;
+      prec nu = fastExp(commonDiv * (binCellArea - binArea));
+      prec commonVal = commonDiv * bin->electroPhi() * nu * binCellArea;
+      prec commonMul = nu * shareArea;
+
+      grad.x += bell * dAdx * commonVal;
+      grad.x += bell * commonMul * bin->electroForceX();
+      grad.y += bell * dAdy * commonVal;
+      grad.y += bell * commonMul * bin->electroForceY();
+      gradTheta += derive * nu * shareArea * bin->electroPhi();
+    }
+  }
+
+  prec rlx = gCell->cx() - 0.5f * gCell->dy();
+  prec rux = gCell->cx() + 0.5f * gCell->dx();
+  prec rly = gCell->cy() - 0.5f * gCell->dy();
+  prec ruy = gCell->cy() + 0.5f * gCell->dy();
+  pairX = bg->getMinMaxIdxX(rlx, rux);
+  pairY = bg->getMinMaxIdxY(rly, ruy);
+  bell = bellShape2(gCell->theta());
+  derive = bellShapeDerive2(gCell->theta());
+  for(int i = pairX.first; i < pairX.second; i++)
+  {
+    for(int j = pairY.first; j < pairY.second; j++)
+    {
+      Bin* bin = bg->bins()[j * bg->binCntX() + i];
+      prec binCellArea = bin->density() * binArea;
+      if(binCellArea > binArea)
+        cellDelta += beta * (binCellArea - binArea) * invTotalCellArea;
+
+      prec overlapLx = std::max(bin->lx(), rlx);
+      prec overlapLy = std::max(bin->ly(), rly);
+      prec overlapUx = std::min(bin->ux(), rux);
+      prec overlapUy = std::min(bin->uy(), ruy);
+      prec shareArea = 0.0f, dAdx = 0.0f, dAdy = 0.0f;
+      if(overlapLx < overlapUx && overlapLy < overlapUy)
+      {
+        shareArea = (overlapUx - overlapLx) * (overlapUy - overlapLy);
+        if(bin->lx() < rlx && bin->ux() < rux)
+          dAdx = -(overlapUy - overlapLy);
+        else if(bin->lx() > rlx && bin->ux() > rux)
+          dAdx = (overlapUy - overlapLy);
+        if(bin->ly() < rly && bin->uy() < ruy)
+          dAdy = -(overlapUx - overlapLx);
+        else if(bin->ly() > rly && bin->uy() > ruy)
+          dAdy = (overlapUx - overlapLx);
+      }
+      prec commonDiv = alpha / binArea;
+      prec nu = fastExp(commonDiv * (binCellArea - binArea));
+      prec commonVal = commonDiv * bin->electroPhi() * nu * binCellArea;
+      prec commonMul = nu * shareArea;
+
+      grad.x += bell * dAdx * commonVal;
+      grad.x += bell * commonMul * bin->electroForceX();
+      grad.y += bell * dAdy * commonVal;
+      grad.y += bell * commonMul * bin->electroForceY();
+      gradTheta += derive * nu * shareArea * bin->electroPhi();
+    }
+  }
+  return grad;
+}
+
 // Density force cals
 void NesterovBase::updateDensityForceBin()
 {
@@ -1260,7 +1469,7 @@ prec NesterovBase::overflow() const
 }
 
 // int64_t is recommended, but prec is 2x fast
-static double getOverlapDensityArea(Bin* bin, GCell* cell)
+static prec getOverlapDensityArea(const  Bin* bin, const GCell* cell)
 {
   prec rectLx = max(bin->lx(), cell->lx()), 
        rectLy = max(bin->ly(), cell->ly()),
@@ -1270,21 +1479,21 @@ static double getOverlapDensityArea(Bin* bin, GCell* cell)
   if( rectLx >= rectUx || rectLy >= rectUy )
     return 0;
   else
-    return (double)(rectUx - rectLx) * (rectUy - rectLy);
+    return (rectUx - rectLx) * (rectUy - rectLy);
 }
 
 
-static double getOverlapArea(Bin* bin, Instance* inst)
+static prec getOverlapArea(const Bin* bin, const  Instance* inst)
 {
   prec rectLx = max(bin->lx(), static_cast<prec>(inst->lx())),
-         rectLy = max(bin->ly(), static_cast<prec>(inst->ly())),
-         rectUx = min(bin->ux(), static_cast<prec>(inst->ux())), 
-         rectUy = min(bin->uy(), static_cast<prec>(inst->uy()));
+       rectLy = max(bin->ly(), static_cast<prec>(inst->ly())),
+       rectUx = min(bin->ux(), static_cast<prec>(inst->ux())), 
+       rectUy = min(bin->uy(), static_cast<prec>(inst->uy()));
 
   if( rectLx >= rectUx || rectLy >= rectUy )
     return 0;
   else
-    return (double)(rectUx - rectLx) * (rectUy - rectLy);
+    return (rectUx - rectLx) * (rectUy - rectLy);
 }
 
 // 

@@ -26,9 +26,12 @@ class NesterovPlaceVars {
   prec minPreconditioner; // MIN_PRE
   prec initialPrevCoordiUpdateCoef; // z_ref_alpha
   prec referenceHpwl; // refDeltaHpwl
+  // local density
   bool useLocalDensity;
   prec initAlpha;
   prec initBeta;
+  // theta
+  bool useTheta;
   NesterovPlaceVars();
 };
 
@@ -116,10 +119,16 @@ private:
 
   bool isDiverged_;
 
+  // local density
   prec localAlpha_;
   prec localBeta_;
-  std::vector<prec> cellDelta_;
-  std::vector<prec> tmpCellDelta_;
+  std::vector<prec> curCellDelta_;
+  std::vector<prec> nextCellDelta_;
+
+  // theta
+  std::vector<int> macroIndices_;
+  std::vector<prec> curTheta_;
+  std::vector<prec> nextTheta_;
 };
 }
 

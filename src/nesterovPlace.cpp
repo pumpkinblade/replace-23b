@@ -30,7 +30,8 @@ NesterovPlaceVars::NesterovPlaceVars()
   referenceHpwl(446000000),
   useLocalDensity(false),
   initAlpha(1e-12f),
-  initBeta(1e-11f) {}
+  initBeta(1e-11f),
+  useTheta(false) {}
 
 NesterovPlace::NesterovPlace() 
   : nb_(nullptr), npVars_(), 
@@ -77,8 +78,8 @@ void NesterovPlace::init() {
   {
     localAlpha_ = npVars_.initAlpha;
     localBeta_ = npVars_.initBeta;
-    cellDelta_.resize(gCellSize, 0.0f);
-    tmpCellDelta_.resize(gCellSize, 0.0f);
+    curCellDelta_.resize(gCellSize, 0.0f);
+    nextCellDelta_.resize(gCellSize, 0.0f);
   }
 
   for(int i = 0; i < gCellSize; i++)
@@ -214,10 +215,10 @@ NesterovPlace::updateGradients(
     sumGrads[i].y = wireLengthGrads[i].y + densityPenalty_ * densityGrads[i].y;
     if(npVars_.useLocalDensity)
     {
-      prec delta = cellDelta_[i];
+      prec delta = curCellDelta_[i];
       Point lgrad = nb_->getDensityGradientLocal(
         gCell, localAlpha_, localBeta_, delta);
-      tmpCellDelta_[i] = delta;
+      nextCellDelta_[i] = delta;
       sumGrads[i].x += delta * lgrad.x;
       sumGrads[i].y += delta * lgrad.y;
     }
@@ -493,6 +494,11 @@ NesterovPlace::updateNextIter() {
 
   std::swap(curCoordi_, nextCoordi_);
 
+  if(npVars_.useLocalDensity)
+  {
+    std::swap(curCellDelta_, nextCellDelta_);
+  }
+
   sumOverflow_ = nb_->overflow();
 
   LOG_DEBUG("Gradient: {}", getSecondNorm(curSLPSumGrads_));
@@ -514,7 +520,6 @@ NesterovPlace::updateNextIter() {
 
   if(npVars_.useLocalDensity)
   {
-    std::copy(tmpCellDelta_.begin(), tmpCellDelta_.end(), cellDelta_.begin());
     localAlpha_ *= phiCoef;
     localBeta_ *= phiCoef;
   }

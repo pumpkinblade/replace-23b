@@ -58,8 +58,9 @@ namespace replace
 
     void setLocation(prec lx, prec ly);
     void setCenterLocation(prec cx, prec cy);
+    void setCenterLocationTheta(prec cx, prec cy, prec theta);
     void setSize(prec dx, prec dy);
-    void setThetaNoUpdatePin(prec theta);
+    void setThetaNoUpdatePin(prec theta) { theta_ = theta; }
 
     prec densityScale() const { return densityScale_; }
     void setDensityScale(prec densityScale) { densityScale_ = densityScale; }
@@ -192,6 +193,8 @@ namespace replace
 
     prec cx() const { return cx_; }
     prec cy() const { return cy_; }
+    prec offsetCx() const { return offsetCx_; }
+    prec offsetCy() const { return offsetCy_; }
 
     // clear WA(Weighted Average) variables.
     void clearWaVars();
@@ -325,7 +328,12 @@ namespace replace
     void setBinCntX(int binCntX);
     void setBinCntY(int binCntY);
     void setTargetDensity(prec density);
+
     void updateBinsGCellDensityArea();
+    void addFillerBinArea(const GCell* gcell);
+    void addStdCellBinArea(const GCell* gcell);
+    void addMacroBinArea(const GCell* gcell);
+    void addMacroBinAreaWithTheta(const GCell* gcell);
 
     void initBins();
 
@@ -454,6 +462,7 @@ namespace replace
     Point getWireLengthGradientPinWA(GPin *gPin, prec wlCoeffX, prec wlCoeffY);
 
     Point getWireLengthGradientWA(GCell *gCell, prec wlCoeffX, prec wlCoeffY);
+    Point getWireLengthGradientWAWithTheta(GCell *gCell, prec wlCoeffX, prec wlCoeffY, prec& gradTheta);
 
     // for preconditioner
     Point getWireLengthPreconditioner(GCell *gCell);
@@ -461,8 +470,10 @@ namespace replace
     Point getDensityPreconditioner(GCell *gCell);
 
     Point getDensityGradient(GCell *gCell);
+    Point getDensityGradientWithTheta(GCell *gCell, prec& gradTheta);
 
     Point getDensityGradientLocal(GCell *gCell, prec alpha, prec beta, prec& cellDelta);
+    Point getDensityGradientLocalWithTheta(GCell *gCell, prec alpha, prec beta, prec& cellDelta, prec& gradTheta);
 
     double hpwl();
     prec overflow() const;
