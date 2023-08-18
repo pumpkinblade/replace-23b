@@ -13,7 +13,6 @@ namespace replace
   class InitialPlace;
   class NesterovPlace;
   class AbacusLegalizer;
-  class LayerAssignmenter;
   class MacroLegalizer;
 
   class Replace

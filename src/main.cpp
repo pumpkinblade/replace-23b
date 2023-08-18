@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <tclap/CmdLine.h>
+#include <omp.h>
 
 #include "placerBase.h"
 #include "parser.h"
@@ -19,9 +20,14 @@ using namespace std;
 int main(int argc, const char *argv[])
 {
   Log::Init();
+#if defined(DEBUG) || defined(_DEBUG)
+  Log::getLogger()->set_level(spdlog::level::trace);
+#else
+  Log::getLogger()->set_level(spdlog::level::info);
+#endif
 
   PlotVars vars;
-  vars.minLength = 2000;
+  vars.minLength = 1000;
   vars.xMargin = 30;
   vars.yMargin = 30;
   Plot::init(vars);
@@ -171,10 +177,11 @@ int main(int argc, const char *argv[])
   }
   catch (ArgException &e) // catch any exceptions
   {
-    LOG_ERROR("TCLAP Error: {} for arg {}", e.error(), e.argId());
+    LOG_CRITICAL("TCLAP Error: {} for arg {}", e.error(), e.argId());
     return 1;
   }
 
 
   return 0;
 }
+ 

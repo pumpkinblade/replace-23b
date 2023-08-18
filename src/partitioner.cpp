@@ -200,6 +200,53 @@ namespace replace
   //   LOG_INFO("hmetis partition finished");
   // }
 
+  // void Partitioner::hmetistest(std::shared_ptr<PlacerBase> pb_){
+  //   // 将pb中的instance和net转换为hmetis的数据结构
+  //   // 1. instance转换为hmetis的hypervertex
+  //   // 2. net转换为hmetis的edge
+  //   // 3. 调用hmetis进行partition
+  //   LOG_INFO("start hmetis partition");
+  //   // 获得instance数量
+  //   int nvtxs = pb_->insts().size();
+  //   // 获得net数量
+  //   int nhedges = pb_->nets().size();
+  //   // 获得instance的weight, 目前暂时设为1
+  //   int *vwgts = new int[nvtxs];
+  //   // 将net转换为eptr和eind
+  //   int *eptr = new int[nhedges + 1];
+  //   int eindnum = 0;
+  //   for(auto net : pb_->nets()){
+  //     eindnum += net->pins().size();
+  //   }
+  //   int *eind = new int[eindnum];
+  //   int i=0;
+  //   for(auto net : pb_->nets()){
+  //     for(auto pin : net->pins()){
+  //       eind[i] = pin->instance()->extId();
+  //       i++;
+  //     }
+  //   }
+  //   // 获得hmetis的参数
+  //   int *options = new int[10];
+  //   options[0] = 0;
+  //   int *part = new int[nvtxs];
+  //   int *edgecut = new int[1];
+  //   int nparts = 2;
+  //   int ubfactor = 10;
+  //   int *hewgts = new int[nhedges];
+  //   for(int i=0; i<nhedges; i++){
+  //     hewgts[i] = 1;
+  //   }
+  //   // 调用hmetis进行partition
+  //   HMETIS_PartRecursive(nvtxs, nhedges, NULL, *eptr, *eind, NULL, nparts, ubfactor, *options, *part, *edgecut);
+  //   std::string filename = "hmetis.txt";
+  //   std::ofstream out(filename);
+  //   for(int i=0; i<nvtxs; i++){
+  //     out << i << " " << part[i] << std::endl;
+  //   }
+  //   LOG_INFO("hmetis partition finished");
+  // }
+
   void moveDecide(int64_t topArea, int64_t botArea, int64_t topCap, int64_t botCap,
                   bool* moveToTop, bool* moveToBot)
   {

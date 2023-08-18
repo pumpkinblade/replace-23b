@@ -62,8 +62,6 @@ namespace replace
       placeInstsCenter();
     }
 
-    Plot::plot(pb_.get(), "./plot/cell", "before_ip");
-
     // set ExtId for idx reference // easy recovery
     setPlaceInstExtId();
     for (int i = 1; i <= ipVars_.maxIter; i++)
@@ -84,10 +82,10 @@ namespace replace
 
       LOG_DEBUG("[InitialPlace] Iter {} CG Error: {} HPWL: {}", i, max(errorX, errorY), pb_->hpwl());
       updateCoordi();
-
+#if defined(DEBUG) || defined(_DEBUG)
       Plot::plot(pb_.get(), "./plot/cell", "ip_" + to_string(i));
-
-      if (max(errorX, errorY) <= 1e-5 && i >= 5)
+#endif
+      if (max(errorX, errorY) <= 1e-3 && i >= 5)
       {
         break;
       }

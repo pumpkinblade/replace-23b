@@ -1,9 +1,7 @@
-# $1 : mode : lefdef or 23b
-# $2 : case id : int
+# $1 : case id : int
 
 # set default value
-mode=${1:-23b}
-testcase=${2:-1}
+testcase=${1:-1}
 
 # clean dumped core file
 rm -rf core.[0-9]*
@@ -18,18 +16,6 @@ if [ $? -ne 0 ]; then
 fi
 
 # RUN
-echo mode: $mode 
 rm -rf plot/*/*.jpg
-case $mode in 
-lefdef)
-    ./build/replace --mode ${mode}  --lef ./test/ispd18_test1.input.lef \
-                                    --def ./test/ispd18_test1.input.def
-    ;;
-23b)
-    ./build/replace --mode ${mode} --txt23b test/ProblemB_case${testcase}.txt 
-    ;;
-*)
-    echo unknown mode $mode
-    exit 1 ;;
-esac
+./build/replace -i test/ProblemB_case${testcase}.txt -o result/ProblemB_case${testcase}_result.txt
 

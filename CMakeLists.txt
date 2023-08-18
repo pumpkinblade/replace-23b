@@ -71,6 +71,7 @@ set(PLACE_SRC
   src/abaxLegalizer.cpp
 )
 
+
 add_executable(replace ${PLACE_SRC} ${PLACE_HEADER})
 
 add_library( kahypar SHARED IMPORTED )
@@ -81,7 +82,14 @@ target_include_directories(replace PRIVATE ${TCLAP_HOME}/include)
 target_include_directories(replace PRIVATE ${EIGEN_HOME}/include)
 target_include_directories(replace PRIVATE ${STB_HOME})
 target_include_directories(replace PRIVATE ${CIMG_HOME})
+target_include_directories(replace PRIVATE ${KAHYPAR_HOME}/include)
 
 target_link_libraries(replace PRIVATE kahypar)
 
 target_compile_definitions(replace PRIVATE -Dcimg_display=0)
+target_compile_definitions(replace PRIVATE -DFFT2D_MAX_THREADS=16)
+if(CMAKE_USE_PTHREADS_INIT)
+  target_compile_definitions(replace PRIVATE -DUSE_FFT2D_PTHREADS)
+elseif(CMAKE_USE_WIN32_THREADS_INIT)
+  target_compile_definitions(replace PRIVATE -DUSE_FFT2D_WINTHREADS)
+endif()
