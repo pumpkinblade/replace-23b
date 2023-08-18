@@ -38,7 +38,6 @@ set(PLACE_HEADER
   src/abacusLegalizer.h
   src/partitioner.h
   src/macroLegalizer.h
-  src/terminalModifier.h
   src/outputWriter.h
   src/abaxLegalizer.h
 )
@@ -61,7 +60,6 @@ set(PLACE_SRC
   src/abacusLegalizer.cpp
   src/partitioner.cpp
   src/macroLegalizer.cpp
-  src/terminalModifier.cpp
   src/outputWriter.cpp
   src/abaxLegalizer.cpp
 )

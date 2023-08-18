@@ -34,7 +34,11 @@ namespace replace
     // the placements before and after partition
     void doNesterovPlace(string placename = "");
     void doAbacusLegalization();
+    void doAbaxLegalization();
     void doMacroLegalization();
+
+    void modifyTerminal();
+    void recoverTerminal();
 
     // Initial Place param settings
     void setInitialPlaceMaxIter(int iter);
@@ -44,6 +48,9 @@ namespace replace
     void setInitialPlaceNetWeightScale(float scale);
 
     void setNesterovPlaceMaxIter(int iter);
+    void setNesterovPlaceUseLocalDensity(bool on);
+    void setNesterovInitLocalAlpha(float alpha);
+    void setNesterovInitLocalBeta(float beta);
 
     void setBinGridCntX(int binGridCntX);
     void setBinGridCntY(int binGridCntY);
@@ -68,6 +75,7 @@ namespace replace
     int initialPlaceMaxSolverIter_;
     int initialPlaceMaxFanout_;
     float initialPlaceNetWeightScale_;
+    bool incrementalPlaceMode_;
 
     int nesterovPlaceMaxIter_;
     int binGridCntX_;
@@ -79,8 +87,9 @@ namespace replace
     float minPhiCoef_;
     float maxPhiCoef_;
     float referenceHpwl_;
-
-    bool incrementalPlaceMode_;
+    bool useLocalDensity_;
+    float initLocalAlpha_;
+    float initLocalBeta_;
   };
 }
 

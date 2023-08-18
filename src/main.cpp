@@ -8,7 +8,6 @@
 #include "replace.h"
 #include "plot.h"
 #include "partitioner.h"
-#include "terminalModifier.h"
 #include "outputWriter.h"
 #include "abaxLegalizer.h"
 
@@ -21,7 +20,7 @@ int main(int argc, const char *argv[])
   Log::Init();
 
   PlotVars vars;
-  vars.minLength = 2000;
+  vars.minLength = 1000;
   vars.xMargin = 30;
   vars.yMargin = 30;
   Plot::init(vars);
@@ -69,34 +68,30 @@ int main(int argc, const char *argv[])
   Plot::plot(pb.get(), "./plot/cell", "after_partition");
 
   // then we do optimization
-  TerminalModifier tm;
-  tm.setPlacerBase(pb);
-  tm.modify();
   Replace rp(1.0);
   rp.setPlacerBase(pb);
+  rp.modifyTerminal();
   rp.doInitialPlace();
+  rp.setNesterovPlaceUseLocalDensity(true);
   rp.doNesterovPlace("postgp");
   Plot::plot(pb.get(), "./plot/cell", "after_postgp");
   rp.doMacroLegalization();
   Plot::plot(pb.get(), "./plot/cell", "after_mlg");
 
   // fix macros
+  for (Instance* inst : pb->insts())
   {
-    for (Instance* inst : pb->insts())
-    {
-      if (inst->isMacro())
-        inst->setFixed(true);
-    }
+    if (inst->isMacro())
+      inst->setFixed(true);
   }
 
   rp.doInitialPlace();
+  rp.setTargetOverflow(0.05f);
   rp.doNesterovPlace("finalgp");
   Plot::plot(pb.get(), "./plot/cell", "after_finalgp");
-  // rp.doAbacusLegalization();
-  AbaxLegalizer abax(pb);
-  abax.doLegalization();
+  rp.doAbacusLegalization();
   Plot::plot(pb.get(), "./plot/cell", "after_clg");
-  tm.recover();
+  rp.recoverTerminal();
 
   int64_t hpwl = pb->hpwl();
   LOG_INFO("Result HPWL: {}", hpwl);

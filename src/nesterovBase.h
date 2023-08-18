@@ -347,10 +347,8 @@ namespace replace
     double overflowArea() const { return overflowArea_; }
 
     // return overlap bins_ index
-    std::pair<int, int> getMinMaxIdxX(Instance* inst);
-    std::pair<int, int> getMinMaxIdxY(Instance* inst);
-    std::pair<int, int> getMinMaxIdxX(GCell* gcell);
-    std::pair<int, int> getMinMaxIdxY(GCell* gcell);
+    std::pair<int, int> getMinMaxIdxX(prec lx1, prec ux1);
+    std::pair<int, int> getMinMaxIdxY(prec ly1, prec uy1);
 
     const std::vector<Bin *> &bins() const { return bins_; }
     Die *die() const { return die_; }
@@ -365,6 +363,7 @@ namespace replace
     double placeStdCellArea() const { return placeStdCellArea_; }
     double placeMacroArea() const { return placeMacroArea_; }
     double fixedInstanceArea() const { return fixedInstArea_; }
+    double totalCellArea() const { return totalCellArea_; }
 
   private:
     void updateBinsNonPlaceArea();
@@ -396,6 +395,7 @@ namespace replace
     double placeStdCellArea_;
     double placeMacroArea_;
     double fixedInstArea_;
+    double totalCellArea_;
   };
 
   class NesterovBaseVars
@@ -461,6 +461,8 @@ namespace replace
     Point getDensityPreconditioner(GCell *gCell);
 
     Point getDensityGradient(GCell *gCell);
+
+    Point getDensityGradientLocal(GCell *gCell, prec alpha, prec beta, prec& cellDelta);
 
     double hpwl();
     prec overflow() const;

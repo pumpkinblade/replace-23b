@@ -262,7 +262,8 @@ BinGrid::BinGrid()
       binCntX_(0), binCntY_(0),
       binSizeX_(0), binSizeY_(0),
       targetDensity_(0), overflowArea_(0),
-      isSetBinCntX_(0), isSetBinCntY_(0)
+      isSetBinCntX_(0), isSetBinCntY_(0),
+      totalCellArea_(0)
 {
 }
 
@@ -397,8 +398,10 @@ void BinGrid::updateBinsNonPlaceArea()
   {
     if(inst->isFixed())
     {
-      auto pairX = getMinMaxIdxX(inst);
-      auto pairY = getMinMaxIdxY(inst);
+      auto pairX = getMinMaxIdxX(static_cast<prec>(inst->lx()),
+                                 static_cast<prec>(inst->ux()));
+      auto pairY = getMinMaxIdxY(static_cast<prec>(inst->ly()),
+                                 static_cast<prec>(inst->uy()));
       for(int i = pairX.first; i < pairX.second; i++)
       {
         for(int j = pairY.first; j < pairY.second; j++)
@@ -431,8 +434,8 @@ void BinGrid::updateBinsGCellDensityArea()
 
   for(auto& cell : gCells_)
   {
-    std::pair<int, int> pairX = getMinMaxIdxX(cell);
-    std::pair<int, int> pairY = getMinMaxIdxY(cell);
+    std::pair<int, int> pairX = getMinMaxIdxX(cell->lx(), cell->ux());
+    std::pair<int, int> pairY = getMinMaxIdxY(cell->ly(), cell->uy());
 
     // The following function is critical runtime hotspot 
     // for global placer.
@@ -503,37 +506,24 @@ void BinGrid::updateBinsGCellDensityArea()
 }
 
 
-std::pair<int, int> BinGrid::getMinMaxIdxX(GCell* gcell)
+std::pair<int, int> BinGrid::getMinMaxIdxX(prec lx1, prec ux1)
 {
-  int lowerIdx = static_cast<int>(std::floor((gcell->lx() - lx()) / binSizeX_));
-  int upperIdx = static_cast<int>(std::ceil((gcell->ux() - lx()) / binSizeX_));
+  int lowerIdx = static_cast<int>(std::floor((lx1 - lx_) / binSizeX_));
+  int upperIdx = static_cast<int>(std::ceil((ux1 - lx_) / binSizeX_));
   return std::make_pair(std::max(lowerIdx, 0), std::min(upperIdx, binCntX_));
 }
 
-std::pair<int, int> BinGrid::getMinMaxIdxY(GCell* gcell)
+std::pair<int, int> BinGrid::getMinMaxIdxY(prec ly1, prec uy1)
 {
-  int lowerIdx = static_cast<int>(std::floor((gcell->ly() - ly()) / binSizeY_));
-  int upperIdx = static_cast<int>(std::ceil((gcell->uy() - ly()) / binSizeY_));
-  return std::make_pair(std::max(lowerIdx, 0), std::min(upperIdx, binCntY_));
-}
-
-std::pair<int, int> BinGrid::getMinMaxIdxX(Instance* inst)
-{
-  int lowerIdx = static_cast<int>(std::floor((static_cast<prec>(inst->lx()) - lx()) / binSizeX_));
-  int upperIdx = static_cast<int>(std::ceil((static_cast<prec>(inst->ux()) - lx()) / binSizeX_));
-  return std::make_pair(std::max(lowerIdx, 0), std::min(upperIdx, binCntX_));
-}
-
-std::pair<int, int> BinGrid::getMinMaxIdxY(Instance* inst)
-{
-  int lowerIdx = static_cast<int>(std::floor((static_cast<prec>(inst->ly()) - ly()) / binSizeY_));
-  int upperIdx = static_cast<int>(std::ceil((static_cast<prec>(inst->uy()) - ly()) / binSizeY_));
+  int lowerIdx = static_cast<int>(std::floor((ly1 - ly_) / binSizeY_));
+  int upperIdx = static_cast<int>(std::ceil((uy1 - ly_) / binSizeY_));
   return std::make_pair(std::max(lowerIdx, 0), std::min(upperIdx, binCntY_));
 }
 
 void BinGrid::addGCell(GCell* gc)
 {
   gCells_.push_back(gc);
+  totalCellArea_ += gc->dx() * gc->dy();
 }
 
 void BinGrid::updateDensityForceBin()
@@ -932,7 +922,7 @@ prec NesterovBase::targetDensity() const
   return nbVars_.targetDensity;
 }
 
-void  NesterovBase::updateDensityCoordiLayoutInside(GCell* gCell)
+void NesterovBase::updateDensityCoordiLayoutInside(GCell* gCell)
 {
   prec targetLx = gCell->lx();
   prec targetLy = gCell->ly();
@@ -946,35 +936,18 @@ void  NesterovBase::updateDensityCoordiLayoutInside(GCell* gCell)
 prec NesterovBase::getDensityCoordiLayoutInsideX(GCell* gCell, prec cx)
 {
   prec adjVal = cx;
-  // TODO will change base on each assigned binGrids.
-  // 
   BinGrid* bg = gCell->binGrid();
-  if(cx - gCell->dx() / 2 < bg->lx())
-  {
-    adjVal = bg->lx() + gCell->dx() / 2;
-  }
-  if(cx + gCell->dx() / 2 > bg->ux())
-  {
-    adjVal = bg->ux() - gCell->dx() / 2;
-  }
+  adjVal = std::max(adjVal, bg->lx() + 0.5f * gCell->dx());
+  adjVal = std::min(adjVal, bg->ux() - 0.5f * gCell->dx());
   return adjVal;
 }
 
 prec NesterovBase::getDensityCoordiLayoutInsideY(GCell* gCell, prec cy)
 {
   prec adjVal = cy;
-  // TODO will change base on each assigned binGrids.
-  // 
   BinGrid* bg = gCell->binGrid();
-  if(cy - gCell->dy() / 2 < bg->ly())
-  {
-    adjVal = bg->ly() + gCell->dy() / 2;
-  }
-  if(cy + gCell->dy() / 2 > bg->uy())
-  {
-    adjVal = bg->uy() - gCell->dy() / 2; 
-  }
-
+  adjVal = std::max(adjVal, bg->ly() + 0.5f * gCell->dy());
+  adjVal = std::min(adjVal, bg->uy() - 0.5f * gCell->dy());
   return adjVal;
 }
 
@@ -1149,8 +1122,8 @@ Point NesterovBase::getDensityGradient(GCell* gCell)
   // find 
   BinGrid* bg = gCell->binGrid();
 
-  auto pairX = bg->getMinMaxIdxX(gCell);
-  auto pairY = bg->getMinMaxIdxY(gCell);
+  auto pairX = bg->getMinMaxIdxX(gCell->lx(), gCell->ux());
+  auto pairY = bg->getMinMaxIdxY(gCell->ly(), gCell->uy());
   
   Point electroForce;
 
@@ -1167,6 +1140,56 @@ Point NesterovBase::getDensityGradient(GCell* gCell)
     }
   }
   return electroForce;
+}
+
+Point NesterovBase::getDensityGradientLocal(GCell *gCell, prec alpha, prec beta, prec& cellDelta)
+{
+  BinGrid* bg = gCell->binGrid();
+  auto pairX = bg->getMinMaxIdxX(gCell->lx(), gCell->ux());
+  auto pairY = bg->getMinMaxIdxY(gCell->ly(), gCell->uy());
+  Point grad;
+
+  prec binArea = bg->binSizeX() * bg->binSizeY();
+  prec invTotalCellArea = static_cast<prec>(1.0 / bg->totalCellArea());
+
+  for(int i = pairX.first; i < pairX.second; i++)
+  {
+    for(int j = pairY.first; j < pairY.second; j++)
+    {
+      Bin* bin = bg->bins()[j * bg->binCntX() + i];
+      prec binCellArea = bin->density() * binArea;
+      if(binCellArea > binArea)
+        cellDelta += beta * (binCellArea - binArea) * invTotalCellArea;
+
+      prec overlapLx = std::max(bin->lx(), gCell->lx());
+      prec overlapLy = std::max(bin->ly(), gCell->ly());
+      prec overlapUx = std::min(bin->ux(), gCell->ux());
+      prec overlapUy = std::min(bin->uy(), gCell->uy());
+      prec shareArea = 0.0f, dAdx = 0.0f, dAdy = 0.0f;
+      if(overlapLx < overlapUx && overlapLy < overlapUy)
+      {
+        shareArea = (overlapUx - overlapLx) * (overlapUy - overlapLy);
+        if(bin->lx() < gCell->lx() && bin->ux() < gCell->ux())
+          dAdx = -(overlapUy - overlapLy);
+        else if(bin->lx() > gCell->lx() && bin->ux() > gCell->ux())
+          dAdx = (overlapUy - overlapLy);
+        if(bin->ly() < gCell->ly() && bin->uy() < gCell->uy())
+          dAdy = -(overlapUx - overlapLx);
+        else if(bin->ly() > gCell->ly() && bin->uy() > gCell->uy())
+          dAdy = (overlapUx - overlapLx);
+      }
+      prec commonDiv = alpha / binArea;
+      prec nu = fastExp(commonDiv * (binCellArea - binArea));
+      prec commonVal = commonDiv * bin->electroPhi() * nu * binCellArea;
+      prec commonMul = nu * shareArea;
+
+      grad.x += dAdx * commonVal;
+      grad.x += commonMul * bin->electroForceX();
+      grad.y += dAdy * commonVal;
+      grad.y += commonMul * bin->electroForceY();
+    }
+  }
+  return grad;
 }
 
 // Density force cals

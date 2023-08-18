@@ -25,7 +25,10 @@ NesterovPlaceVars::NesterovPlaceVars()
   maxPhiCoef(1.05),
   minPreconditioner(1.0),
   initialPrevCoordiUpdateCoef(100),
-  referenceHpwl(446000000) {}
+  referenceHpwl(446000000),
+  useLocalDensity(false),
+  initAlpha(1e-12f),
+  initBeta(1e-11f) {}
 
 NesterovPlace::NesterovPlace() 
   : nb_(nullptr), npVars_(), 
@@ -67,6 +70,14 @@ void NesterovPlace::init() {
 
   curCoordi_.resize(gCellSize, Point());
   nextCoordi_.resize(gCellSize, Point());
+
+  if(npVars_.useLocalDensity)
+  {
+    localAlpha_ = npVars_.initAlpha;
+    localBeta_ = npVars_.initBeta;
+    cellDelta_.resize(gCellSize, 0.0f);
+    tmpCellDelta_.resize(gCellSize, 0.0f);
+  }
 
   for(int i = 0; i < gCellSize; i++)
   {
@@ -199,6 +210,15 @@ NesterovPlace::updateGradients(
 
     sumGrads[i].x = wireLengthGrads[i].x + densityPenalty_ * densityGrads[i].x;
     sumGrads[i].y = wireLengthGrads[i].y + densityPenalty_ * densityGrads[i].y;
+    if(npVars_.useLocalDensity)
+    {
+      prec delta = cellDelta_[i];
+      Point lgrad = nb_->getDensityGradientLocal(
+        gCell, localAlpha_, localBeta_, delta);
+      tmpCellDelta_[i] = delta;
+      sumGrads[i].x += delta * lgrad.x;
+      sumGrads[i].y += delta * lgrad.y;
+    }
 
     Point wireLengthPreCondi 
       = nb_->getWireLengthPreconditioner(gCell);
@@ -229,8 +249,7 @@ NesterovPlace::updateGradients(
 
   // divergence detection on 
   // Wirelength / density gradient calculation
-  if( isnan(wireLengthGradSum_) || isinf(wireLengthGradSum_) ||
-      isnan(densityGradSum_) || isinf(densityGradSum_) ) {
+  if( isnan(gradSum) || isinf(gradSum)) {
     isDiverged_ = true;
   }
 }
@@ -250,7 +269,6 @@ NesterovPlace::doNesterovPlace(string placename) {
     placename.push_back('_');
   }
   Plot::plot(nb_.get(), PlotNesterovType::GCell, "./plot/cell", placename + "cell_0");
-  Plot::plot(nb_.get(), PlotNesterovType::Bin, "./plot/bin", placename + "bin_0");
   Plot::plot(nb_.get(), PlotNesterovType::Arrow, "./plot/arrow", placename + "arrow_0");
 
   // backTracking variable.
@@ -368,16 +386,14 @@ NesterovPlace::doNesterovPlace(string placename) {
       break;
     }
 
-    updateNextIter(); 
-
+    updateNextIter();
 
     // For JPEG Saving
     // debug
 
-    if( i == 0 || (i+1) % 100 == 0 ) {
+    if( i == 0 || (i+1) % 20 == 0 ) {
       LOG_DEBUG("[NesterovSolve] Iter: {} overflow: {} HPWL: {}", i+1, sumOverflow_, prevHpwl_);
       Plot::plot(nb_.get(), PlotNesterovType::GCell, "./plot/cell", placename + "cell_" + std::to_string(i+1));
-      Plot::plot(nb_.get(), PlotNesterovType::Bin, "./plot/bin", placename + "bin_" + std::to_string(i+1));
       Plot::plot(nb_.get(), PlotNesterovType::Arrow, "./plot/arrow", placename + "arrow_" + std::to_string(i+1));
     }
 
@@ -412,6 +428,8 @@ NesterovPlace::doNesterovPlace(string placename) {
   // in all case including diverge, 
   // PlacerBase should be updated. 
   updatePlacerBase();
+  Plot::plot(nb_.get(), PlotNesterovType::GCell, "./plot/cell", placename + "cell_end");
+  Plot::plot(nb_.get(), PlotNesterovType::Arrow, "./plot/arrow", placename + "arrow_end");
 
   if( isDiverged_ ) { 
     LOG_ERROR("{} : Code `{}`", divergeMsg, divergeCode);
@@ -491,7 +509,14 @@ NesterovPlace::updateNextIter() {
   
   prevHpwl_ = hpwl;
   densityPenalty_ *= phiCoef;
-  
+
+  if(npVars_.useLocalDensity)
+  {
+    std::copy(tmpCellDelta_.begin(), tmpCellDelta_.end(), cellDelta_.begin());
+    localAlpha_ *= phiCoef;
+    localBeta_ *= phiCoef;
+  }
+
   LOG_DEBUG("PhiCoef: {}", phiCoef);
 }
 
