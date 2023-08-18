@@ -97,7 +97,7 @@ namespace replace
     offsetCx_ = offsetX;
     offsetCy_ = offsetY;
     cx_ = offsetCx_ + (inst_ == nullptr ? 0 : inst_->cx());
-    cy_ = offsetCx_ + (inst_ == nullptr ? 0 : inst_->cy());
+    cy_ = offsetCy_ + (inst_ == nullptr ? 0 : inst_->cy());
   }
 
   void Pin::setLocation(int cx, int cy)
@@ -220,7 +220,7 @@ namespace replace
     rowWidth_       = ano.rowWidth()       ; 
     rowHeight_      = ano.rowHeight()      ;
     rowRepeatCount_ = ano.rowRepeatCount() ;
-    isSetRow_       = ano.isSetRow_;
+    isSetRow_       = ano.isSetRow_        ;
 
     coreLx_         = ano.coreLx()         ;
     coreLy_         = ano.coreLy()         ;

@@ -329,9 +329,11 @@ namespace replace
         for (const auto &pinDesc : cellDesc->pins)
         {
           int pinId = libPinNameIdMaps[cellId].at(pinDesc.name);
-          int offsetCx = pinDesc.x - cellDesc->sizeX / 2;
-          int offsetCy = pinDesc.y - cellDesc->sizeY / 2;
-          tech->pinStor_.emplace_back(pinId, offsetCx, offsetCy);
+          int offsetX = pinDesc.x;
+          int offsetY = pinDesc.y;
+          offsetX -= cellDesc->sizeX / 2;
+          offsetY -= cellDesc->sizeY / 2;
+          tech->pinStor_.emplace_back(pinId, offsetX, offsetY);
           cell->pins_[pinId] = &tech->pinStor_.back();
         }
       }

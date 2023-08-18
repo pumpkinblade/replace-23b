@@ -18,6 +18,12 @@ using namespace std;
 static double getOverlapArea(Bin* bin, Instance* inst);
 static double getOverlapDensityArea(Bin* bin, GCell* cell);
 static prec fastExp(prec exp);
+static prec bellShape(prec theta_i, prec theta);
+static prec bellShape1(prec theta_i);
+static prec bellShape2(prec theta_i);
+static prec bellShapeDerive(prec theta_i, prec theta);
+static prec bellShapeDerive1(prec theta_i);
+static prec bellShapeDerive2(prec theta_i);
 
 
 ////////////////////////////////////////////////
@@ -25,7 +31,7 @@ static prec fastExp(prec exp);
 
 GCell::GCell() 
     : inst_(nullptr), isMacro_(false),
-      lx_(0), ly_(0), ux_(0), uy_(0),
+      lx_(0), ly_(0), ux_(0), uy_(0), theta_(0),
       densityScale_(0)
 {
 }
@@ -68,9 +74,15 @@ void GCell::setLocation(prec lx, prec ly)
   lx = lx_;
   ly = ly_;
 
-  for(auto& gPin: gPins_)
+  if(isMacro_)
   {
-    gPin->updateLocation(this);
+    for(GPin* pin : gPins_)
+      pin->updateLocationWithTheta(this);
+  }
+  else
+  {
+    for(GPin* pin : gPins_)
+      pin->updateLocation(this);
   }
 }
 
@@ -84,9 +96,15 @@ void GCell::setCenterLocation(prec cx, prec cy)
   ux_ = cx + halfDx;
   uy_ = cy + halfDy;
 
-  for(auto& gPin: gPins_)
+  if(isMacro_)
   {
-    gPin->updateLocation(this);
+    for(GPin* pin : gPins_)
+      pin->updateLocationWithTheta(this);
+  }
+  else
+  {
+    for(GPin* pin : gPins_)
+      pin->updateLocation(this);
   }
 }
 
@@ -100,6 +118,11 @@ void GCell::setSize(prec dx, prec dy)
   ly_ = centerY - dy / 2;
   ux_ = centerX + dx / 2;
   uy_ = centerY + dy / 2;
+}
+
+void GCell::setThetaNoUpdatePin(prec theta)
+{
+  theta_ = theta;
 }
 
 ////////////////////////////////////////////////
@@ -224,6 +247,14 @@ void GPin::updateLocation(const GCell* gCell)
 {
   cx_ = gCell->cx() + offsetCx_;
   cy_ = gCell->cy() + offsetCy_;
+}
+
+void GPin::updateLocationWithTheta(const GCell* gCell)
+{
+  prec cosTheta = std::cos(gCell->theta());
+  prec sinTheta = std::sin(gCell->theta());
+  cx_ = gCell->cx() + offsetCx_ * cosTheta - offsetCy_ * sinTheta;
+  cy_ = gCell->cy() + offsetCx_ * sinTheta + offsetCy_ * cosTheta;
 }
 
 ////////////////////////////////////////////////////////
@@ -452,7 +483,7 @@ void BinGrid::updateBinsGCellDensityArea()
           {
             Bin* bin = bins_[j * binCntX_ + i];
             double overlapArea = getOverlapDensityArea(bin, cell);
-            overlapArea *= cell->densityScale() * bin->targetDensity();
+            overlapArea *= (cell->densityScale() * bin->targetDensity());
             bin->addInstPlacedArea(static_cast<prec>(overlapArea));
           }
         }
@@ -1272,6 +1303,49 @@ static prec fastExp(prec a)
   a *= a;
   a *= a;
   return a;
+}
+
+static prec bellShape(prec theta_i, prec theta)
+{
+  prec delta_abs = (1.f / (2.f * PI)) * std::abs(theta_i - theta);
+  if (delta_abs <= 0.125f)
+    return 1.f - 32.f * delta_abs * delta_abs;
+  else if (delta_abs <= 0.25f)
+    return 32.f * (delta_abs - 0.25f) * (delta_abs - 0.25f);
+  else
+    return 0.f;
+}
+
+static prec bellShape1(prec theta_i)
+{
+  return bellShape(theta_i, 0.0f) + bellShape(theta_i, PI) + bellShape(theta_i, 2.0f * PI);
+}
+
+static prec bellShape2(prec theta_i)
+{
+  return bellShape(theta_i, 0.5f * PI) + bellShape(theta_i, 1.5f * PI);
+}
+
+static prec bellShapeDerive(prec theta_i, prec theta)
+{
+  prec delta = (1.f / (2.f * PI)) * (theta_i - theta);
+  prec delta_abs = std::abs(delta);
+  if (delta_abs <= 0.125f)
+    return (-16.f / PI) * delta;
+  else if (delta_abs <= 0.25f)
+    return (32.f / PI) * delta + ((delta > 0) ? (-8.f / PI) : (8.f / PI));
+  else
+    return 0.f;
+}
+
+static prec bellShapeDerive1(prec theta_i)
+{
+  return bellShapeDerive(theta_i, 0.0f) + bellShapeDerive(theta_i, PI) + bellShapeDerive(theta_i, 2.0f * PI);
+}
+
+static prec bellShapeDerive2(prec theta_i)
+{
+  return bellShapeDerive(theta_i, 0.5f * PI) + bellShapeDerive(theta_i, 1.5f * PI);
 }
 
 }

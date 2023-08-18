@@ -47,7 +47,7 @@ namespace replace
         int get_hpwl(const std::vector<Instance *> &macros, Die *die);
         double calc_cost(const std::vector<Instance *> &macros, Die *die);
 
-        void postLegalize(const std::vector<Instance *> macros, Die *die);
+        void postLegalize(std::vector<Instance *>& macros, Die *die);
 
     private:
         /* data */

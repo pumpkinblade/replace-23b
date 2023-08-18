@@ -54,10 +54,12 @@ namespace replace
     prec cy() const { return (ly_ + uy_) / 2; }
     prec dx() const { return (ux_ - lx_); }
     prec dy() const { return (uy_ - ly_); }
+    prec theta() const { return theta_; }
 
     void setLocation(prec lx, prec ly);
     void setCenterLocation(prec cx, prec cy);
     void setSize(prec dx, prec dy);
+    void setThetaNoUpdatePin(prec theta);
 
     prec densityScale() const { return densityScale_; }
     void setDensityScale(prec densityScale) { densityScale_ = densityScale; }
@@ -75,6 +77,7 @@ namespace replace
     prec ly_;
     prec ux_;
     prec uy_;
+    prec theta_;
 
     prec densityScale_;
     BinGrid* bg_;
@@ -210,6 +213,7 @@ namespace replace
 
     void setCenterLocation(prec cx, prec cy);
     void updateLocation(const GCell *gCell);
+    void updateLocationWithTheta(const GCell *gCell);
 
   private:
     Pin* pin_;
@@ -310,10 +314,6 @@ namespace replace
     prec electroForceY_;
   };
 
-  //
-  // The bin can be non-uniform because of
-  // "integer" coordinates
-  //
   class BinGrid
   {
   public:

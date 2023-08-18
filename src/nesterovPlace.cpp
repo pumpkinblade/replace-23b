@@ -2,18 +2,19 @@
 #include "nesterovBase.h"
 #include "nesterovPlace.h"
 #include "log.h"
-#include <iostream>
-using namespace std;
-
 #include "plot.h"
+#include <glpk.h>
+
+using namespace std;
 
 namespace replace {
 
-static prec
-getDistance(vector<Point>& a, vector<Point>& b);
+static prec getDistance(vector<Point>& a, vector<Point>& b);
+static prec getSecondNorm(vector<Point>& a);
 
-static prec
-getSecondNorm(vector<Point>& a);
+static void getRotBox(GCell *cell, bool rot, double &lx, double &ux, double &ly, double &uy);
+static double getRotOverlap(GCell* cell1, GCell* cell2, bool rot1, bool rot2);
+static void ilpSolve(std::vector<GCell*>& macros);
 
 NesterovPlaceVars::NesterovPlaceVars()
   : maxNesterovIter(2000), 
@@ -420,7 +421,7 @@ NesterovPlace::doNesterovPlace(string placename) {
 
     // minimum iteration is 50
     if( i > 50 && sumOverflow_ <= npVars_.targetOverflow) {
-      cout << "[NesterovSolve] Finished with Overflow: " << sumOverflow_ << endl;
+      LOG_DEBUG("[NesterovSolve] Finished with Overflow: {}", sumOverflow_);
       break;
     }
   }
@@ -561,25 +562,185 @@ NesterovPlace::updatePlacerBase() {
   }
 }
 
-static prec
-getDistance(vector<Point>& a, vector<Point>& b) {
+void NesterovPlace::determinMacroOrient()
+{
+  for (BinGrid* bg : nb_->binGrids())
+  {
+    std::vector<GCell*> macros;
+    for (GCell* gcell : bg->gCells())
+    {
+      if (gcell->isMacro() && gcell->isInstance())
+      {
+        int idx = 0;
+        for (idx = 0; idx < 5; idx++)
+        {
+          if (std::abs(gcell->theta() - LEGAL_THETA[idx]) < 0.1 * PI)
+            gcell->setThetaNoUpdatePin(LEGAL_THETA[idx]);
+        }
+        if (idx == 5)
+          macros.push_back(gcell);
+      }
+    }
+    ilpSolve(macros);
+  }
+}
+
+static prec getDistance(vector<Point>& a, vector<Point>& b)
+{
   prec sumDistance = 0.0f;
-  for(size_t i=0; i<a.size(); i++) {
+  for(size_t i=0; i<a.size(); i++)
+  {
     sumDistance += (a[i].x - b[i].x) * (a[i].x - b[i].x);
     sumDistance += (a[i].y - b[i].y) * (a[i].y - b[i].y);
   }
 
-  return sqrt( sumDistance / (2.0 * a.size()) );
+  return sqrt(sumDistance / (2.0 * a.size()));
 }
 
-static prec
-getSecondNorm(vector<Point>& a) {
+static prec getSecondNorm(vector<Point>& a)
+{
   prec norm = 0;
-  for(auto& coordi : a) {
+  for(auto& coordi : a)
     norm += coordi.x * coordi.x + coordi.y * coordi.y;
-  }
   return sqrt( norm / (2.0*a.size()) ); 
 }
 
+static void getRotBox(GCell *cell, bool rot, double &lx, double &ux, double &ly, double &uy)
+{
+  if (rot)
+  {
+    double cx = cell->cx();
+    double dx = cell->dx();
+    double cy = cell->cy();
+    double dy = cell->dy();
+    lx = cx - 0.5 * dy;
+    ux = cx + 0.5 * dy;
+    ly = cy - 0.5 * dx;
+    uy = cy + 0.5 * dx;
+  }
+  else
+  {
+    lx = cell->lx();
+    ux = cell->ux();
+    ly = cell->ly();
+    uy = cell->uy();
+  }
+}
+
+static double getRotOverlap(GCell* cell1, GCell* cell2, bool rot1, bool rot2)
+{
+  double lx1, ux1, ly1, uy1;
+  getRotBox(cell1, rot1, lx1, ux1, ly1, uy1);
+  double lx2, ux2, ly2, uy2;
+  getRotBox(cell2, rot2, lx2, ux2, ly2, uy2);
+
+  double lx = std::max(lx1, lx2);
+  double ux = std::min(ux1, ux2);
+  double ly = std::max(ly1, ly2);
+  double uy = std::min(uy1, uy2);
+
+  if (lx < ux && ly < uy)
+    return (ux - lx) * (uy - ly);
+  else
+    return 0.0;
+}
+
+static void ilpSolve(std::vector<GCell*>& macros)
+{
+  int numMacros = static_cast<int>(macros.size());
+  std::vector<double> coeff(numMacros * (numMacros + 1) / 2, 0.0);
+  for (int u = 0, j = numMacros; u < numMacros; u++)
+  {
+    for (int v = u + 1; v < numMacros; v++)
+    {
+      double phi_uv = getRotOverlap(macros[u], macros[v], false, false);
+      double phi_uRv = getRotOverlap(macros[u], macros[v], true, false);
+      double phi_uvR = getRotOverlap(macros[u], macros[v], false, true);
+      double phi_uRvR = getRotOverlap(macros[u], macros[v], true, true);
+      coeff[u] += (phi_uRv - phi_uv);
+      coeff[v] += (phi_uvR - phi_uv);
+      coeff[j++] = (phi_uv - phi_uRv - phi_uvR + phi_uRvR);
+    }
+  }
+
+  glp_prob *lp = glp_create_prob();
+  glp_set_prob_name(lp, "orientation");
+  glp_set_obj_dir(lp, GLP_MIN);
+  // cols
+  int n = static_cast<int>(coeff.size());
+  char name[16];
+  glp_add_cols(lp, n);
+  for (int u = 0, j = numMacros; u < numMacros; u++)
+  {
+    std::sprintf(name, "r%d", u + 1);
+    glp_set_col_name(lp, u + 1, name);
+    glp_set_obj_coef(lp, u + 1, coeff[u]);
+    glp_set_col_kind(lp, u + 1, GLP_BV);
+    for (int v = u + 1; v < numMacros; v++)
+    {
+      std::sprintf(name, "r%d_%d", u + 1, v + 1);
+      glp_set_col_name(lp, j + 1, name);
+      glp_set_obj_coef(lp, j + 1, coeff[j]);
+      glp_set_col_kind(lp, j + 1, GLP_BV);
+      j++;
+    }
+  }
+  // rows
+  int m = 2 * n;
+  glp_add_rows(lp, m);
+  for (int u = 0, i = 0, j = numMacros; u < numMacros; u++)
+  {
+    for (int v = u + 1; v < numMacros; v++)
+    {
+      int ind[1 + 3];
+      double val[1 + 3];
+
+      glp_set_row_bnds(lp, i + 1, GLP_UP, 0.0, 0.0);
+      ind[1] = u + 1;
+      ind[2] = j + 1;
+      val[1] = -1.0;
+      val[2] = 1.0;
+      glp_set_mat_row(lp, i + 1, 2, ind, val);
+
+      glp_set_row_bnds(lp, i + 2, GLP_UP, 0.0, 1.0);
+      ind[1] = u + 1;
+      ind[2] = v + 1;
+      ind[3] = j + 1;
+      val[1] = 1.0;
+      val[2] = 1.0;
+      val[3] = -1.0;
+      glp_set_mat_row(lp, i + 2, 3, ind, val);
+
+      i += 2;
+      j++;
+    }
+  }
+
+  glp_simplex(lp, NULL);
+  glp_intopt(lp, NULL);
+  std::vector<double> rot(numMacros);
+  for (int u = 0; u < numMacros; u++)
+    rot[u] = glp_mip_col_val(lp, u + 1);
+  glp_delete_prob(lp);
+
+  for (int u = 0; u < numMacros; u++)
+  {
+    if (rot[u] == 1.0)
+    {
+      if (std::abs(macros[u]->theta() - 0.5 * PI) < std::abs(macros[u]->theta() - 1.5 * PI))
+        macros[u]->setThetaNoUpdatePin(0.5 * PI);
+      else
+        macros[u]->setThetaNoUpdatePin(1.5 * PI);
+    }
+    else
+    {
+      if (std::abs(macros[u]->theta()) < std::abs(macros[u]->theta() - PI)
+          || std::abs(macros[u]->theta() - 2.0 * PI) < std::abs(macros[u]->theta() - PI))
+        macros[u]->setThetaNoUpdatePin(0.0);
+      else
+        macros[u]->setThetaNoUpdatePin(PI);
+    }
+  }
+}
 
 }

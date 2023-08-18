@@ -61,6 +61,8 @@ public:
 
   void updatePlacerBase();
 
+  void determinMacroOrient();
+
 private:
   std::shared_ptr<NesterovBase> nb_;
   NesterovPlaceVars npVars_;

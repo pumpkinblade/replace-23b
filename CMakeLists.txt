@@ -22,6 +22,9 @@ set(CIMG_HOME
 set(STB_HOME
   ${PROJECT_SOURCE_DIR}/module/stb
 )
+set(GLPK_HOME
+  ${PROJECT_SOURCE_DIR}/module/glpk
+)
 
 set(PLACE_HEADER
   src/log.h
@@ -71,5 +74,15 @@ target_include_directories(replace PRIVATE ${TCLAP_HOME}/include)
 target_include_directories(replace PRIVATE ${EIGEN_HOME}/include)
 target_include_directories(replace PRIVATE ${STB_HOME})
 target_include_directories(replace PRIVATE ${CIMG_HOME})
+target_include_directories(replace PRIVATE ${GLPK_HOME})
 
 target_compile_definitions(replace PRIVATE -Dcimg_display=0)
+
+target_link_directories(replace PRIVATE ${GLPK_HOME})
+target_link_libraries(replace PRIVATE glpk_4_65.lib)
+add_custom_command(
+  TARGET replace
+  POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy 
+    ${GLPK_HOME}/glpk_4_65.dll 
+    $<TARGET_FILE_DIR:${CMAKE_PROJECT_NAME}>/glpk_4_65.dll
+)
