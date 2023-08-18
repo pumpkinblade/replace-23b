@@ -7,7 +7,6 @@
 #include <algorithm>
 #include <unordered_set>
 #include <libkahypar.h>
-#include <thread>
 #include <iostream>
 
 namespace replace
@@ -659,6 +658,7 @@ namespace replace
 
     // move the instance to the bottom die
     // create bottom nets
+    std::cout<<"---------------------"<<std::endl;
     std::vector<Net> bottomNets;
     const std::vector<Net *> &topNets = pb_->nets();
     bottomNets.reserve(pb_->nets().size());
@@ -714,7 +714,7 @@ namespace replace
         // is different
       }
     }
-
+    kahypar_context_free(context);
     std::sort(macros.begin(), macros.end(), [](const Instance* left,
     const Instance* right){ return left->size() > right->size(); });
     // A greedy macro partition method, which may be not optimal.
@@ -759,7 +759,7 @@ namespace replace
           inst.setLocation(2 * pb_->terminalSizeX(), 2 * pb_->terminalSizeY());
           inst.setFixed(false);
           // set inst's name using net name
-          inst.setName(topNet->name());
+          // inst.setName(topNet->name());
           Pin &pinTop = pb_->emplacePin();
           Pin &pinBot = pb_->emplacePin();
           // add pin to net
@@ -774,7 +774,7 @@ namespace replace
         pb_->addNet(botNet);
       }
     }
-    kahypar_context_free(context);
+    
     LOG_TRACE("finish partition");
   }
 
