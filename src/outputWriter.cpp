@@ -8,7 +8,23 @@ namespace replace
   void writeInstance(std::ofstream& out, const Instance* inst)
   {
     out << "Inst " << inst->name() << " " 
-        << inst->lx() << " " << inst->ly() << " R0\n";
+        << inst->lx() << " " << inst->ly();
+    switch(inst->orientation())
+    {
+    case Orientation::R0:
+    case Orientation::R360:
+      out << " R0";
+      break;
+    case Orientation::R90:
+      out << " R90";
+      break;
+    case Orientation::R180:
+      out << " R180";
+      break;
+    case Orientation::R270:
+      out << " R270";
+      break;
+    }
   }
 
   void writeTerminal(std::ofstream& out, const Instance* term)

@@ -7,6 +7,7 @@
 #include <memory>
 #include <cassert>
 #include "technology.h"
+#include "point.h"
 
 namespace replace
 {
@@ -31,12 +32,12 @@ namespace replace
 
     void setLocation(int x, int y);
     void setCenterLocation(int x, int y);
-    // w for x dimension, h for y dimension
-    void setSize(int w, int h);
-    // use libCellName_ to get LibCell data under tech. and set
-    // instance size to the LibCell size
-    void setSize(Technology &tech);
     void setBox(int lx, int ly, int ux, int uy);
+    // use libCellId to get LibCell data under tech. and set
+    // instance size to the LibCell size
+    void setSize(const Technology& tech);
+    void setOrientSize(const Technology& tech, Orientation ori);
+    void setSize(int w, int h);
 
     int lx() const { return lx_; }
     int ly() const { return ly_; }
@@ -61,6 +62,11 @@ namespace replace
     int libCellId() const { return libCellId_; }
     void setLibCellId(int id) { libCellId_ = id; }
 
+    Orientation orientation() const { return orient_; }
+
+  private:
+
+
   private:
     std::vector<Pin *> pins_;
     int lx_;
@@ -69,6 +75,7 @@ namespace replace
     int uy_;
     bool isFixed_;
     bool isMacro_;
+    Orientation orient_;
 
     // For initialPlace
     int extId_;
@@ -106,7 +113,6 @@ namespace replace
     void setLocation(int cx, int cy);
 
     void updateLocation(const Instance *inst);
-    // this is the only medifiter of offsetX nad offsetY
     void updateLocation(const Instance *inst, int offsetX, int offsetY);
 
     void setInstance(Instance *inst);

@@ -33,20 +33,78 @@ namespace replace
     setBox(x - halfXLeft, y - halfYTop, x + halfXRight, y + halfYBottom);
   }
 
-  void Instance::setSize(int w, int h)
+  void Instance::setSize(const Technology& tech)
   {
-    setBox(lx_, ly_, lx_ + w, ly_ + h);
-  }
-
-  void Instance::setSize(Technology &tech)
-  {
-    auto& libcell = *tech.libCell(libCellId());
-    setSize(libcell.sizeX(), libcell.sizeY());
+    const LibCell* libcell = tech.libCell(libCellId());
+    orient_ = Orientation::R0;
+    setSize(libcell->sizeX(), libcell->sizeY());
     for(Pin* pin : pins_)
     {
-      LibPin* libpin = libcell.libPin(pin->libPinId());
-      pin->setOffset(libpin->x(), libpin->y());
+      LibPin* libpin = libcell->libPin(pin->libPinId());
+      pin->updateLocation(this, libpin->x(), libpin->y());
     }
+  }
+
+  void Instance::setOrientSize(const Technology& tech, Orientation ori)
+  {
+    const LibCell* libcell = tech.libCell(libCellId());
+
+    orient_ = ori;
+    switch(ori)
+    {
+    case Orientation::R0:
+    case Orientation::R180:
+    case Orientation::R360:
+      setSize(libcell->sizeX(), libcell->sizeY());
+      break;
+    case Orientation::R90:
+    case Orientation::R270:
+      setSize(libcell->sizeY(), libcell->sizeX());
+      break;
+    };
+
+    switch(ori)
+    {
+    case Orientation::R0:
+    case Orientation::R360:
+      for(Pin* pin : pins_)
+      {
+        LibPin* libpin = libcell->libPin(pin->libPinId());
+        pin->updateLocation(this, libpin->x(), libpin->y());
+      }
+      break;
+    case Orientation::R90:
+      for(Pin* pin : pins_)
+      {
+        LibPin* libpin = libcell->libPin(pin->libPinId());
+        pin->updateLocation(this, -libpin->y(), libpin->x());
+      }
+      break;
+    case Orientation::R180:
+      for(Pin* pin : pins_)
+      {
+        LibPin* libpin = libcell->libPin(pin->libPinId());
+        pin->updateLocation(this, -libpin->x(), -libpin->y());
+      }
+      break;
+    case Orientation::R270:
+      for(Pin* pin : pins_)
+      {
+        LibPin* libpin = libcell->libPin(pin->libPinId());
+        pin->updateLocation(this, libpin->y(), -libpin->x());
+      }
+      break;
+    };
+  }
+
+  void Instance::setSize(int w, int h)
+  {
+    int x = cx(), y = cy();
+    int hw1 = w / 2;
+    int hw2 = w - hw1;
+    int hh1 = h / 2;
+    int hh2 = h - hh1;
+    setBox(x - hw1, y - hh1, x + hw2, y + hh2);
   }
 
   void Instance::setBox(int lx, int ly, int ux, int uy)
