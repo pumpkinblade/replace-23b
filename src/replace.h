@@ -41,6 +41,7 @@ namespace replace
     void recoverTerminal();
 
     // Initial Place param settings
+    void setInitialPlaceMinIter(int iter);
     void setInitialPlaceMaxIter(int iter);
     void setInitialPlaceMinDiffLength(int length);
     void setInitialPlaceMaxSolverIter(int iter);
@@ -70,6 +71,7 @@ namespace replace
   private:
     std::shared_ptr<PlacerBase> pb_;
 
+    int initialPlaceMinIter_;
     int initialPlaceMaxIter_;
     int initialPlaceMinDiffLength_;
     int initialPlaceMaxSolverIter_;

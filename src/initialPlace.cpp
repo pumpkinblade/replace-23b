@@ -15,7 +15,8 @@ namespace replace
   typedef Eigen::Triplet<float> T;
 
   InitialPlaceVars::InitialPlaceVars()
-      : maxIter(20),
+      : minIter(5),
+        maxIter(20),
         minDiffLength(1500),
         maxSolverIter(100),
         maxFanout(200),
@@ -87,7 +88,7 @@ namespace replace
 
       Plot::plot(pb_.get(), "./plot/cell", "ip_" + to_string(i));
 
-      if (max(errorX, errorY) <= 1e-5 && i >= 5)
+      if (max(errorX, errorY) <= 1e-5 && i >= ipVars_.minIter)
       {
         break;
       }

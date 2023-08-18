@@ -11,6 +11,7 @@ namespace replace
   class InitialPlaceVars
   {
   public:
+    int minIter;
     int maxIter;
     int minDiffLength;
     int maxSolverIter;

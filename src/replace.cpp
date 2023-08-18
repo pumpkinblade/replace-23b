@@ -76,6 +76,7 @@ namespace replace
   void Replace::doInitialPlace()
   {
     InitialPlaceVars ipVars;
+    ipVars.minIter = initialPlaceMinIter_;
     ipVars.maxIter = initialPlaceMaxIter_;
     ipVars.minDiffLength = initialPlaceMinDiffLength_;
     ipVars.maxSolverIter = initialPlaceMaxSolverIter_;
@@ -210,6 +211,11 @@ namespace replace
     int coreUx = pb_->die("terminal")->coreUx() + spaceLeft;
     int coreUy = pb_->die("terminal")->coreUy() + spaceLeft;
     pb_->die("terminal")->setCoreBox(coreLx, coreLy, coreUx, coreUy);
+  }
+
+  void Replace::setInitialPlaceMinIter(int iter)
+  {
+    initialPlaceMinIter_ = iter;
   }
 
   void Replace::setInitialPlaceMaxIter(int iter)

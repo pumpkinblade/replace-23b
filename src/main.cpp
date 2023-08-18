@@ -1,7 +1,6 @@
 #include <iostream>
 #include <string>
 #include <tclap/CmdLine.h>
-#include <glpk.h>
 
 #include "placerBase.h"
 #include "parser.h"
@@ -18,10 +17,6 @@ using namespace std;
 
 int main(int argc, const char *argv[])
 {
-  glp_prob *lp;
-  lp = glp_create_prob();
-  glp_delete_prob(lp);
-
   Log::Init();
 
   PlotVars vars;
@@ -76,6 +71,7 @@ int main(int argc, const char *argv[])
   Replace rp(1.0);
   rp.setPlacerBase(pb);
   rp.modifyTerminal();
+  rp.setInitialPlaceMinIter(10);
   rp.doInitialPlace();
   rp.setNesterovPlaceUseLocalDensity(true);
   rp.doNesterovPlace("postgp");
