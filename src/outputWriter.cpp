@@ -13,16 +13,16 @@ namespace replace
     {
     case Orientation::R0:
     case Orientation::R360:
-      out << " R0";
+      out << " R0\n";
       break;
     case Orientation::R90:
-      out << " R90";
+      out << " R90\n";
       break;
     case Orientation::R180:
-      out << " R180";
+      out << " R180\n";
       break;
     case Orientation::R270:
-      out << " R270";
+      out << " R270\n";
       break;
     }
   }
