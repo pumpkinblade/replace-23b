@@ -1339,6 +1339,7 @@ Point NesterovBase::getDensityGradientLocalWithTheta(GCell *gCell, prec alpha, p
   auto pairX = bg->getMinMaxIdxX(gCell->lx(), gCell->ux());
   auto pairY = bg->getMinMaxIdxY(gCell->ly(), gCell->uy());
   Point grad;
+  gradTheta = 0.0f;
 
   prec binArea = bg->binSizeX() * bg->binSizeY();
   prec invTotalCellArea = static_cast<prec>(1.0 / bg->totalCellArea());

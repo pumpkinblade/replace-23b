@@ -225,15 +225,35 @@ namespace replace
   {
     for (const GCell *cell : bg->gCells())
     {
-      int cx = cell->cx();
-      int cy = cell->cy();
-      int x1 = getImageX(cx - cell->dx() / 2);
-      int y1 = getImageY(cy - cell->dy() / 2);
-      int x2 = getImageX(cx + cell->dx() / 2);
-      int y2 = getImageY(cy + cell->dy() / 2);
-
-      if (cell->isInstance())
+      if(!cell->isInstance())
+        return;
+      if(cell->isMacro())
       {
+        float cx = cell->cx();
+        float cy = cell->cy();
+        float hw = cell->dx() * 0.5f;
+        float hh = cell->dy() * 0.5f;
+        float cosTheta = std::cos(cell->theta());
+        float sinTheta = std::sin(cell->theta());
+        cimg_library::CImg<int> points(4, 2);
+        points(0, 0) = getImageX(cx + (-hw) * cosTheta - (-hh) * sinTheta);
+        points(0, 1) = getImageY(cy + (-hw) * sinTheta + (-hh) * cosTheta);
+        points(1, 0) = getImageX(cx + ( hw) * cosTheta - (-hh) * sinTheta);
+        points(1, 1) = getImageY(cy + ( hw) * sinTheta + (-hh) * cosTheta);
+        points(2, 0) = getImageX(cx + ( hw) * cosTheta - ( hh) * sinTheta);
+        points(2, 1) = getImageY(cy + ( hw) * sinTheta + ( hh) * cosTheta);
+        points(3, 0) = getImageX(cx + (-hw) * cosTheta - ( hh) * sinTheta);
+        points(3, 1) = getImageY(cy + (-hw) * sinTheta + ( hh) * cosTheta);
+        img_->draw_polygon(points, g_blue.data(), opacity);
+      }
+      else
+      {
+        int cx = cell->cx();
+        int cy = cell->cy();
+        int x1 = getImageX(cx - cell->dx() / 2);
+        int y1 = getImageY(cy - cell->dy() / 2);
+        int x2 = getImageX(cx + cell->dx() / 2);
+        int y2 = getImageY(cy + cell->dy() / 2);
         img_->draw_rectangle(x1, y1, x2, y2, g_blue.data(), opacity);
       }
     }

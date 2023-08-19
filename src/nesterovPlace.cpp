@@ -57,18 +57,12 @@ void NesterovPlace::init() {
 
   size_t gCellSize = nb_->gCells().size();
   curSLPCoordi_.resize(gCellSize, Point());
-  curSLPWireLengthGrads_.resize(gCellSize, Point());
-  curSLPDensityGrads_.resize(gCellSize, Point());
   curSLPSumGrads_.resize(gCellSize, Point());
 
   nextSLPCoordi_.resize(gCellSize, Point());
-  nextSLPWireLengthGrads_.resize(gCellSize, Point());
-  nextSLPDensityGrads_.resize(gCellSize, Point());
   nextSLPSumGrads_.resize(gCellSize, Point());
   
   prevSLPCoordi_.resize(gCellSize, Point());
-  prevSLPWireLengthGrads_.resize(gCellSize, Point());
-  prevSLPDensityGrads_.resize(gCellSize, Point());
   prevSLPSumGrads_.resize(gCellSize, Point());
 
   curCoordi_.resize(gCellSize, Point());
@@ -82,6 +76,23 @@ void NesterovPlace::init() {
     nextCellDelta_.resize(gCellSize, 0.0f);
   }
 
+  if(npVars_.useTheta)
+  {
+    for(int i = 0; i < gCellSize; i++)
+    {
+      if(nb_->gCells()[i]->isInstance() && nb_->gCells()[i]->isMacro())
+        macroIndices_.push_back(i);
+    }
+    curTheta_.resize(macroIndices_.size(), 0.0f);
+    nextTheta_.resize(macroIndices_.size(), 0.0f);
+    curSLPTheta_.resize(macroIndices_.size(), 0.0f);
+    curSLPSumGradTheta_.resize(macroIndices_.size(), 0.0f);
+    nextSLPTheta_.resize(macroIndices_.size(), 0.0f);
+    nextSLPSumGradTheta_.resize(macroIndices_.size(), 0.0f);
+    prevSLPTheta_.resize(macroIndices_.size(), 0.0f);
+    prevSLPSumGradTheta_.resize(macroIndices_.size(), 0.0f);
+  }
+
   for(int i = 0; i < gCellSize; i++)
   {
     nb_->updateDensityCoordiLayoutInside(nb_->gCells()[i]);
@@ -89,6 +100,17 @@ void NesterovPlace::init() {
       = prevSLPCoordi_[i] 
       = curCoordi_[i] 
       = Point(nb_->gCells()[i]->cx(), nb_->gCells()[i]->cy());
+  }
+
+  if(npVars_.useTheta)
+  {
+    for(int idx : macroIndices_)
+    {
+      curSLPTheta_[idx]
+        = prevSLPTheta_[idx]
+        = curTheta_[idx]
+        = nb_->gCells()[idx]->theta();
+    }
   }
 
   // bin update
@@ -125,17 +147,14 @@ void NesterovPlace::init() {
   // WL update
   nb_->updateWireLengthForceWA(wireLengthCoefX_, wireLengthCoefY_);
  
-  // fill in curSLPSumGrads_, curSLPWireLengthGrads_, curSLPDensityGrads_ 
-  updateGradients(
-      curSLPSumGrads_, curSLPWireLengthGrads_,
-      curSLPDensityGrads_);
+  // fill in curSLPSumGrads_
+  updateGradients(curSLPSumGrads_);
 
   if( isDiverged_ ) {
     return;
   }
 
-  // approximately fill in 
-  // prevSLPCoordi_ to calculate lc vars
+  // approximately fill in prevSLPCoordi_ to calculate lc vars
   updateInitialPrevSLPCoordi();
 
   // bin, FFT, wlen update with prevSLPCoordi.
@@ -143,14 +162,11 @@ void NesterovPlace::init() {
   nb_->updateDensityForceBin();
   nb_->updateWireLengthForceWA(wireLengthCoefX_, wireLengthCoefY_);
   
-  // update previSumGrads_, prevSLPWireLengthGrads_, prevSLPDensityGrads_
-  updateGradients(
-      prevSLPSumGrads_, prevSLPWireLengthGrads_,
-      prevSLPDensityGrads_);
-  
-  if( isDiverged_ ) {
+  // update previSumGrads_
+  updateGradients(prevSLPSumGrads_);
+
+  if(isDiverged_)
     return;
-  }
   
   LOG_DEBUG("WireLengthGradSum: {}", wireLengthGradSum_);
   LOG_DEBUG("DensityGradSum", densityGradSum_);
@@ -180,65 +196,49 @@ void NesterovPlace::init() {
 //  
 // nb_->updateWireLengthForceWA(wireLengthCoefX_, wireLengthCoefY_); // WL update
 //
-void
-NesterovPlace::updateGradients(
-    std::vector<Point>& sumGrads,
-    std::vector<Point>& wireLengthGrads,
-    std::vector<Point>& densityGrads) {
-
+void NesterovPlace::updateGradients(std::vector<Point>& sumGrads)
+{
   wireLengthGradSum_ = 0;
   densityGradSum_ = 0;
-
+  localDensityGradSum_ = 0;
   prec gradSum = 0;
-
   LOG_DEBUG("Density Penalty: {}", densityPenalty_);
 
-  for(size_t i=0; i<nb_->gCells().size(); i++) {
+  for(size_t i=0; i<nb_->gCells().size(); i++)
+  {
     GCell* gCell = nb_->gCells().at(i);
-    wireLengthGrads[i] = nb_->getWireLengthGradientWA(
-        gCell, wireLengthCoefX_, wireLengthCoefY_);
-    densityGrads[i] = nb_->getDensityGradient(gCell); 
 
-    // Different compiler has different results on the following formula.
-    // e.g. wireLengthGradSum_ += fabs(~~.x) + fabs(~~.y);
-    //
-    // To prevent instability problem,
-    // I partitioned the fabs(~~.x) + fabs(~~.y) as two terms.
-    //
-    wireLengthGradSum_ += fabs(wireLengthGrads[i].x);
-    wireLengthGradSum_ += fabs(wireLengthGrads[i].y);
-      
-    densityGradSum_ += fabs(densityGrads[i].x);
-    densityGradSum_ += fabs(densityGrads[i].y);
+    Point wireLengthGrad = nb_->getWireLengthGradientWA(gCell, wireLengthCoefX_, wireLengthCoefY_);
+    wireLengthGradSum_ += fabs(wireLengthGrad.x);
+    wireLengthGradSum_ += fabs(wireLengthGrad.y);
 
-    sumGrads[i].x = wireLengthGrads[i].x + densityPenalty_ * densityGrads[i].x;
-    sumGrads[i].y = wireLengthGrads[i].y + densityPenalty_ * densityGrads[i].y;
+    Point densityGrad = nb_->getDensityGradient(gCell); 
+    densityGradSum_ += fabs(densityGrad.x);
+    densityGradSum_ += fabs(densityGrad.y);
+
+    sumGrads[i].x = wireLengthGrad.x + densityPenalty_ * densityGrad.x;
+    sumGrads[i].y = wireLengthGrad.y + densityPenalty_ * densityGrad.y;
+
     if(npVars_.useLocalDensity)
     {
       prec delta = curCellDelta_[i];
-      Point lgrad = nb_->getDensityGradientLocal(
-        gCell, localAlpha_, localBeta_, delta);
+      Point lgrad = nb_->getDensityGradientLocal(gCell, localAlpha_, localBeta_, delta);
       nextCellDelta_[i] = delta;
+      localDensityGradSum_ += fabs(lgrad.x);
+      localDensityGradSum_ += fabs(lgrad.y);
+
       sumGrads[i].x += delta * lgrad.x;
       sumGrads[i].y += delta * lgrad.y;
     }
 
-    Point wireLengthPreCondi 
-      = nb_->getWireLengthPreconditioner(gCell);
-    Point densityPrecondi
-      = nb_->getDensityPreconditioner(gCell);
-
+    Point wireLengthPreCondi = nb_->getWireLengthPreconditioner(gCell);
+    Point densityPrecondi = nb_->getDensityPreconditioner(gCell);
     Point sumPrecondi(
         wireLengthPreCondi.x + densityPenalty_ * densityPrecondi.x,
         wireLengthPreCondi.y + densityPenalty_ * densityPrecondi.y);
 
-    if( sumPrecondi.x <= npVars_.minPreconditioner ) {
-      sumPrecondi.x = npVars_.minPreconditioner;
-    }
-
-    if( sumPrecondi.y <= npVars_.minPreconditioner ) {
-      sumPrecondi.y = npVars_.minPreconditioner; 
-    }
+    sumPrecondi.x = std::max(sumPrecondi.x, npVars_.minPreconditioner);
+    sumPrecondi.y = std::max(sumPrecondi.y, npVars_.minPreconditioner);
     
     sumGrads[i].x /= sumPrecondi.x;
     sumGrads[i].y /= sumPrecondi.y; 
@@ -248,13 +248,12 @@ NesterovPlace::updateGradients(
   
   LOG_DEBUG("WireLengthGradSum: {}", wireLengthGradSum_);
   LOG_DEBUG("DensityGradSum: {}", densityGradSum_);
+  if(npVars_.useLocalDensity)
+    LOG_DEBUG("LocalDensityGradSum: {}", localDensityGradSum_);
   LOG_DEBUG("GradSum: {}", gradSum);
 
-  // divergence detection on 
-  // Wirelength / density gradient calculation
-  if( isnan(gradSum) || isinf(gradSum)) {
-    isDiverged_ = true;
-  }
+  // divergence detection
+  isDiverged_ = (isnan(gradSum) || isinf(gradSum));
 }
 
 void
@@ -343,7 +342,7 @@ NesterovPlace::doNesterovPlace(string placename) {
       nb_->updateDensityForceBin();
       nb_->updateWireLengthForceWA(wireLengthCoefX_, wireLengthCoefY_);
 
-      updateGradients(nextSLPSumGrads_, nextSLPWireLengthGrads_, nextSLPDensityGrads_ );
+      updateGradients(nextSLPSumGrads_);
 
       // NaN or inf is detected in WireLength/Density Coef 
       if( isDiverged_ ) {
@@ -483,13 +482,9 @@ void
 NesterovPlace::updateNextIter() {
   // swap vector pointers
   std::swap(prevSLPCoordi_, curSLPCoordi_);
-  std::swap(prevSLPWireLengthGrads_, curSLPWireLengthGrads_);
-  std::swap(prevSLPDensityGrads_, curSLPDensityGrads_);
   std::swap(prevSLPSumGrads_, curSLPSumGrads_);
   
   std::swap(curSLPCoordi_, nextSLPCoordi_);
-  std::swap(curSLPWireLengthGrads_, nextSLPWireLengthGrads_);
-  std::swap(curSLPDensityGrads_, nextSLPDensityGrads_);
   std::swap(curSLPSumGrads_, nextSLPSumGrads_);
 
   std::swap(curCoordi_, nextCoordi_);

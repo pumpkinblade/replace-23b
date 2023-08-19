@@ -44,10 +44,7 @@ public:
   void init();
   void doNesterovPlace(string placename = "");
 
-  void updateGradients(
-      std::vector<Point>& sumGrads,
-      std::vector<Point>& wireLengthGrads,
-      std::vector<Point>& densityGrads );
+  void updateGradients(std::vector<Point>& sumGrads);
 
   void updateWireLengthCoef(prec overflow);
 
@@ -74,20 +71,14 @@ private:
   //
   // y_st, y_dst, y_wdst, w_pdst
   std::vector<Point> curSLPCoordi_;
-  std::vector<Point> curSLPWireLengthGrads_;
-  std::vector<Point> curSLPDensityGrads_;
   std::vector<Point> curSLPSumGrads_;
 
   // y0_st, y0_dst, y0_wdst, y0_pdst
   std::vector<Point> nextSLPCoordi_;
-  std::vector<Point> nextSLPWireLengthGrads_;
-  std::vector<Point> nextSLPDensityGrads_;
   std::vector<Point> nextSLPSumGrads_;
 
   // z_st, z_dst, z_wdst, z_pdst
   std::vector<Point> prevSLPCoordi_;
-  std::vector<Point> prevSLPWireLengthGrads_;
-  std::vector<Point> prevSLPDensityGrads_;
   std::vector<Point> prevSLPSumGrads_;
 
   // x_st and x0_st
@@ -96,6 +87,7 @@ private:
 
   prec wireLengthGradSum_;
   prec densityGradSum_;
+  prec localDensityGradSum_;
 
   // alpha
   prec stepLength_;
@@ -129,6 +121,15 @@ private:
   std::vector<int> macroIndices_;
   std::vector<prec> curTheta_;
   std::vector<prec> nextTheta_;
+  std::vector<prec> curSLPTheta_;
+  std::vector<prec> curSLPSumGradTheta_;
+  std::vector<prec> nextSLPTheta_;
+  std::vector<prec> nextSLPSumGradTheta_;
+  std::vector<prec> prevSLPTheta_;
+  std::vector<prec> prevSLPSumGradTheta_;
+  prec wireLengthGradSumTheta_;
+  prec densityGradSumTheta_;
+  prec localDensityGradSumTheta_;
 };
 }
 
