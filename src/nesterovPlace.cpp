@@ -249,7 +249,6 @@ NesterovPlace::doNesterovPlace(string placename) {
   if (placename != "" && placename[placename.length() - 1] != '_') {
     placename.push_back('_');
   }
-#if defined(DEBUG) || defined(_DEBUG)
   Plot::plot(nb_.get(), PlotNesterovType::GCell, "./plot/cell", placename + "cell_0");
   Plot::plot(nb_.get(), PlotNesterovType::Bin, "./plot/bin", placename + "bin_0");
   Plot::plot(nb_.get(), PlotNesterovType::Arrow, "./plot/arrow", placename + "arrow_0");
@@ -374,14 +373,14 @@ NesterovPlace::doNesterovPlace(string placename) {
 
     // For JPEG Saving
     // debug
-#if defined(DEBUG) || defined(_DEBUG)
+
     if( i == 0 || (i+1) % 100 == 0 ) {
       LOG_DEBUG("[NesterovSolve] Iter: {} overflow: {} HPWL: {}", i+1, sumOverflow_, prevHpwl_);
       Plot::plot(nb_.get(), PlotNesterovType::GCell, "./plot/cell", placename + "cell_" + std::to_string(i+1));
       Plot::plot(nb_.get(), PlotNesterovType::Bin, "./plot/bin", placename + "bin_" + std::to_string(i+1));
       Plot::plot(nb_.get(), PlotNesterovType::Arrow, "./plot/arrow", placename + "arrow_" + std::to_string(i+1));
     }
-#endif
+
     if( minSumOverflow > sumOverflow_ ) {
       minSumOverflow = sumOverflow_;
       hpwlWithMinSumOverflow = prevHpwl_; 
@@ -405,7 +404,7 @@ NesterovPlace::doNesterovPlace(string placename) {
 
     // minimum iteration is 50
     if( i > 50 && sumOverflow_ <= npVars_.targetOverflow) {
-      LOG_DEBUG("[NesterovSolve] Finished with Overflow: {}", sumOverflow_);
+      cout << "[NesterovSolve] Finished with Overflow: " << sumOverflow_ << endl;
       break;
     }
   }

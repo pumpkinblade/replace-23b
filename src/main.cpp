@@ -130,45 +130,45 @@ int main(int argc, const char *argv[])
       // partitioner.hmetistest(pb);
       // partitioner.do_run_kahypar();
       partitioner.partitionInstance(pb);
-      // Plot::plot(pb.get(), "./plot/cell", "after_partition");
-      // // then we do optimization
-      // LOG_INFO("optimization");
-      // TerminalModifier tm;
-      // tm.setPlacerBase(pb);
-      // tm.modify();
-      // Replace rp(1.0);
-      // rp.setPlacerBase(pb);
-      // rp.doInitialPlace();
-      // rp.doNesterovPlace("postgp");
-      // Plot::plot(pb.get(), "./plot/cell", "after_postgp");
-      // rp.doMacroLegalization();
-      // Plot::plot(pb.get(), "./plot/cell", "after_mlg");
+      Plot::plot(pb.get(), "./plot/cell", "after_partition");
+      // then we do optimization
+      LOG_INFO("optimization");
+      TerminalModifier tm;
+      tm.setPlacerBase(pb);
+      tm.modify();
+      Replace rp(1.0);
+      rp.setPlacerBase(pb);
+      rp.doInitialPlace();
+      rp.doNesterovPlace("postgp");
+      Plot::plot(pb.get(), "./plot/cell", "after_postgp");
+      rp.doMacroLegalization();
+      Plot::plot(pb.get(), "./plot/cell", "after_mlg");
 
-      // // fix macros
-      // {
-      //   for(Instance* inst : pb->insts())
-      //   {
-      //     if(inst->isMacro())
-      //       inst->setFixed(true);
-      //   }
-      // }
+      // fix macros
+      {
+        for(Instance* inst : pb->insts())
+        {
+          if(inst->isMacro())
+            inst->setFixed(true);
+        }
+      }
 
-      // LOG_INFO("finalgp");
-      // rp.doNesterovPlace("finalgp");
-      // Plot::plot(pb.get(), "./plot/cell", "after_finalgp");
+      LOG_INFO("finalgp");
+      rp.doNesterovPlace("finalgp");
+      Plot::plot(pb.get(), "./plot/cell", "after_finalgp");
 
-      // // rp.doAbacusLegalization();
-      // {
-      //   AbaxLegalizer abax(pb);
-      //   abax.doLegalization();
-      // }
-      // Plot::plot(pb.get(), "./plot/cell", "after_clg");
-      // tm.recover();
-      // int64_t hpwl = pb->hpwl();
-      // LOG_INFO("Result HPWL: {}", hpwl);
-      // Plot::plot(pb.get(), "./plot/cell", "result");
+      // rp.doAbacusLegalization();
+      {
+        AbaxLegalizer abax(pb);
+        abax.doLegalization();
+      }
+      Plot::plot(pb.get(), "./plot/cell", "after_clg");
+      tm.recover();
+      int64_t hpwl = pb->hpwl();
+      LOG_INFO("Result HPWL: {}", hpwl);
+      Plot::plot(pb.get(), "./plot/cell", "result");
 
-      // OutputWriter::write(pb.get(), outputFilename);
+      OutputWriter::write(pb.get(), outputFilename);
     }
     else
     {
