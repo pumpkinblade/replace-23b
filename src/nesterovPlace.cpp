@@ -12,9 +12,9 @@ namespace replace {
 static prec getDistance(vector<Point>& a, vector<Point>& b);
 static prec getSecondNorm(vector<Point>& a);
 
-static void getRotBox(GCell *cell, bool rot, double &lx, double &ux, double &ly, double &uy);
-static double getRotOverlap(GCell* cell1, GCell* cell2, bool rot1, bool rot2);
-static void ilpSolve(std::vector<GCell*>& macros);
+static void getRotBox(const GCell *cell, bool rot, double &lx, double &ux, double &ly, double &uy);
+static double getRotOverlap(const GCell* cell1, const  GCell* cell2, bool rot1, bool rot2);
+static void ilpSolve(const std::vector<GCell*>& macros, std::vector<bool>& isRot);
 static Orientation findNearestOrientation(prec theta);
 
 NesterovPlaceVars::NesterovPlaceVars()
@@ -202,6 +202,7 @@ void NesterovPlace::updateGradients(std::vector<Point>& sumGrads)
   densityGradSum_ = 0;
   localDensityGradSum_ = 0;
   prec gradSum = 0;
+  prec cellDeltaSum = 0;
   LOG_DEBUG("Density Penalty: {}", densityPenalty_);
 
   for(size_t i=0; i<nb_->gCells().size(); i++)
@@ -226,6 +227,7 @@ void NesterovPlace::updateGradients(std::vector<Point>& sumGrads)
       nextCellDelta_[i] = delta;
       localDensityGradSum_ += fabs(lgrad.x);
       localDensityGradSum_ += fabs(lgrad.y);
+      cellDeltaSum += delta;
 
       sumGrads[i].x += delta * lgrad.x;
       sumGrads[i].y += delta * lgrad.y;
@@ -246,6 +248,12 @@ void NesterovPlace::updateGradients(std::vector<Point>& sumGrads)
     gradSum += fabs(sumGrads[i].x) + fabs(sumGrads[i].y);
   }
   
+  if(npVars_.useLocalDensity)
+  {
+    cellDeltaSum /= nb_->gCells().size();
+    LOG_DEBUG("CellDeltaAverage: {}", cellDeltaSum);
+  }
+
   LOG_DEBUG("WireLengthGradSum: {}", wireLengthGradSum_);
   LOG_DEBUG("DensityGradSum: {}", densityGradSum_);
   if(npVars_.useLocalDensity)
@@ -253,7 +261,7 @@ void NesterovPlace::updateGradients(std::vector<Point>& sumGrads)
   LOG_DEBUG("GradSum: {}", gradSum);
 
   // divergence detection
-  isDiverged_ = (isnan(gradSum) || isinf(gradSum));
+  isDiverged_ = (std::isnan(gradSum) || std::isinf(gradSum));
 }
 
 void
@@ -569,30 +577,54 @@ void NesterovPlace::determinMacroOrient()
   {
     const Technology& tech = *bg->die()->tech();
     std::vector<GCell*> macros;
-    for (GCell* gcell : bg->gCells())
+    for (int idx : macroIndices_)
     {
-      if (gcell->isMacro() && gcell->isInstance())
+      GCell* gcell = nb_->gCells()[idx];
+      if(gcell->binGrid() != bg)
+        continue;
+      Orientation ori = findNearestOrientation(gcell->theta());
+      int i = static_cast<int>(ori);
+      if(std::abs(LEGAL_THETA[idx] - gcell->theta()) < 0.1 * PI)
       {
-        Orientation ori = findNearestOrientation(gcell->theta());
-        int idx = static_cast<int>(ori);
-        if(std::abs(LEGAL_THETA[idx] - gcell->theta()) < 0.1 * PI)
+        gcell->setThetaNoUpdatePin(LEGAL_THETA[i]);
+        gcell->instance()->setOrientSize(tech, ori);
+      }
+      else
+      {
+        macros.push_back(gcell);
+      }
+    }
+    std::vector<bool> isRot(macros.size(), false);
+    ilpSolve(macros, isRot);
+    for (int u = 0; u < macros.size(); u++)
+    {
+      if (isRot[u])
+      {
+        if (std::abs(macros[u]->theta() - 0.5 * PI) < std::abs(macros[u]->theta() - 1.5 * PI))
         {
-          gcell->setThetaNoUpdatePin(LEGAL_THETA[idx]);
-          gcell->instance()->setOrientSize(tech, ori);
+          macros[u]->setThetaNoUpdatePin(0.5 * PI);
+          macros[u]->instance()->setOrientSize(tech, Orientation::R90);
         }
         else
         {
-          macros.push_back(gcell);
+          macros[u]->setThetaNoUpdatePin(1.5 * PI);
+          macros[u]->instance()->setOrientSize(tech, Orientation::R270);
         }
       }
-    }
-    ilpSolve(macros);
-    for(GCell* gcell : macros)
-    {
-      Orientation ori = findNearestOrientation(gcell->theta());
-      int idx = static_cast<int>(ori);
-      gcell->setThetaNoUpdatePin(LEGAL_THETA[idx]);
-      gcell->instance()->setOrientSize(tech, ori);
+      else
+      {
+        if (std::abs(macros[u]->theta()) < std::abs(macros[u]->theta() - PI)
+            || std::abs(macros[u]->theta() - 2.0 * PI) < std::abs(macros[u]->theta() - PI))
+        {
+          macros[u]->setThetaNoUpdatePin(0.0);
+          macros[u]->instance()->setOrientSize(tech, Orientation::R0);
+        }
+        else
+        {
+          macros[u]->setThetaNoUpdatePin(PI);
+          macros[u]->instance()->setOrientSize(tech, Orientation::R180);
+        }
+      }
     }
   }
 }
@@ -617,7 +649,7 @@ static prec getSecondNorm(vector<Point>& a)
   return sqrt( norm / (2.0*a.size()) ); 
 }
 
-static void getRotBox(GCell *cell, bool rot, double &lx, double &ux, double &ly, double &uy)
+static void getRotBox(const GCell *cell, bool rot, double &lx, double &ux, double &ly, double &uy)
 {
   if (rot)
   {
@@ -639,7 +671,7 @@ static void getRotBox(GCell *cell, bool rot, double &lx, double &ux, double &ly,
   }
 }
 
-static double getRotOverlap(GCell* cell1, GCell* cell2, bool rot1, bool rot2)
+static double getRotOverlap(const GCell* cell1, const  GCell* cell2, bool rot1, bool rot2)
 {
   double lx1, ux1, ly1, uy1;
   getRotBox(cell1, rot1, lx1, ux1, ly1, uy1);
@@ -657,7 +689,7 @@ static double getRotOverlap(GCell* cell1, GCell* cell2, bool rot1, bool rot2)
     return 0.0;
 }
 
-static void ilpSolve(std::vector<GCell*>& macros)
+static void ilpSolve(const std::vector<GCell*>& macros, std::vector<bool>& isRot)
 {
   int numMacros = static_cast<int>(macros.size());
   std::vector<double> coeff(numMacros * (numMacros + 1) / 2, 0.0);
@@ -730,37 +762,9 @@ static void ilpSolve(std::vector<GCell*>& macros)
 
   glp_simplex(lp, NULL);
   glp_intopt(lp, NULL);
-  std::vector<double> rot(numMacros);
   for (int u = 0; u < numMacros; u++)
-    rot[u] = glp_mip_col_val(lp, u + 1);
+    isRot[u] = static_cast<bool>(glp_mip_col_val(lp, u + 1));
   glp_delete_prob(lp);
-
-  for (int u = 0; u < numMacros; u++)
-  {
-    if (rot[u] == 1.0)
-    {
-      if (std::abs(macros[u]->theta() - 0.5 * PI) < std::abs(macros[u]->theta() - 1.5 * PI))
-      {
-        macros[u]->setThetaNoUpdatePin(0.5 * PI);
-      }
-      else
-      {
-        macros[u]->setThetaNoUpdatePin(1.5 * PI);
-      }
-    }
-    else
-    {
-      if (std::abs(macros[u]->theta()) < std::abs(macros[u]->theta() - PI)
-          || std::abs(macros[u]->theta() - 2.0 * PI) < std::abs(macros[u]->theta() - PI))
-        {
-          macros[u]->setThetaNoUpdatePin(0.0);
-        }
-      else
-      {
-        macros[u]->setThetaNoUpdatePin(PI);
-      }
-    }
-  }
 }
 
 static Orientation findNearestOrientation(prec theta)

@@ -44,3 +44,5 @@ core.[0-9]*
 module/CImg/.github
 result
 output.txt
+!module/glpk/*.dll
+!module/glpk/*.lib

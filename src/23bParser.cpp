@@ -71,7 +71,7 @@ namespace replace
   {
     std::ifstream in(txtFilename);
     std::string token;
-    if(in.bad())
+    if(!in)
     {
       LOG_CRITICAL("Couldn't open file `{}`", txtFilename);
       exit(-1);
