@@ -33,7 +33,8 @@ namespace replace
         referenceHpwl_(446000000),
         incrementalPlaceMode_(false),
         useLocalDensity_(false),
-        initLocalAlpha_(1e-12f), initLocalBeta_(1e-11f)
+        initLocalAlpha_(1e-12f), initLocalBeta_(1e-11f),
+        useTheta_(false)
   {
   }
 
@@ -120,6 +121,7 @@ namespace replace
     npVars.useLocalDensity = useLocalDensity_;
     npVars.initAlpha = initLocalAlpha_;
     npVars.initBeta = initLocalBeta_;
+    npVars.useTheta = useTheta_;
 
     NesterovPlace np(npVars, nb);
     np.init();
@@ -261,6 +263,11 @@ namespace replace
   void Replace::setNesterovInitLocalBeta(float beta)
   {
     initLocalBeta_ = beta;
+  }
+
+  void Replace::setNesterovUseTheta(bool on)
+  {
+    useTheta_ = on;
   }
 
   void Replace::setBinGridCntX(int binGridCntX)

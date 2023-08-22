@@ -16,6 +16,7 @@ static void getRotBox(const GCell *cell, bool rot, double &lx, double &ux, doubl
 static double getRotOverlap(const GCell* cell1, const  GCell* cell2, bool rot1, bool rot2);
 static void ilpSolve(const std::vector<GCell*>& macros, std::vector<bool>& isRot);
 static Orientation findNearestOrientation(prec theta);
+static prec getThetaInsideTwoPi(prec theta);
 
 NesterovPlaceVars::NesterovPlaceVars()
   : maxNesterovIter(2000), 
@@ -80,8 +81,14 @@ void NesterovPlace::init() {
   {
     for(int i = 0; i < gCellSize; i++)
     {
-      if(nb_->gCells()[i]->isInstance() && nb_->gCells()[i]->isMacro())
+      if(nb_->gCells()[i]->isMacro())
+      {
         macroIndices_.push_back(i);
+        prec wireLengthPrecondi = nb_->getWireLengthPreconditionerTheta(nb_->gCells()[i]);
+        prec densityPrecondi = nb_->getDensityPreconditionerTheta(nb_->gCells()[i]);
+        wireLengthPrecondiTheta_.push_back(wireLengthPrecondi);
+        densityPrecondiTheta_.push_back(densityPrecondi);
+      }
     }
     curTheta_.resize(macroIndices_.size(), 0.0f);
     nextTheta_.resize(macroIndices_.size(), 0.0f);
@@ -95,7 +102,8 @@ void NesterovPlace::init() {
 
   for(int i = 0; i < gCellSize; i++)
   {
-    nb_->updateDensityCoordiLayoutInside(nb_->gCells()[i]);
+    bool useTheta = npVars_.useTheta && nb_->gCells()[i]->isMacro();
+    nb_->updateDensityCoordiLayoutInside(nb_->gCells()[i], useTheta);
     curSLPCoordi_[i] 
       = prevSLPCoordi_[i] 
       = curCoordi_[i] 
@@ -104,17 +112,21 @@ void NesterovPlace::init() {
 
   if(npVars_.useTheta)
   {
-    for(int idx : macroIndices_)
+    for(int i = 0; i < macroIndices_.size(); i++)
     {
-      curSLPTheta_[idx]
-        = prevSLPTheta_[idx]
-        = curTheta_[idx]
-        = nb_->gCells()[idx]->theta();
+      int idx = macroIndices_[i];
+      curSLPTheta_[i]
+        = prevSLPTheta_[i]
+        = curTheta_[i]
+        = getThetaInsideTwoPi(nb_->gCells()[idx]->theta());
     }
   }
 
   // bin update
-  nb_->updateGCellCenterLocation(curSLPCoordi_);
+  if(npVars_.useTheta)
+    nb_->updateGCellCenterLocationWithTheta(curSLPCoordi_, macroIndices_, curSLPTheta_);
+  else
+    nb_->updateGCellCenterLocation(curSLPCoordi_);
   
   prevHpwl_ = nb_->hpwl();
 
@@ -148,7 +160,7 @@ void NesterovPlace::init() {
   nb_->updateWireLengthForceWA(wireLengthCoefX_, wireLengthCoefY_);
  
   // fill in curSLPSumGrads_
-  updateGradients(curSLPSumGrads_);
+  updateGradients(curSLPSumGrads_, curSLPSumGradTheta_);
 
   if( isDiverged_ ) {
     return;
@@ -158,12 +170,15 @@ void NesterovPlace::init() {
   updateInitialPrevSLPCoordi();
 
   // bin, FFT, wlen update with prevSLPCoordi.
-  nb_->updateGCellCenterLocation(prevSLPCoordi_);
+  if(npVars_.useTheta)
+    nb_->updateGCellCenterLocationWithTheta(prevSLPCoordi_, macroIndices_, prevSLPTheta_);
+  else
+    nb_->updateGCellCenterLocation(prevSLPCoordi_);
   nb_->updateDensityForceBin();
   nb_->updateWireLengthForceWA(wireLengthCoefX_, wireLengthCoefY_);
   
   // update previSumGrads_
-  updateGradients(prevSLPSumGrads_);
+  updateGradients(prevSLPSumGrads_, prevSLPSumGradTheta_);
 
   if(isDiverged_)
     return;
@@ -196,56 +211,108 @@ void NesterovPlace::init() {
 //  
 // nb_->updateWireLengthForceWA(wireLengthCoefX_, wireLengthCoefY_); // WL update
 //
-void NesterovPlace::updateGradients(std::vector<Point>& sumGrads)
+void NesterovPlace::updateGradients(std::vector<Point>& sumGrads, std::vector<prec>& sumGradTheta)
 {
   wireLengthGradSum_ = 0;
   densityGradSum_ = 0;
   localDensityGradSum_ = 0;
   prec gradSum = 0;
+  prec gradSumTheta = 0;
   prec cellDeltaSum = 0;
   LOG_DEBUG("Density Penalty: {}", densityPenalty_);
 
-  for(size_t i=0; i<nb_->gCells().size(); i++)
+  for(int i = 0, macroIdx = 0; i < nb_->gCells().size(); i++)
   {
     GCell* gCell = nb_->gCells().at(i);
 
-    Point wireLengthGrad = nb_->getWireLengthGradientWA(gCell, wireLengthCoefX_, wireLengthCoefY_);
+    // wirelength
+    Point wireLengthGrad;
+    prec wireLengthGradTheta;
+    if(npVars_.useTheta && gCell->isMacro() && gCell->isInstance())
+    {
+      wireLengthGrad = nb_->getWireLengthGradientWAWithTheta(gCell, wireLengthCoefX_, wireLengthCoefY_, wireLengthGradTheta);
+      wireLengthGradSumTheta_ += fabs(wireLengthGradTheta);
+    }
+    else
+    {
+      wireLengthGrad = nb_->getWireLengthGradientWA(gCell, wireLengthCoefX_, wireLengthCoefY_);
+    }
     wireLengthGradSum_ += fabs(wireLengthGrad.x);
     wireLengthGradSum_ += fabs(wireLengthGrad.y);
 
-    Point densityGrad = nb_->getDensityGradient(gCell); 
+    // density
+    Point densityGrad; 
+    prec densityGradTheta;
+    if(npVars_.useTheta && gCell->isMacro() && gCell->isInstance())
+    {
+      densityGrad = nb_->getDensityGradientWithTheta(gCell, densityGradTheta);
+      densityGradSumTheta_ += fabs(densityGradTheta);
+    }
+    else
+    {
+      densityGrad = nb_->getDensityGradient(gCell);
+    }
     densityGradSum_ += fabs(densityGrad.x);
     densityGradSum_ += fabs(densityGrad.y);
 
-    sumGrads[i].x = wireLengthGrad.x + densityPenalty_ * densityGrad.x;
-    sumGrads[i].y = wireLengthGrad.y + densityPenalty_ * densityGrad.y;
+    // local density
+    Point localDensityGrad;
+    prec localDensityGradTheta;
+    prec delta = 0;
+    if(npVars_.useLocalDensity)
+    {
+      delta = curCellDelta_[i];
+      if(npVars_.useTheta && gCell->isMacro() && gCell->isInstance())
+      {
+        localDensityGrad = nb_->getDensityGradientLocalWithTheta(gCell, localAlpha_, localBeta_, delta, localDensityGradTheta);
+        localDensityGradSumTheta_ += fabs(localDensityGradTheta);
+      }
+      else
+      {
+        localDensityGrad = nb_->getDensityGradientLocal(gCell, localAlpha_, localBeta_, delta);
+      }
+      nextCellDelta_[i] = delta;
+      localDensityGradSum_ += fabs(localDensityGrad.x);
+      localDensityGradSum_ += fabs(localDensityGrad.y);
+      cellDeltaSum += delta;
+    }
 
     if(npVars_.useLocalDensity)
     {
-      prec delta = curCellDelta_[i];
-      Point lgrad = nb_->getDensityGradientLocal(gCell, localAlpha_, localBeta_, delta);
-      nextCellDelta_[i] = delta;
-      localDensityGradSum_ += fabs(lgrad.x);
-      localDensityGradSum_ += fabs(lgrad.y);
-      cellDeltaSum += delta;
-
-      sumGrads[i].x += delta * lgrad.x;
-      sumGrads[i].y += delta * lgrad.y;
+      sumGrads[i].x = wireLengthGrad.x + densityPenalty_ * densityGrad.x + delta * localDensityGrad.x;
+      sumGrads[i].y = wireLengthGrad.y + densityPenalty_ * densityGrad.y + delta * localDensityGrad.y;
+      if(npVars_.useTheta && gCell->isMacro())
+        sumGradTheta[macroIdx] = wireLengthGradTheta + densityPenalty_ * densityGradTheta + delta * localDensityGradTheta;
+    }
+    else
+    {
+      sumGrads[i].x = wireLengthGrad.x + densityPenalty_ * densityGrad.x;
+      sumGrads[i].y = wireLengthGrad.y + densityPenalty_ * densityGrad.y;
+      if(npVars_.useTheta && gCell->isMacro())
+        sumGradTheta[macroIdx] = wireLengthGradTheta + densityPenalty_ * densityGradTheta;
     }
 
-    Point wireLengthPreCondi = nb_->getWireLengthPreconditioner(gCell);
+    Point wireLengthPrecondi = nb_->getWireLengthPreconditioner(gCell);
     Point densityPrecondi = nb_->getDensityPreconditioner(gCell);
     Point sumPrecondi(
-        wireLengthPreCondi.x + densityPenalty_ * densityPrecondi.x,
-        wireLengthPreCondi.y + densityPenalty_ * densityPrecondi.y);
-
+        wireLengthPrecondi.x + densityPenalty_ * densityPrecondi.x,
+        wireLengthPrecondi.y + densityPenalty_ * densityPrecondi.y);
     sumPrecondi.x = std::max(sumPrecondi.x, npVars_.minPreconditioner);
     sumPrecondi.y = std::max(sumPrecondi.y, npVars_.minPreconditioner);
-    
     sumGrads[i].x /= sumPrecondi.x;
     sumGrads[i].y /= sumPrecondi.y; 
-
     gradSum += fabs(sumGrads[i].x) + fabs(sumGrads[i].y);
+
+    if(npVars_.useTheta && gCell->isMacro())
+    {
+      prec wireLenghtPrecondiTheta = wireLengthPrecondiTheta_[macroIdx];
+      prec densityPrecondiTheta = densityPrecondiTheta_[macroIdx];
+      prec sumPrecondiTheta = wireLenghtPrecondiTheta + densityPenalty_ * densityPrecondiTheta;
+      sumPrecondiTheta = std::max(sumPrecondi.y, npVars_.minPreconditioner);
+      sumGradTheta[macroIdx] /= sumPrecondiTheta;
+      gradSumTheta += fabs(sumGradTheta[macroIdx]);
+      macroIdx++;
+    }
   }
   
   if(npVars_.useLocalDensity)
@@ -259,9 +326,11 @@ void NesterovPlace::updateGradients(std::vector<Point>& sumGrads)
   if(npVars_.useLocalDensity)
     LOG_DEBUG("LocalDensityGradSum: {}", localDensityGradSum_);
   LOG_DEBUG("GradSum: {}", gradSum);
+  if(npVars_.useTheta)
+    LOG_DEBUG("GradSumTheta: {}", gradSumTheta);
 
   // divergence detection
-  isDiverged_ = (std::isnan(gradSum) || std::isinf(gradSum));
+  isDiverged_ = (std::isnan(gradSum) || std::isinf(gradSum) || std::isnan(gradSumTheta) || std::isinf(gradSumTheta));
 }
 
 void
@@ -296,7 +365,7 @@ NesterovPlace::doNesterovPlace(string placename) {
   int divergeCode = 0;
 
   // Core Nesterov Loop
-  for(int i=0; i<npVars_.maxNesterovIter; i++) {
+  for(int i = 0; i < npVars_.maxNesterovIter; i++) {
     LOG_DEBUG("Iter: {}", i+1);
     
     prec prevA = curA;
@@ -319,7 +388,10 @@ NesterovPlace::doNesterovPlace(string placename) {
     for(numBackTrak = 0; numBackTrak < npVars_.maxBackTrack; numBackTrak++) {
       
       // fill in nextCoordinates with given stepLength_
-      for(size_t k=0; k<nb_->gCells().size(); k++) {
+      for(int k = 0, macroIdx = 0; k < nb_->gCells().size(); k++)
+      {
+        GCell* curGCell = nb_->gCells()[k];
+
         Point nextCoordi(
           curSLPCoordi_[k].x + stepLength_ * curSLPSumGrads_[k].x,
           curSLPCoordi_[k].y + stepLength_ * curSLPSumGrads_[k].y );
@@ -328,29 +400,39 @@ NesterovPlace::doNesterovPlace(string placename) {
           nextCoordi.x + coeff * (nextCoordi.x - curCoordi_[k].x),
           nextCoordi.y + coeff * (nextCoordi.y - curCoordi_[k].y));
 
-        GCell* curGCell = nb_->gCells()[k];
+        if(npVars_.useTheta && curGCell->isMacro())
+        {
+          prec nextTheta = curSLPTheta_[macroIdx] + stepLength_ * curSLPSumGradTheta_[macroIdx];
+          prec nextSLPTheta = nextTheta + coeff * (nextTheta - curTheta_[macroIdx]);
+          nextTheta_[macroIdx] = getThetaInsideTwoPi(nextTheta);
+          nextSLPTheta_[macroIdx] = getThetaInsideTwoPi(nextSLPTheta);
+          macroIdx++;
+        }
 
         nextCoordi_[k] 
           = Point( 
               nb_->getDensityCoordiLayoutInsideX( 
-                curGCell, nextCoordi.x),
+                curGCell, nextCoordi.x, npVars_.useTheta && curGCell->isMacro()),
               nb_->getDensityCoordiLayoutInsideY(
-                curGCell, nextCoordi.y));
+                curGCell, nextCoordi.y, npVars_.useTheta && curGCell->isMacro()));
         
         nextSLPCoordi_[k]
           = Point(
               nb_->getDensityCoordiLayoutInsideX(
-                curGCell, nextSLPCoordi.x),
+                curGCell, nextSLPCoordi.x, npVars_.useTheta && curGCell->isMacro()),
               nb_->getDensityCoordiLayoutInsideY(
-                curGCell, nextSLPCoordi.y));
+                curGCell, nextSLPCoordi.y, npVars_.useTheta && curGCell->isMacro()));
       }
  
 
-      nb_->updateGCellCenterLocation(nextSLPCoordi_);
+      if(npVars_.useTheta)
+        nb_->updateGCellCenterLocationWithTheta(nextSLPCoordi_, macroIndices_, nextTheta_);
+      else
+        nb_->updateGCellCenterLocation(nextSLPCoordi_);
       nb_->updateDensityForceBin();
       nb_->updateWireLengthForceWA(wireLengthCoefX_, wireLengthCoefY_);
 
-      updateGradients(nextSLPSumGrads_);
+      updateGradients(nextSLPSumGrads_, nextSLPSumGradTheta_);
 
       // NaN or inf is detected in WireLength/Density Coef 
       if( isDiverged_ ) {
@@ -479,11 +561,21 @@ NesterovPlace::updateInitialPrevSLPCoordi() {
       * curSLPSumGrads_[i].y;
     
     Point newCoordi( 
-      nb_->getDensityCoordiLayoutInsideX( curGCell, prevCoordiX),
-      nb_->getDensityCoordiLayoutInsideY( curGCell, prevCoordiY) );
+      nb_->getDensityCoordiLayoutInsideX( curGCell, prevCoordiX, false),
+      nb_->getDensityCoordiLayoutInsideY( curGCell, prevCoordiY, false) );
 
     prevSLPCoordi_[i] = newCoordi;
   } 
+
+  if(npVars_.useTheta)
+  {
+    for(int i = 0; i < macroIndices_.size(); i++)
+    {
+      prec prevTheta = curSLPTheta_[i] + npVars_.initialPrevCoordiUpdateCoef
+                     * curSLPSumGradTheta_[i];
+      prevSLPTheta_[i] = getThetaInsideTwoPi(prevTheta);
+    }
+  }
 }
 
 void
@@ -500,6 +592,14 @@ NesterovPlace::updateNextIter() {
   if(npVars_.useLocalDensity)
   {
     std::swap(curCellDelta_, nextCellDelta_);
+  }
+
+  if(npVars_.useTheta)
+  {
+    std::swap(prevSLPTheta_, curSLPTheta_);
+    std::swap(prevSLPSumGradTheta_, curSLPSumGradTheta_);
+    std::swap(curSLPTheta_, nextSLPTheta_);
+    std::swap(curSLPSumGradTheta_, nextSLPSumGradTheta_);
   }
 
   sumOverflow_ = nb_->overflow();
@@ -560,13 +660,17 @@ NesterovPlace::getPhiCoef(prec scaledDiffHpwl) {
   return retCoef;
 }
 
-void
-NesterovPlace::updatePlacerBase() {
-  for(auto& gCell : nb_->gCells()) {
-    if(gCell->isInstance()) {
-      int lx = static_cast<int>(std::round(gCell->lx()));
-      int ly = static_cast<int>(std::round(gCell->ly()));
-      gCell->instance()->setLocation(lx, ly);
+void NesterovPlace::updatePlacerBase()
+{
+  if(npVars_.useTheta)
+    determinMacroOrient();
+  for(auto& gCell : nb_->gCells())
+  {
+    if(gCell->isInstance())
+    {
+      int cx = static_cast<int>(std::round(gCell->cx()));
+      int cy = static_cast<int>(std::round(gCell->cy()));
+      gCell->instance()->setCenterLocation(cx, cy);
     }
   }
 }
@@ -586,7 +690,7 @@ void NesterovPlace::determinMacroOrient()
       int i = static_cast<int>(ori);
       if(std::abs(LEGAL_THETA[idx] - gcell->theta()) < 0.1 * PI)
       {
-        gcell->setThetaNoUpdatePin(LEGAL_THETA[i]);
+        gcell->setTheta(LEGAL_THETA[i]);
         gcell->instance()->setOrientSize(tech, ori);
       }
       else
@@ -594,6 +698,8 @@ void NesterovPlace::determinMacroOrient()
         macros.push_back(gcell);
       }
     }
+    if (macros.size() == 0)
+      continue;
     std::vector<bool> isRot(macros.size(), false);
     ilpSolve(macros, isRot);
     for (int u = 0; u < macros.size(); u++)
@@ -602,12 +708,12 @@ void NesterovPlace::determinMacroOrient()
       {
         if (std::abs(macros[u]->theta() - 0.5 * PI) < std::abs(macros[u]->theta() - 1.5 * PI))
         {
-          macros[u]->setThetaNoUpdatePin(0.5 * PI);
+          macros[u]->setTheta(0.5 * PI);
           macros[u]->instance()->setOrientSize(tech, Orientation::R90);
         }
         else
         {
-          macros[u]->setThetaNoUpdatePin(1.5 * PI);
+          macros[u]->setTheta(1.5 * PI);
           macros[u]->instance()->setOrientSize(tech, Orientation::R270);
         }
       }
@@ -616,12 +722,12 @@ void NesterovPlace::determinMacroOrient()
         if (std::abs(macros[u]->theta()) < std::abs(macros[u]->theta() - PI)
             || std::abs(macros[u]->theta() - 2.0 * PI) < std::abs(macros[u]->theta() - PI))
         {
-          macros[u]->setThetaNoUpdatePin(0.0);
+          macros[u]->setTheta(0.0);
           macros[u]->instance()->setOrientSize(tech, Orientation::R0);
         }
         else
         {
-          macros[u]->setThetaNoUpdatePin(PI);
+          macros[u]->setTheta(PI);
           macros[u]->instance()->setOrientSize(tech, Orientation::R180);
         }
       }
@@ -781,6 +887,11 @@ static Orientation findNearestOrientation(prec theta)
     }
   }
   return bestOri;
+}
+
+static prec getThetaInsideTwoPi(prec theta)
+{
+  return std::fmod(std::fmod(theta, 2.0f * PI) + 2.0f * PI, 2.0f * PI);
 }
 
 }

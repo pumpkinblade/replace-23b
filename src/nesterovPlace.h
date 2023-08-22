@@ -44,7 +44,7 @@ public:
   void init();
   void doNesterovPlace(string placename = "");
 
-  void updateGradients(std::vector<Point>& sumGrads);
+  void updateGradients(std::vector<Point>& sumGrads, std::vector<prec>& sumGradTheta);
 
   void updateWireLengthCoef(prec overflow);
 
@@ -127,6 +127,8 @@ private:
   std::vector<prec> nextSLPSumGradTheta_;
   std::vector<prec> prevSLPTheta_;
   std::vector<prec> prevSLPSumGradTheta_;
+  std::vector<prec> wireLengthPrecondiTheta_;
+  std::vector<prec> densityPrecondiTheta_;
   prec wireLengthGradSumTheta_;
   prec densityGradSumTheta_;
   prec localDensityGradSumTheta_;

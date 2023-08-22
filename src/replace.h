@@ -52,6 +52,7 @@ namespace replace
     void setNesterovPlaceUseLocalDensity(bool on);
     void setNesterovInitLocalAlpha(float alpha);
     void setNesterovInitLocalBeta(float beta);
+    void setNesterovUseTheta(bool on);
 
     void setBinGridCntX(int binGridCntX);
     void setBinGridCntY(int binGridCntY);
@@ -92,6 +93,7 @@ namespace replace
     bool useLocalDensity_;
     float initLocalAlpha_;
     float initLocalBeta_;
+    bool useTheta_;
   };
 }
 

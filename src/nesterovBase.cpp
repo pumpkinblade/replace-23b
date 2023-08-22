@@ -31,7 +31,7 @@ static prec bellShapeDerive2(prec theta_i);
 
 GCell::GCell() 
     : inst_(nullptr), isMacro_(false),
-      lx_(0), ly_(0), ux_(0), uy_(0), theta_(0),
+      cx_(0), cy_(0), dx_(0), dy_(0), theta_(0),
       densityScale_(0)
 {
 }
@@ -45,21 +45,27 @@ GCell::GCell(Instance* inst)
 GCell::GCell(prec cx, prec cy, prec dx, prec dy) 
     : GCell() 
 {
-  lx_ = cx - dx / 2;
-  ly_ = cy - dy / 2;
-  ux_ = cx + dx / 2;
-  uy_ = cy + dy / 2;
+  cx_ = cx;
+  cy_ = cy;
+  dx_ = dx;
+  dy_ = dy;
+  theta_ = 0;
 }
 
 void GCell::setInstance(Instance* inst)
 {
   inst_ = inst;
-  // density coordi has the same center points.
-  lx_ = static_cast<prec>(inst->lx());
-  ly_ = static_cast<prec>(inst->ly());
-  ux_ = static_cast<prec>(inst->ux());
-  uy_ = static_cast<prec>(inst->uy());
   isMacro_ = inst->isMacro();
+  prec lx = static_cast<prec>(inst->lx());
+  prec ly = static_cast<prec>(inst->ly());
+  prec ux = static_cast<prec>(inst->ux());
+  prec uy = static_cast<prec>(inst->uy());
+  cx_ = 0.5f * (lx + ux);
+  cy_ = 0.5f * (ly + uy);
+  dx_ = ux - lx;
+  dy_ = uy - ly;
+  // initial theta must be 0
+  theta_ = 0;
 }
 
 void GCell::addGPin(GPin* gPin)
@@ -67,56 +73,18 @@ void GCell::addGPin(GPin* gPin)
   gPins_.push_back(gPin);
 }
 
-void GCell::setLocation(prec lx, prec ly)
+void GCell::updatePins(bool useTheta)
 {
-  ux_ = lx + (ux_ - lx_);
-  uy_ = ly + (uy_ - ly_);
-  lx = lx_;
-  ly = ly_;
-
-  for(GPin* pin : gPins_)
-    pin->updateLocation(this);
-}
-
-void GCell::setCenterLocation(prec cx, prec cy)
-{
-  prec halfDx = dx() / 2;
-  prec halfDy = dy() / 2;
-
-  lx_ = cx - halfDx;
-  ly_ = cy - halfDy;
-  ux_ = cx + halfDx;
-  uy_ = cy + halfDy;
-
-  for(GPin* pin : gPins_)
-    pin->updateLocation(this);
-}
-
-// changing size and preserve center coordinates
-void GCell::setSize(prec dx, prec dy)
-{
-  prec centerX = cx();
-  prec centerY = cy();
-
-  lx_ = centerX - dx / 2;
-  ly_ = centerY - dy / 2;
-  ux_ = centerX + dx / 2;
-  uy_ = centerY + dy / 2;
-}
-
-void GCell::setCenterLocationTheta(prec cx, prec cy, prec theta)
-{
-  prec halfDx = dx() / 2;
-  prec halfDy = dy() / 2;
-
-  lx_ = cx - halfDx;
-  ly_ = cy - halfDy;
-  ux_ = cx + halfDx;
-  uy_ = cy + halfDy;
-  theta_ = theta;
-
-  for(GPin* pin : gPins_)
-    pin->updateLocationWithTheta(this);
+  if(useTheta)
+  {
+    for(GPin* pin : gPins_)
+      pin->updateLocationWithTheta(this);
+  }
+  else
+  {
+    for(GPin* pin : gPins_)
+      pin->updateLocation(this);
+  }
 }
 
 ////////////////////////////////////////////////
@@ -448,7 +416,7 @@ void BinGrid::updateBinsNonPlaceArea()
 
 
 // Core Part
-void BinGrid::updateBinsGCellDensityArea()
+void BinGrid::updateBinsGCellDensityArea(bool useTheta)
 {
   // clear the Bin-area info
   for(auto& bin : bins_)
@@ -460,12 +428,21 @@ void BinGrid::updateBinsGCellDensityArea()
   for(auto& cell : gCells_)
   {
     // The following function is critical runtime hotspot for global placer.
-    if(cell->isInstance() && cell->isMacro())
-      addMacroBinArea(cell);
+    if(cell->isMacro())
+    {
+      if(useTheta)
+        addMacroBinAreaWithTheta(cell);
+      else
+        addMacroBinArea(cell);
+    }
     else if(cell->isInstance())
+    {
       addStdCellBinArea(cell);
+    }
     else
+    {
       addFillerBinArea(cell);
+    }
   }
 
   overflowArea_ = 0;
@@ -945,30 +922,36 @@ void NesterovBase::initFillerGCells(BinGrid* bg)
 }
 
 // gcell update
-void NesterovBase::updateGCellLocation(std::vector<Point>& coordis)
-{
-  for(auto& coordi : coordis)
-  {
-    int idx = static_cast<int>(&coordi - &coordis[0]);
-    gCells_[idx]->setLocation( coordi.x, coordi.y );
-  }
-  for (BinGrid* bg : binGrids_)
-  {
-    bg->updateBinsGCellDensityArea();
-  }
-}
-
-// gcell update
 void NesterovBase::updateGCellCenterLocation(std::vector<Point>& coordis)
 {
   for(auto& coordi : coordis)
   {
     int idx = static_cast<int>(&coordi - &coordis[0]);
-    gCells_[idx]->setCenterLocation( coordi.x, coordi.y );
+    gCells_[idx]->setCenterLocation(coordi.x, coordi.y);
+    gCells_[idx]->updatePins(false);
   }
   for (BinGrid* bg : binGrids_)
   {
-    bg->updateBinsGCellDensityArea();
+    bg->updateBinsGCellDensityArea(false);
+  }
+}
+
+void NesterovBase::updateGCellCenterLocationWithTheta(std::vector<Point>& coordis, std::vector<int>& macroIndices, std::vector<prec>& macroTheta)
+{
+  for(int i = 0; i < macroIndices.size(); i++)
+  {
+    int macroIdx = macroIndices[i];
+    gCells_[macroIdx]->setTheta(macroTheta[i]);
+  }
+  for(auto& coordi : coordis)
+  {
+    int idx = static_cast<int>(&coordi - &coordis[0]);
+    gCells_[idx]->setCenterLocation( coordi.x, coordi.y );
+    gCells_[idx]->updatePins(gCells_[idx]->isMacro());
+  }
+  for (BinGrid* bg : binGrids_)
+  {
+    bg->updateBinsGCellDensityArea(true);
   }
 }
 
@@ -992,32 +975,39 @@ prec NesterovBase::targetDensity() const
   return nbVars_.targetDensity;
 }
 
-void NesterovBase::updateDensityCoordiLayoutInside(GCell* gCell)
+void NesterovBase::updateDensityCoordiLayoutInside(GCell* gcell, bool useTheta)
 {
-  prec targetLx = gCell->lx();
-  prec targetLy = gCell->ly();
-
-  BinGrid* bg = gCell->binGrid();
-  targetLx = std::max(std::min(targetLx, bg->ux() - gCell->dx()), bg->lx());
-  targetLy = std::max(std::min(targetLy, bg->uy() - gCell->dy()), bg->ly());
-  gCell->setLocation(targetLx, targetLy);
+  prec cx = getDensityCoordiLayoutInsideX(gcell, gcell->cx(), useTheta);
+  prec cy = getDensityCoordiLayoutInsideY(gcell, gcell->cy(), useTheta);
+  gcell->setCenterLocation(cx, cy);
+  gcell->updatePins(false);
 }
 
-prec NesterovBase::getDensityCoordiLayoutInsideX(GCell* gCell, prec cx)
+prec NesterovBase::getDensityCoordiLayoutInsideX(const GCell* gcell, prec newCx, bool useTheta)
 {
-  prec adjVal = cx;
-  BinGrid* bg = gCell->binGrid();
-  adjVal = std::max(adjVal, bg->lx() + 0.5f * gCell->dx());
-  adjVal = std::min(adjVal, bg->ux() - 0.5f * gCell->dx());
+  prec adjVal = newCx;
+  const BinGrid* bg = gcell->binGrid();
+  adjVal = std::max(adjVal, bg->lx() + 0.5f * gcell->dx());
+  adjVal = std::min(adjVal, bg->ux() - 0.5f * gcell->dx());
+  if(useTheta)
+  {
+    adjVal = std::max(adjVal, bg->lx() + 0.5f * gcell->dy());
+    adjVal = std::min(adjVal, bg->ux() - 0.5f * gcell->dy());
+  }
   return adjVal;
 }
 
-prec NesterovBase::getDensityCoordiLayoutInsideY(GCell* gCell, prec cy)
+prec NesterovBase::getDensityCoordiLayoutInsideY(const GCell* gcell, prec newCy, bool useTheta)
 {
-  prec adjVal = cy;
-  BinGrid* bg = gCell->binGrid();
-  adjVal = std::max(adjVal, bg->ly() + 0.5f * gCell->dy());
-  adjVal = std::min(adjVal, bg->uy() - 0.5f * gCell->dy());
+  prec adjVal = newCy;
+  const BinGrid* bg = gcell->binGrid();
+  adjVal = std::max(adjVal, bg->ly() + 0.5f * gcell->dy());
+  adjVal = std::min(adjVal, bg->uy() - 0.5f * gcell->dy());
+  if(useTheta)
+  {
+    adjVal = std::max(adjVal, bg->ly() + 0.5f * gcell->dx());
+    adjVal = std::min(adjVal, bg->uy() - 0.5f * gcell->dx());
+  }
   return adjVal;
 }
 
@@ -1092,7 +1082,7 @@ void NesterovBase::updateWireLengthForceWA(
 }
 
 // get x,y WA Gradient values with given GCell
-Point NesterovBase::getWireLengthGradientWA(GCell* gCell, prec wlCoeffX, prec wlCoeffY)
+Point NesterovBase::getWireLengthGradientWA(const GCell* gCell, prec wlCoeffX, prec wlCoeffY)
 {
   Point gradientPair;
 
@@ -1107,7 +1097,7 @@ Point NesterovBase::getWireLengthGradientWA(GCell* gCell, prec wlCoeffX, prec wl
   return gradientPair;
 }
 
-Point NesterovBase::getWireLengthGradientWAWithTheta(GCell* gCell, prec wlCoeffX, prec wlCoeffY, prec& gradTheta)
+Point NesterovBase::getWireLengthGradientWAWithTheta(const GCell* gCell, prec wlCoeffX, prec wlCoeffY, prec& gradTheta)
 {
   Point gradientPair;
   gradTheta = 0.0f;
@@ -1133,7 +1123,7 @@ Point NesterovBase::getWireLengthGradientWAWithTheta(GCell* gCell, prec wlCoeffX
 //
 // You can't understand the following function
 // unless you read the (4.13) formula
-Point NesterovBase::getWireLengthGradientPinWA(GPin* gPin, prec wlCoeffX, prec wlCoeffY)
+Point NesterovBase::getWireLengthGradientPinWA(const GPin* gPin, prec wlCoeffX, prec wlCoeffY)
 {
   prec gradientMinX = 0, gradientMinY = 0;
   prec gradientMaxX = 0, gradientMaxY = 0;
@@ -1192,22 +1182,37 @@ Point NesterovBase::getWireLengthGradientPinWA(GPin* gPin, prec wlCoeffX, prec w
 }
 
 
-Point NesterovBase::getWireLengthPreconditioner(GCell* gCell)
+Point NesterovBase::getWireLengthPreconditioner(const GCell* gCell)
 {
   return Point(gCell->gPins().size(), gCell->gPins().size());
 }
 
-Point NesterovBase::getDensityPreconditioner(GCell* gCell)
+Point NesterovBase::getDensityPreconditioner(const GCell* gCell)
 {
-  prec areaVal = static_cast<prec>(gCell->dx()) 
-    * static_cast<prec>(gCell->dy());
+  prec areaVal = gCell->dx() * gCell->dy();
 
   return Point(areaVal, areaVal);
 }
 
+prec NesterovBase::getWireLengthPreconditionerTheta(const GCell* gCell)
+{
+  prec precondi = 0;
+  for(const GPin* gPin : gCell->gPins())
+  {
+    precondi += gPin->offsetCx() * gPin->offsetCx() + gPin->offsetCy() * gPin->offsetCy();
+  }
+  precondi = std::sqrt(precondi);
+  return precondi;
+}
+
+prec NesterovBase::getDensityPreconditionerTheta(const GCell* gCell)
+{
+  return gCell->dx() * gCell->dy();
+}
+
 // get GCells' electroForcePair
 // i.e. get DensityGradient with given GCell
-Point NesterovBase::getDensityGradient(GCell* gCell)
+Point NesterovBase::getDensityGradient(const GCell* gCell)
 {
   // find 
   BinGrid* bg = gCell->binGrid();
@@ -1232,7 +1237,7 @@ Point NesterovBase::getDensityGradient(GCell* gCell)
   return electroForce;
 }
 
-Point NesterovBase::getDensityGradientWithTheta(GCell* gCell, prec& gradTheta)
+Point NesterovBase::getDensityGradientWithTheta(const GCell* gCell, prec& gradTheta)
 {
   BinGrid* bg = gCell->binGrid();
   Point electroForce;
@@ -1283,7 +1288,7 @@ Point NesterovBase::getDensityGradientWithTheta(GCell* gCell, prec& gradTheta)
   return electroForce;
 }
 
-Point NesterovBase::getDensityGradientLocal(GCell *gCell, prec alpha, prec beta, prec& cellDelta)
+Point NesterovBase::getDensityGradientLocal(const GCell *gCell, prec alpha, prec beta, prec& cellDelta)
 {
   BinGrid* bg = gCell->binGrid();
   auto pairX = bg->getMinMaxIdxX(gCell->lx(), gCell->ux());
@@ -1333,7 +1338,7 @@ Point NesterovBase::getDensityGradientLocal(GCell *gCell, prec alpha, prec beta,
   return grad;
 }
 
-Point NesterovBase::getDensityGradientLocalWithTheta(GCell *gCell, prec alpha, prec beta, prec& cellDelta, prec& gradTheta)
+Point NesterovBase::getDensityGradientLocalWithTheta(const GCell *gCell, prec alpha, prec beta, prec& cellDelta, prec& gradTheta)
 {
   BinGrid* bg = gCell->binGrid();
   auto pairX = bg->getMinMaxIdxX(gCell->lx(), gCell->ux());

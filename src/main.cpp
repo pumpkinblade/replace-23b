@@ -73,7 +73,8 @@ int main(int argc, const char *argv[])
   rp.modifyTerminal();
   rp.setInitialPlaceMinIter(10);
   rp.doInitialPlace();
-  rp.setNesterovPlaceUseLocalDensity(true);
+  rp.setNesterovUseTheta(true);
+  rp.setNesterovPlaceUseLocalDensity(false);
   rp.doNesterovPlace("postgp");
   Plot::plot(pb.get(), "./plot/cell", "after_postgp");
   rp.doMacroLegalization();
@@ -88,6 +89,8 @@ int main(int argc, const char *argv[])
 
   rp.doInitialPlace();
   rp.setTargetOverflow(0.05f);
+  rp.setNesterovPlaceUseLocalDensity(true);
+  rp.setNesterovUseTheta(false);
   rp.doNesterovPlace("finalgp");
   Plot::plot(pb.get(), "./plot/cell", "after_finalgp");
   rp.doAbacusLegalization();

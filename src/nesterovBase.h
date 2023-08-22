@@ -46,27 +46,34 @@ namespace replace
     bool isMacro() const { return isMacro_; }
 
     // normal coordinates
-    prec lx() const { return lx_; }
-    prec ly() const { return ly_; }
-    prec ux() const { return ux_; }
-    prec uy() const { return uy_; }
-    prec cx() const { return (lx_ + ux_) / 2; }
-    prec cy() const { return (ly_ + uy_) / 2; }
-    prec dx() const { return (ux_ - lx_); }
-    prec dy() const { return (uy_ - ly_); }
+    prec lx() const { return cx_ - 0.5f * dx_; }
+    prec ly() const { return cy_ - 0.5f * dy_; }
+    prec ux() const { return cx_ + 0.5f * dx_; }
+    prec uy() const { return cy_ + 0.5f * dy_; }
+    prec cx() const { return cx_; }
+    prec cy() const { return cy_; }
+    prec dx() const { return dx_; }
+    prec dy() const { return dy_; }
     prec theta() const { return theta_; }
 
-    void setLocation(prec lx, prec ly);
-    void setCenterLocation(prec cx, prec cy);
-    void setCenterLocationTheta(prec cx, prec cy, prec theta);
-    void setSize(prec dx, prec dy);
-    void setThetaNoUpdatePin(prec theta) { theta_ = theta; }
+    void setCenterLocation(prec cx, prec cy)
+    {
+      cx_ = cx;
+      cy_ = cy;
+    }
+    void setSize(prec dx, prec dy)
+    {
+      dx_ = dx;
+      dy_ = dy;
+    }
+    void setTheta(prec theta) { theta_ = theta; }
+    void updatePins(bool useTheta);
 
     prec densityScale() const { return densityScale_; }
     void setDensityScale(prec densityScale) { densityScale_ = densityScale; }
 
-    BinGrid* binGrid() const { return bg_; }
-    void setBinGrid(BinGrid* bg) { bg_ = bg; }
+    BinGrid *binGrid() const { return bg_; }
+    void setBinGrid(BinGrid *bg) { bg_ = bg; }
 
   private:
     Instance *inst_;
@@ -74,14 +81,14 @@ namespace replace
     // need to be stored for MS replace
     bool isMacro_;
 
-    prec lx_;
-    prec ly_;
-    prec ux_;
-    prec uy_;
+    prec cx_;
+    prec cy_;
+    prec dx_;
+    prec dy_;
     prec theta_;
 
     prec densityScale_;
-    BinGrid* bg_;
+    BinGrid *bg_;
   };
 
   class GNet
@@ -131,7 +138,7 @@ namespace replace
     prec waYExpMaxSumY() const { return waYExpMaxSumY_; }
 
   private:
-    Net* net_;
+    Net *net_;
     std::vector<GPin *> gPins_;
     prec lx_;
     prec ly_;
@@ -219,7 +226,7 @@ namespace replace
     void updateLocationWithTheta(const GCell *gCell);
 
   private:
-    Pin* pin_;
+    Pin *pin_;
     GCell *gCell_;
     GNet *gNet_;
 
@@ -329,11 +336,11 @@ namespace replace
     void setBinCntY(int binCntY);
     void setTargetDensity(prec density);
 
-    void updateBinsGCellDensityArea();
-    void addFillerBinArea(const GCell* gcell);
-    void addStdCellBinArea(const GCell* gcell);
-    void addMacroBinArea(const GCell* gcell);
-    void addMacroBinAreaWithTheta(const GCell* gcell);
+    void updateBinsGCellDensityArea(bool useTheta);
+    void addFillerBinArea(const GCell *gcell);
+    void addStdCellBinArea(const GCell *gcell);
+    void addMacroBinArea(const GCell *gcell);
+    void addMacroBinAreaWithTheta(const GCell *gcell);
 
     void initBins();
 
@@ -435,19 +442,17 @@ namespace replace
     const std::vector<BinGrid *> &binGrids() const { return binGrids_; }
     const std::shared_ptr<PlacerBase> &pb() const { return pb_; }
 
-    // update gCells with lx, ly
-    void updateGCellLocation(std::vector<Point> &points);
     // update gCells with cx, cy
     void updateGCellCenterLocation(std::vector<Point> &points);
+    void updateGCellCenterLocationWithTheta(std::vector<Point> &points, std::vector<int> &macroIndices, std::vector<prec> &macroTheta);
 
     double overflowArea() const;
     prec sumPhi() const;
     prec targetDensity() const;
 
-    void updateDensityCoordiLayoutInside(GCell *gcell);
-
-    prec getDensityCoordiLayoutInsideX(GCell *gCell, prec cx);
-    prec getDensityCoordiLayoutInsideY(GCell *gCell, prec cy);
+    void updateDensityCoordiLayoutInside(GCell *gcell, bool useTheta);
+    prec getDensityCoordiLayoutInsideX(const GCell *gcell, prec newCx, bool useTheta);
+    prec getDensityCoordiLayoutInsideY(const GCell *gcell, prec newCy, bool useTheta);
 
     // WL force update based on WeightedAverage model
     // wlCoeffX : WireLengthCoefficient for X.
@@ -458,32 +463,32 @@ namespace replace
     // Gamma is described in the ePlaceMS paper.
     //
     void updateWireLengthForceWA(prec wlCoeffX, prec wlCoeffY);
+    Point getWireLengthGradientPinWA(const GPin *gPin, prec wlCoeffX, prec wlCoeffY);
 
-    Point getWireLengthGradientPinWA(GPin *gPin, prec wlCoeffX, prec wlCoeffY);
-
-    Point getWireLengthGradientWA(GCell *gCell, prec wlCoeffX, prec wlCoeffY);
-    Point getWireLengthGradientWAWithTheta(GCell *gCell, prec wlCoeffX, prec wlCoeffY, prec& gradTheta);
+    Point getWireLengthGradientWA(const GCell *gCell, prec wlCoeffX, prec wlCoeffY);
+    Point getWireLengthGradientWAWithTheta(const GCell *gCell, prec wlCoeffX, prec wlCoeffY, prec &gradTheta);
 
     // for preconditioner
-    Point getWireLengthPreconditioner(GCell *gCell);
+    Point getWireLengthPreconditioner(const GCell *gCell);
+    Point getDensityPreconditioner(const GCell *gCell);
+    prec getWireLengthPreconditionerTheta(const GCell *gCell);
+    prec getDensityPreconditionerTheta(const GCell *gCell);
 
-    Point getDensityPreconditioner(GCell *gCell);
+    Point getDensityGradient(const GCell *gCell);
+    Point getDensityGradientWithTheta(const GCell *gCell, prec &gradTheta);
 
-    Point getDensityGradient(GCell *gCell);
-    Point getDensityGradientWithTheta(GCell *gCell, prec& gradTheta);
-
-    Point getDensityGradientLocal(GCell *gCell, prec alpha, prec beta, prec& cellDelta);
-    Point getDensityGradientLocalWithTheta(GCell *gCell, prec alpha, prec beta, prec& cellDelta, prec& gradTheta);
+    Point getDensityGradientLocal(const GCell *gCell, prec alpha, prec beta, prec &cellDelta);
+    Point getDensityGradientLocalWithTheta(const GCell *gCell, prec alpha, prec beta, prec &cellDelta, prec &gradTheta);
 
     double hpwl();
     prec overflow() const;
 
     // update electrostatic forces within Bin
     void updateDensityForceBin();
-  
+
   private:
     void init();
-    void initFillerGCells(BinGrid* bg);
+    void initFillerGCells(BinGrid *bg);
 
   private:
     NesterovBaseVars nbVars_;
