@@ -278,10 +278,15 @@ namespace replace
     ~PlacerBase() = default;
 
     const std::vector<Instance*>& insts() const { return insts_; }
+    std::vector<Instance*>& insts() { return insts_; }
     const std::vector<Die*>& dies() const { return dies_; }
+    std::vector<Die*>& dies() { return dies_; }
     const std::vector<Technology*>& techs() const { return techs_; }
+    std::vector<Technology*>& techs() { return techs_; }
     const std::vector<Net*>& nets() const { return nets_; }
+    std::vector<Net*>& nets() { return nets_; }
     const std::vector<Pin*>& pins() const { return pins_; }
+    std::vector<Pin*>& pins() { return pins_; }
 
     int64_t hpwl();
     void printDebugInfo() const;

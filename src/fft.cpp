@@ -15,26 +15,26 @@
 //
 //
 /// 1D FFT ////////////////////////////////////////////////////////////////
-void cdft(int n, int isgn, prec *a, int *ip, prec *w);
-void ddct(int n, int isgn, prec *a, int *ip, prec *w);
-void ddst(int n, int isgn, prec *a, int *ip, prec *w);
+void cdft(int n, int isgn, double *a, int *ip, double *w);
+void ddct(int n, int isgn, double *a, int *ip, double *w);
+void ddst(int n, int isgn, double *a, int *ip, double *w);
 
 /// 2D FFT ////////////////////////////////////////////////////////////////
-void cdft2d(int, int, int, prec **, prec *, int *, prec *);
-void rdft2d(int, int, int, prec **, prec *, int *, prec *);
-void ddct2d(int, int, int, prec **, prec *, int *, prec *);
-void ddst2d(int, int, int, prec **, prec *, int *, prec *);
-void ddsct2d(int n1, int n2, int isgn, prec **a, prec *t, int *ip, prec *w);
-void ddcst2d(int n1, int n2, int isgn, prec **a, prec *t, int *ip, prec *w);
+void cdft2d(int, int, int, double **, double *, int *, double *);
+void rdft2d(int, int, int, double **, double *, int *, double *);
+void ddct2d(int, int, int, double **, double *, int *, double *);
+void ddst2d(int, int, int, double **, double *, int *, double *);
+void ddsct2d(int n1, int n2, int isgn, double **a, double *t, int *ip, double *w);
+void ddcst2d(int n1, int n2, int isgn, double **a, double *t, int *ip, double *w);
 
 /// 3D FFT ////////////////////////////////////////////////////////////////
-void cdft3d(int, int, int, int, prec ***, prec *, int *, prec *);
-void rdft3d(int, int, int, int, prec ***, prec *, int *, prec *);
-void ddct3d(int, int, int, int, prec ***, prec *, int *, prec *);
-void ddst3d(int, int, int, int, prec ***, prec *, int *, prec *);
-void ddscct3d(int, int, int, int isgn, prec ***, prec *, int *, prec *);
-void ddcsct3d(int, int, int, int isgn, prec ***, prec *, int *, prec *);
-void ddccst3d(int, int, int, int isgn, prec ***, prec *, int *, prec *);
+void cdft3d(int, int, int, int, double ***, double *, int *, double *);
+void rdft3d(int, int, int, int, double ***, double *, int *, double *);
+void ddct3d(int, int, int, int, double ***, double *, int *, double *);
+void ddst3d(int, int, int, int, double ***, double *, int *, double *);
+void ddscct3d(int, int, int, int isgn, double ***, double *, int *, double *);
+void ddcsct3d(int, int, int, int isgn, double ***, double *, int *, double *);
+void ddccst3d(int, int, int, int isgn, double ***, double *, int *, double *);
 
 namespace replace {
 
@@ -44,7 +44,7 @@ FFT::FFT()
 }
 
 void 
-FFT::init(int binCntX, int binCntY, prec binSizeX, prec binSizeY) {
+FFT::init(int binCntX, int binCntY, double binSizeX, double binSizeY) {
   binCntX_ = binCntX;
   binCntY_ = binCntY;
   binSizeX_ = binSizeX;
@@ -77,33 +77,33 @@ FFT::init(int binCntX, int binCntY, prec binSizeX, prec binSizeY) {
   workArea_.resize( round(sqrt(std::max(binCntX_, binCntY_))) + 2, 0 );
  
   for(int i=0; i<binCntX_; i++) {
-    wx_[i] = REPLACE_FFT_PI * static_cast<prec>(i) 
-      / static_cast<prec>(binCntX_);
+    wx_[i] = REPLACE_FFT_PI * static_cast<double>(i) 
+      / static_cast<double>(binCntX_);
     wxSquare_[i] = wx_[i] * wx_[i]; 
   }
 
   for(int i=0; i<binCntY_; i++) {
-    wy_[i] = REPLACE_FFT_PI * static_cast<prec>(i)
-      / static_cast<prec>(binCntY_) 
-      * static_cast<prec>(binSizeY_) 
-      / static_cast<prec>(binSizeX_);
+    wy_[i] = REPLACE_FFT_PI * static_cast<double>(i)
+      / static_cast<double>(binCntY_) 
+      * static_cast<double>(binSizeY_) 
+      / static_cast<double>(binSizeX_);
     wySquare_[i] = wy_[i] * wy_[i];
   }
 }
 
 void
-FFT::updateDensity(int x, int y, prec density) {
+FFT::updateDensity(int x, int y, double density) {
   binDensity_[x][y] = density;
 }
 
-std::pair<prec, prec> 
+std::pair<double, double> 
 FFT::getElectroForce(int x, int y) {
   return std::make_pair(
       electroForceX_[x][y],
       electroForceY_[x][y]);
 }
 
-prec
+double
 FFT::getElectroPhi(int x, int y) {
   return electroPhi_[x][y]; 
 }
@@ -113,7 +113,7 @@ using namespace std;
 void
 FFT::doFFT() {
   ddct2d(binCntX_, binCntY_, -1, binDensity_.data(), 
-      NULL, (int*) &workArea_[0], (prec*)&csTable_[0]);
+      NULL, (int*) &workArea_[0], (double*)&csTable_[0]);
   
   for(int i = 0; i < binCntX_; i++) {
     binDensity_[i][0] *= 0.5;
@@ -130,16 +130,16 @@ FFT::doFFT() {
   }
 
   for(int i = 0; i < binCntX_; i++) {
-    prec wx = wx_[i];
-    prec wx2 = wxSquare_[i];
+    double wx = wx_[i];
+    double wx2 = wxSquare_[i];
 
     for(int j = 0; j < binCntY_; j++) {
-      prec wy = wy_[j];
-      prec wy2 = wySquare_[j];
+      double wy = wy_[j];
+      double wy2 = wySquare_[j];
 
-      prec density = binDensity_[i][j];
-      prec phi = 0;
-      prec electroX = 0, electroY = 0;
+      double density = binDensity_[i][j];
+      double phi = 0;
+      double electroX = 0, electroY = 0;
 
       if(i == 0 && j == 0) {
         phi = electroX = electroY = 0.0f;
@@ -168,13 +168,13 @@ FFT::doFFT() {
   // Inverse DCT
   ddct2d(binCntX_, binCntY_, 1, 
       electroPhi_.data(), NULL, 
-      (int*) &workArea_[0], (prec*) &csTable_[0]);
+      (int*) &workArea_[0], (double*) &csTable_[0]);
   ddsct2d(binCntX_, binCntY_, 1, 
       electroForceX_.data(), NULL, 
-      (int*) &workArea_[0], (prec*) &csTable_[0]);
+      (int*) &workArea_[0], (double*) &csTable_[0]);
   ddcst2d(binCntX_, binCntY_, 1, 
       electroForceY_.data(), NULL, 
-      (int*) &workArea_[0], (prec*) &csTable_[0]);
+      (int*) &workArea_[0], (double*) &csTable_[0]);
 }
 
 }

@@ -11,49 +11,49 @@ class FFT {
     FFT();
     ~FFT() = default;
 
-    void init(int binCntX, int binCntY, prec binSizeX, prec binSizeY);
+    void init(int binCntX, int binCntY, double binSizeX, double binSizeY);
 
     // input func
-    void updateDensity(int x, int y, prec density);
+    void updateDensity(int x, int y, double density);
 
     // do FFT
     void doFFT();
 
     // returning func
-    std::pair<prec, prec> getElectroForce(int x, int y);
-    prec getElectroPhi(int x, int y);
+    std::pair<double, double> getElectroForce(int x, int y);
+    double getElectroPhi(int x, int y);
 
   private:
     // 2D array; width: binCntX_, height: binCntY_;
     // No hope to use Vector at this moment...
-    //prec** binDensity_;
-    //prec** electroPhi_;
-    //prec** electroForceX_;
-    //prec** electroForceY_;
+    //double** binDensity_;
+    //double** electroPhi_;
+    //double** electroForceX_;
+    //double** electroForceY_;
 
-    std::vector<prec> binDensityStor_;
-    std::vector<prec*> binDensity_;
+    std::vector<double> binDensityStor_;
+    std::vector<double*> binDensity_;
 
-    std::vector<prec> electroPhiStor_;
-    std::vector<prec*> electroPhi_;
+    std::vector<double> electroPhiStor_;
+    std::vector<double*> electroPhi_;
 
-    std::vector<prec> electroForceXStor_;
-    std::vector<prec*> electroForceX_;
+    std::vector<double> electroForceXStor_;
+    std::vector<double*> electroForceX_;
 
-    std::vector<prec> electroForceYStor_;
-    std::vector<prec*> electroForceY_;
+    std::vector<double> electroForceYStor_;
+    std::vector<double*> electroForceY_;
 
     // cos/sin table (prev: w_2d)
     // length:  max(binCntX, binCntY) * 3 / 2
-    std::vector<prec> csTable_;
+    std::vector<double> csTable_;
 
     // wx. length:  binCntX_
-    std::vector<prec> wx_;
-    std::vector<prec> wxSquare_;
+    std::vector<double> wx_;
+    std::vector<double> wxSquare_;
 
     // wy. length:  binCntY_
-    std::vector<prec> wy_;
-    std::vector<prec> wySquare_;
+    std::vector<double> wy_;
+    std::vector<double> wySquare_;
 
     // work area for bit reversal (prev: ip)
     // length: round(sqrt( max(binCntX_, binCntY_) )) + 2
@@ -61,8 +61,8 @@ class FFT {
 
     int binCntX_;
     int binCntY_;
-    prec binSizeX_;
-    prec binSizeY_;
+    double binSizeX_;
+    double binSizeY_;
 };
 
 }

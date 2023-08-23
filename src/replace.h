@@ -69,6 +69,8 @@ namespace replace
 
     void setIncrementalPlaceMode(bool mode);
 
+    void setMacroPostMaxIter(int iter);
+
   private:
     std::shared_ptr<PlacerBase> pb_;
 
@@ -94,6 +96,8 @@ namespace replace
     float initLocalAlpha_;
     float initLocalBeta_;
     bool useTheta_;
+
+    int macroPostMaxIter_;
   };
 }
 

@@ -9,130 +9,135 @@ using std::string;
 
 namespace replace
 {
+  class PlacerBase;
+  class Instance;
+  class NesterovBase;
 
-class PlacerBase;
-class Instance;
-class NesterovBase;
-
-class NesterovPlaceVars {
+  class NesterovPlaceVars
+  {
   public:
-  int maxNesterovIter;
-  int maxBackTrack;
-  prec initDensityPenalty; // INIT_LAMBDA
-  prec initWireLengthCoef; // base_wcof
-  prec targetOverflow; // overflow
-  prec minPhiCoef; // pcof_min
-  prec maxPhiCoef; // pcof_max
-  prec minPreconditioner; // MIN_PRE
-  prec initialPrevCoordiUpdateCoef; // z_ref_alpha
-  prec referenceHpwl; // refDeltaHpwl
-  // local density
-  bool useLocalDensity;
-  prec initAlpha;
-  prec initBeta;
-  // theta
-  bool useTheta;
-  NesterovPlaceVars();
-};
+    int maxNesterovIter;
+    int maxBackTrack;
+    double initDensityPenalty;          // INIT_LAMBDA
+    double initWireLengthCoef;          // base_wcof
+    double targetOverflow;              // overflow
+    double minPhiCoef;                  // pcof_min
+    double maxPhiCoef;                  // pcof_max
+    double minPreconditioner;           // MIN_PRE
+    double initialPrevCoordiUpdateCoef; // z_ref_alpha
+    double referenceHpwl;               // refDeltaHpwl
+    // local density
+    bool useLocalDensity;
+    double initAlpha;
+    double initBeta;
+    // theta
+    bool useTheta;
+    NesterovPlaceVars();
+  };
 
-class NesterovPlace {
-public:
-  NesterovPlace();
-  NesterovPlace(NesterovPlaceVars npVars, std::shared_ptr<NesterovBase> nb);
-  ~NesterovPlace() = default;
+  class NesterovPlace
+  {
+  public:
+    NesterovPlace();
+    NesterovPlace(NesterovPlaceVars npVars, std::shared_ptr<NesterovBase> nb);
+    ~NesterovPlace() = default;
 
-  void init();
-  void doNesterovPlace(string placename = "");
+    void init();
+    void doNesterovPlace(string placename = "");
 
-  void updateGradients(std::vector<Point>& sumGrads, std::vector<prec>& sumGradTheta);
+    void updateGradients(std::vector<Point> &sumGrads,
+                         std::vector<double> &sumGradTheta,
+                         std::vector<double> &refCellDeltas,
+                         std::vector<double> &outCellDeltas);
 
-  void updateWireLengthCoef(prec overflow);
+    void updateWireLengthCoef(double overflow);
 
-  void updateInitialPrevSLPCoordi();
+    void updateInitialPrevSLPCoordi();
 
-  prec getStepLength(
-      std::vector<Point>& prevCoordi_,
-      std::vector<Point>& prevSumGrads_,
-      std::vector<Point>& curCoordi_,
-      std::vector<Point>& curSumGrads_ );
+    double getStepLength(
+        std::vector<Point> &prevCoordi_,
+        std::vector<Point> &prevSumGrads_,
+        std::vector<Point> &curCoordi_,
+        std::vector<Point> &curSumGrads_);
 
-  void updateNextIter();
-  prec getPhiCoef(prec scaledDiffHpwl);
+    void updateNextIter();
+    double getPhiCoef(double scaledDiffHpwl);
 
-  void updatePlacerBase();
+    void updatePlacerBase();
 
-  void determinMacroOrient();
+    void determinMacroOrient();
 
-private:
-  std::shared_ptr<NesterovBase> nb_;
-  NesterovPlaceVars npVars_;
+  private:
+    std::shared_ptr<NesterovBase> nb_;
+    NesterovPlaceVars npVars_;
 
-  // SLP is Step Length Prediction.
-  //
-  // y_st, y_dst, y_wdst, w_pdst
-  std::vector<Point> curSLPCoordi_;
-  std::vector<Point> curSLPSumGrads_;
+    // SLP is Step Length Prediction.
+    //
+    // y_st, y_dst, y_wdst, w_pdst
+    std::vector<Point> curSLPCoordi_;
+    std::vector<Point> curSLPSumGrads_;
 
-  // y0_st, y0_dst, y0_wdst, y0_pdst
-  std::vector<Point> nextSLPCoordi_;
-  std::vector<Point> nextSLPSumGrads_;
+    // y0_st, y0_dst, y0_wdst, y0_pdst
+    std::vector<Point> nextSLPCoordi_;
+    std::vector<Point> nextSLPSumGrads_;
 
-  // z_st, z_dst, z_wdst, z_pdst
-  std::vector<Point> prevSLPCoordi_;
-  std::vector<Point> prevSLPSumGrads_;
+    // z_st, z_dst, z_wdst, z_pdst
+    std::vector<Point> prevSLPCoordi_;
+    std::vector<Point> prevSLPSumGrads_;
 
-  // x_st and x0_st
-  std::vector<Point> curCoordi_;
-  std::vector<Point> nextCoordi_;
+    // x_st and x0_st
+    std::vector<Point> curCoordi_;
+    std::vector<Point> nextCoordi_;
 
-  prec wireLengthGradSum_;
-  prec densityGradSum_;
-  prec localDensityGradSum_;
+    double wireLengthGradSum_;
+    double densityGradSum_;
+    double localDensityGradSum_;
 
-  // alpha
-  prec stepLength_;
+    // alpha
+    double stepLength_;
 
-  // opt_phi_cof
-  prec densityPenalty_;
+    // opt_phi_cof
+    double densityPenalty_;
 
-  // base_wcof
-  prec baseWireLengthCoef_;
+    // base_wcof
+    double baseWireLengthCoef_;
 
-  // wlen_cof
-  prec wireLengthCoefX_;
-  prec wireLengthCoefY_;
+    // wlen_cof
+    double wireLengthCoefX_;
+    double wireLengthCoefY_;
 
-  // phi is described in ePlace paper.
-  double sumPhi_;
-  prec sumOverflow_;
+    // phi is described in ePlace paper.
+    double sumPhi_;
+    double sumOverflow_;
 
-  // half-parameter-wire-length
-  double prevHpwl_;
+    // half-parameter-wire-length
+    double prevHpwl_;
 
-  bool isDiverged_;
+    bool isDiverged_;
 
-  // local density
-  prec localAlpha_;
-  prec localBeta_;
-  std::vector<prec> curCellDelta_;
-  std::vector<prec> nextCellDelta_;
+    // local density
+    double localAlpha_;
+    double localBeta_;
+    std::vector<double> prevCellDelta_;
+    std::vector<double> curCellDelta_;
+    std::vector<double> nextCellDelta_;
 
-  // theta
-  std::vector<int> macroIndices_;
-  std::vector<prec> curTheta_;
-  std::vector<prec> nextTheta_;
-  std::vector<prec> curSLPTheta_;
-  std::vector<prec> curSLPSumGradTheta_;
-  std::vector<prec> nextSLPTheta_;
-  std::vector<prec> nextSLPSumGradTheta_;
-  std::vector<prec> prevSLPTheta_;
-  std::vector<prec> prevSLPSumGradTheta_;
-  std::vector<prec> wireLengthPrecondiTheta_;
-  std::vector<prec> densityPrecondiTheta_;
-  prec wireLengthGradSumTheta_;
-  prec densityGradSumTheta_;
-  prec localDensityGradSumTheta_;
-};
+    // theta
+    int useThetaMacroCount;
+    std::vector<double> curTheta_;
+    std::vector<double> nextTheta_;
+    std::vector<double> curSLPTheta_;
+    std::vector<double> curSLPSumGradTheta_;
+    std::vector<double> nextSLPTheta_;
+    std::vector<double> nextSLPSumGradTheta_;
+    std::vector<double> prevSLPTheta_;
+    std::vector<double> prevSLPSumGradTheta_;
+    std::vector<double> wireLengthPrecondiTheta_;
+    std::vector<double> densityPrecondiTheta_;
+    double wireLengthGradSumTheta_;
+    double densityGradSumTheta_;
+    double localDensityGradSumTheta_;
+  };
 }
 
 #endif

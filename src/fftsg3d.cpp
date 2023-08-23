@@ -52,11 +52,11 @@ functions
     ddct3d: Discrete Cosine Transform
     ddst3d: Discrete Sine Transform
 function prototypes
-    void cdft3d(int, int, int, int, prec   ***, prec   *, int *, prec   *);
-    void rdft3d(int, int, int, int, prec   ***, prec   *, int *, prec   *);
-    void rdft3dsort(int, int, int, int, prec   ***);
-    void ddct3d(int, int, int, int, prec   ***, prec   *, int *, prec   *);
-    void ddst3d(int, int, int, int, prec   ***, prec   *, int *, prec   *);
+    void cdft3d(int, int, int, int, double   ***, double   *, int *, double   *);
+    void rdft3d(int, int, int, int, double   ***, double   *, int *, double   *);
+    void rdft3dsort(int, int, int, int, double   ***);
+    void ddct3d(int, int, int, int, double   ***, double   *, int *, double   *);
+    void ddst3d(int, int, int, int, double   ***, double   *, int *, double   *);
 necessary package
     fftsg.c  : 1D-FFT package
 macro definitions
@@ -100,7 +100,7 @@ macro definitions
         2*n3   :data length (int)
                 n3 >= 1, n3 = power of 2
         a[0...n1-1][0...n2-1][0...2*n3-1]
-               :input/output data (prec   ***)
+               :input/output data (double   ***)
                 input data
                     a[j1][j2][2*j3] = Re(x[j1][j2][j3]),
                     a[j1][j2][2*j3+1] = Im(x[j1][j2][j3]),
@@ -110,7 +110,7 @@ macro definitions
                     a[k1][k2][2*k3+1] = Im(X[k1][k2][k3]),
                     0<=k1<n1, 0<=k2<n2, 0<=k3<n3
         t[0...*]
-               :work area (prec   *)
+               :work area (double   *)
                 length of t >= max(8*n1, 8*n2),        if single thread,
                 length of t >= max(8*n1, 8*n2)*FFT3D_MAX_THREADS,
                                                        if multi threads,
@@ -121,7 +121,7 @@ macro definitions
                 (n = max(n1, n2, n3))
                 ip[0],ip[1] are pointers of the cos/sin table.
         w[0...*]
-               :cos/sin table (prec   *)
+               :cos/sin table (double   *)
                 length of w >= max(n1/2, n2/2, n3/2)
                 w[],ip[] are initialized if ip[0] == 0.
     [remark]
@@ -179,7 +179,7 @@ macro definitions
         n3     :data length (int)
                 n3 >= 2, n3 = power of 2
         a[0...n1-1][0...n2-1][0...n3-1]
-               :input/output data (prec   ***)
+               :input/output data (double   ***)
                 <case1>
                     output data
                         a[k1][k2][2*k3] = R[k1][k2][k3]
@@ -275,7 +275,7 @@ macro definitions
                     rdft3dsort(n1, n2, n3, -1, a);
                     rdft3d(n1, n2, n3, -1, a, t, ip, w);
         t[0...*]
-               :work area (prec   *)
+               :work area (double   *)
                 length of t >= max(8*n1, 8*n2),        if single thread,
                 length of t >= max(8*n1, 8*n2)*FFT3D_MAX_THREADS,
                                                        if multi threads,
@@ -286,7 +286,7 @@ macro definitions
                 (n = max(n1, n2, n3/2))
                 ip[0],ip[1] are pointers of the cos/sin table.
         w[0...*]
-               :cos/sin table (prec   *)
+               :cos/sin table (double   *)
                 length of w >= max(n1/2, n2/2, n3/4) + n3/4
                 w[],ip[] are initialized if ip[0] == 0.
     [remark]
@@ -335,12 +335,12 @@ macro definitions
         n3     :data length (int)
                 n3 >= 2, n3 = power of 2
         a[0...n1-1][0...n2-1][0...n3-1]
-               :input/output data (prec   ***)
+               :input/output data (double   ***)
                 output data
                     a[k1][k2][k3] = C[k1][k2][k3],
                         0<=k1<n1, 0<=k2<n2, 0<=k3<n3
         t[0...*]
-               :work area (prec   *)
+               :work area (double   *)
                 length of t >= max(4*n1, 4*n2),        if single thread,
                 length of t >= max(4*n1, 4*n2)*FFT3D_MAX_THREADS,
                                                        if multi threads,
@@ -351,7 +351,7 @@ macro definitions
                 (n = max(n1/2, n2/2, n3/2))
                 ip[0],ip[1] are pointers of the cos/sin table.
         w[0...*]
-               :cos/sin table (prec   *)
+               :cos/sin table (double   *)
                 length of w >= max(n1*3/2, n2*3/2, n3*3/2)
                 w[],ip[] are initialized if ip[0] == 0.
     [remark]
@@ -413,7 +413,7 @@ macro definitions
         n3     :data length (int)
                 n3 >= 2, n3 = power of 2
         a[0...n1-1][0...n2-1][0...n3-1]
-               :input/output data (prec   ***)
+               :input/output data (double   ***)
                 <case1>
                     input data
                         a[j1%n1][j2%n2][j3%n3] = A[j1][j2][j3],
@@ -427,7 +427,7 @@ macro definitions
                         a[k1%n1][k2%n2][k3%n3] = S[k1][k2][k3],
                             0<k1<=n1, 0<k2<=n2, 0<k3<=n3
         t[0...*]
-               :work area (prec   *)
+               :work area (double   *)
                 length of t >= max(4*n1, 4*n2),        if single thread,
                 length of t >= max(4*n1, 4*n2)*FFT3D_MAX_THREADS,
                                                        if multi threads,
@@ -438,7 +438,7 @@ macro definitions
                 (n = max(n1/2, n2/2, n3/2))
                 ip[0],ip[1] are pointers of the cos/sin table.
         w[0...*]
-               :cos/sin table (prec   *)
+               :cos/sin table (double   *)
                 length of w >= max(n1*3/2, n2*3/2, n3*3/2)
                 w[],ip[] are initialized if ip[0] == 0.
     [remark]
@@ -534,18 +534,18 @@ macro definitions
   }
 #endif /* USE_FFT3D_WINTHREADS */
 
-void cdft3d(int n1, int n2, int n3, int isgn, prec ***a, prec *t, int *ip,
-            prec *w) {
-  void makewt(int nw, int *ip, prec *w);
-  void xdft3da_sub(int n1, int n2, int n3, int icr, int isgn, prec ***a,
-                   prec *t, int *ip, prec *w);
-  void cdft3db_sub(int n1, int n2, int n3, int isgn, prec ***a, prec *t,
-                   int *ip, prec *w);
+void cdft3d(int n1, int n2, int n3, int isgn, double ***a, double *t, int *ip,
+            double *w) {
+  void makewt(int nw, int *ip, double *w);
+  void xdft3da_sub(int n1, int n2, int n3, int icr, int isgn, double ***a,
+                   double *t, int *ip, double *w);
+  void cdft3db_sub(int n1, int n2, int n3, int isgn, double ***a, double *t,
+                   int *ip, double *w);
 #ifdef USE_FFT3D_THREADS
-  void xdft3da_subth(int n1, int n2, int n3, int icr, int isgn, prec ***a,
-                     prec *t, int *ip, prec *w);
-  void cdft3db_subth(int n1, int n2, int n3, int isgn, prec ***a, prec *t,
-                     int *ip, prec *w);
+  void xdft3da_subth(int n1, int n2, int n3, int icr, int isgn, double ***a,
+                     double *t, int *ip, double *w);
+  void cdft3db_subth(int n1, int n2, int n3, int isgn, double ***a, double *t,
+                     int *ip, double *w);
 #endif /* USE_FFT3D_THREADS */
   int n, itnull, nt;
 
@@ -577,11 +577,11 @@ void cdft3d(int n1, int n2, int n3, int isgn, prec ***a, prec *t, int *ip,
     else if(n3 < 4) {
       nt >>= 2;
     }
-    t = (prec *)malloc(sizeof(prec) * nt);
+    t = (double *)malloc(sizeof(double) * nt);
     fft3d_alloc_error_check(t);
   }
 #ifdef USE_FFT3D_THREADS
-  if((prec)n1 * n2 * n3 >= (prec)FFT3D_THREADS_BEGIN_N) {
+  if((double)n1 * n2 * n3 >= (double)FFT3D_THREADS_BEGIN_N) {
     xdft3da_subth(n1, n2, n3, 0, isgn, a, t, ip, w);
     cdft3db_subth(n1, n2, n3, isgn, a, t, ip, w);
   }
@@ -596,20 +596,20 @@ void cdft3d(int n1, int n2, int n3, int isgn, prec ***a, prec *t, int *ip,
   }
 }
 
-void rdft3d(int n1, int n2, int n3, int isgn, prec ***a, prec *t, int *ip,
-            prec *w) {
-  void makewt(int nw, int *ip, prec *w);
-  void makect(int nc, int *ip, prec *c);
-  void xdft3da_sub(int n1, int n2, int n3, int icr, int isgn, prec ***a,
-                   prec *t, int *ip, prec *w);
-  void cdft3db_sub(int n1, int n2, int n3, int isgn, prec ***a, prec *t,
-                   int *ip, prec *w);
-  void rdft3d_sub(int n1, int n2, int isgn, prec ***a);
+void rdft3d(int n1, int n2, int n3, int isgn, double ***a, double *t, int *ip,
+            double *w) {
+  void makewt(int nw, int *ip, double *w);
+  void makect(int nc, int *ip, double *c);
+  void xdft3da_sub(int n1, int n2, int n3, int icr, int isgn, double ***a,
+                   double *t, int *ip, double *w);
+  void cdft3db_sub(int n1, int n2, int n3, int isgn, double ***a, double *t,
+                   int *ip, double *w);
+  void rdft3d_sub(int n1, int n2, int isgn, double ***a);
 #ifdef USE_FFT3D_THREADS
-  void xdft3da_subth(int n1, int n2, int n3, int icr, int isgn, prec ***a,
-                     prec *t, int *ip, prec *w);
-  void cdft3db_subth(int n1, int n2, int n3, int isgn, prec ***a, prec *t,
-                     int *ip, prec *w);
+  void xdft3da_subth(int n1, int n2, int n3, int icr, int isgn, double ***a,
+                     double *t, int *ip, double *w);
+  void cdft3db_subth(int n1, int n2, int n3, int isgn, double ***a, double *t,
+                     int *ip, double *w);
 #endif /* USE_FFT3D_THREADS */
   int n, nw, nc, itnull, nt;
 
@@ -648,11 +648,11 @@ void rdft3d(int n1, int n2, int n3, int isgn, prec ***a, prec *t, int *ip,
     else if(n3 < 4) {
       nt >>= 2;
     }
-    t = (prec *)malloc(sizeof(prec) * nt);
+    t = (double *)malloc(sizeof(double) * nt);
     fft3d_alloc_error_check(t);
   }
 #ifdef USE_FFT3D_THREADS
-  if((prec)n1 * n2 * n3 >= (prec)FFT3D_THREADS_BEGIN_N) {
+  if((double)n1 * n2 * n3 >= (double)FFT3D_THREADS_BEGIN_N) {
     if(isgn < 0) {
       rdft3d_sub(n1, n2, isgn, a);
       cdft3db_subth(n1, n2, n3, isgn, a, t, ip, w);
@@ -681,9 +681,9 @@ void rdft3d(int n1, int n2, int n3, int isgn, prec ***a, prec *t, int *ip,
   }
 }
 
-void rdft3dsort(int n1, int n2, int n3, int isgn, prec ***a) {
+void rdft3dsort(int n1, int n2, int n3, int isgn, double ***a) {
   int n1h, n2h, i, j;
-  prec x, y;
+  double x, y;
 
   n1h = n1 >> 1;
   n2h = n2 >> 1;
@@ -761,19 +761,19 @@ void rdft3dsort(int n1, int n2, int n3, int isgn, prec ***a) {
   }
 }
 
-void ddscct3d(int n1, int n2, int n3, int isgn, prec ***a, prec *t, int *ip,
-              prec *w) {
-  void makewt(int nw, int *ip, prec *w);
-  void makect(int nc, int *ip, prec *c);
+void ddscct3d(int n1, int n2, int n3, int isgn, double ***a, double *t, int *ip,
+              double *w) {
+  void makewt(int nw, int *ip, double *w);
+  void makect(int nc, int *ip, double *c);
   void ddxt3da_sub(int n1, int n2, int n3, int ics2, int ics3, int isgn,
-                   prec ***a, prec *t, int *ip, prec *w);
-  void ddxt3db_sub(int n1, int n2, int n3, int ics, int isgn, prec ***a,
-                   prec *t, int *ip, prec *w);
+                   double ***a, double *t, int *ip, double *w);
+  void ddxt3db_sub(int n1, int n2, int n3, int ics, int isgn, double ***a,
+                   double *t, int *ip, double *w);
 #ifdef USE_FFT3D_THREADS
-  void ddxt3da_subth(int n1, int n2, int n3, int ics, int isgn, prec ***a,
-                     prec *t, int *ip, prec *w);
-  void ddxt3db_subth(int n1, int n2, int n3, int ics, int isgn, prec ***a,
-                     prec *t, int *ip, prec *w);
+  void ddxt3da_subth(int n1, int n2, int n3, int ics, int isgn, double ***a,
+                     double *t, int *ip, double *w);
+  void ddxt3db_subth(int n1, int n2, int n3, int ics, int isgn, double ***a,
+                     double *t, int *ip, double *w);
 #endif /* USE_FFT3D_THREADS */
   int n, nw, nc, itnull, nt;
 
@@ -808,11 +808,11 @@ void ddscct3d(int n1, int n2, int n3, int isgn, prec ***a, prec *t, int *ip,
     if(n3 == 2) {
       nt >>= 1;
     }
-    t = (prec *)malloc(sizeof(prec) * nt);
+    t = (double *)malloc(sizeof(double) * nt);
     fft3d_alloc_error_check(t);
   }
 #ifdef USE_FFT3D_THREADS
-  if((prec)n1 * n2 * n3 >= (prec)FFT3D_THREADS_BEGIN_N) {
+  if((double)n1 * n2 * n3 >= (double)FFT3D_THREADS_BEGIN_N) {
     ddxt3da_subth(n1, n2, n3, 0, isgn, a, t, ip, w);
     ddxt3db_subth(n1, n2, n3, 0, isgn, a, t, ip, w);
   }
@@ -827,19 +827,19 @@ void ddscct3d(int n1, int n2, int n3, int isgn, prec ***a, prec *t, int *ip,
   }
 }
 
-void ddcsct3d(int n1, int n2, int n3, int isgn, prec ***a, prec *t, int *ip,
-              prec *w) {
-  void makewt(int nw, int *ip, prec *w);
-  void makect(int nc, int *ip, prec *c);
+void ddcsct3d(int n1, int n2, int n3, int isgn, double ***a, double *t, int *ip,
+              double *w) {
+  void makewt(int nw, int *ip, double *w);
+  void makect(int nc, int *ip, double *c);
   void ddxt3da_sub(int n1, int n2, int n3, int ics2, int ics3, int isgn,
-                   prec ***a, prec *t, int *ip, prec *w);
-  void ddxt3db_sub(int n1, int n2, int n3, int ics, int isgn, prec ***a,
-                   prec *t, int *ip, prec *w);
+                   double ***a, double *t, int *ip, double *w);
+  void ddxt3db_sub(int n1, int n2, int n3, int ics, int isgn, double ***a,
+                   double *t, int *ip, double *w);
 #ifdef USE_FFT3D_THREADS
-  void ddxt3da_subth(int n1, int n2, int n3, int ics, int isgn, prec ***a,
-                     prec *t, int *ip, prec *w);
-  void ddxt3db_subth(int n1, int n2, int n3, int ics, int isgn, prec ***a,
-                     prec *t, int *ip, prec *w);
+  void ddxt3da_subth(int n1, int n2, int n3, int ics, int isgn, double ***a,
+                     double *t, int *ip, double *w);
+  void ddxt3db_subth(int n1, int n2, int n3, int ics, int isgn, double ***a,
+                     double *t, int *ip, double *w);
 #endif /* USE_FFT3D_THREADS */
   int n, nw, nc, itnull, nt;
 
@@ -874,11 +874,11 @@ void ddcsct3d(int n1, int n2, int n3, int isgn, prec ***a, prec *t, int *ip,
     if(n3 == 2) {
       nt >>= 1;
     }
-    t = (prec *)malloc(sizeof(prec) * nt);
+    t = (double *)malloc(sizeof(double) * nt);
     fft3d_alloc_error_check(t);
   }
 #ifdef USE_FFT3D_THREADS
-  if((prec)n1 * n2 * n3 >= (prec)FFT3D_THREADS_BEGIN_N) {
+  if((double)n1 * n2 * n3 >= (double)FFT3D_THREADS_BEGIN_N) {
     ddxt3da_subth(n1, n2, n3, 0, isgn, a, t, ip, w);
     ddxt3db_subth(n1, n2, n3, 0, isgn, a, t, ip, w);
   }
@@ -893,19 +893,19 @@ void ddcsct3d(int n1, int n2, int n3, int isgn, prec ***a, prec *t, int *ip,
   }
 }
 
-void ddccst3d(int n1, int n2, int n3, int isgn, prec ***a, prec *t, int *ip,
-              prec *w) {
-  void makewt(int nw, int *ip, prec *w);
-  void makect(int nc, int *ip, prec *c);
+void ddccst3d(int n1, int n2, int n3, int isgn, double ***a, double *t, int *ip,
+              double *w) {
+  void makewt(int nw, int *ip, double *w);
+  void makect(int nc, int *ip, double *c);
   void ddxt3da_sub(int n1, int n2, int n3, int ics2, int ics3, int isgn,
-                   prec ***a, prec *t, int *ip, prec *w);
-  void ddxt3db_sub(int n1, int n2, int n3, int ics, int isgn, prec ***a,
-                   prec *t, int *ip, prec *w);
+                   double ***a, double *t, int *ip, double *w);
+  void ddxt3db_sub(int n1, int n2, int n3, int ics, int isgn, double ***a,
+                   double *t, int *ip, double *w);
 #ifdef USE_FFT3D_THREADS
-  void ddxt3da_subth(int n1, int n2, int n3, int ics, int isgn, prec ***a,
-                     prec *t, int *ip, prec *w);
-  void ddxt3db_subth(int n1, int n2, int n3, int ics, int isgn, prec ***a,
-                     prec *t, int *ip, prec *w);
+  void ddxt3da_subth(int n1, int n2, int n3, int ics, int isgn, double ***a,
+                     double *t, int *ip, double *w);
+  void ddxt3db_subth(int n1, int n2, int n3, int ics, int isgn, double ***a,
+                     double *t, int *ip, double *w);
 #endif /* USE_FFT3D_THREADS */
   int n, nw, nc, itnull, nt;
 
@@ -940,11 +940,11 @@ void ddccst3d(int n1, int n2, int n3, int isgn, prec ***a, prec *t, int *ip,
     if(n3 == 2) {
       nt >>= 1;
     }
-    t = (prec *)malloc(sizeof(prec) * nt);
+    t = (double *)malloc(sizeof(double) * nt);
     fft3d_alloc_error_check(t);
   }
 #ifdef USE_FFT3D_THREADS
-  if((prec)n1 * n2 * n3 >= (prec)FFT3D_THREADS_BEGIN_N) {
+  if((double)n1 * n2 * n3 >= (double)FFT3D_THREADS_BEGIN_N) {
     ddxt3da_subth(n1, n2, n3, 0, isgn, a, t, ip, w);
     ddxt3db_subth(n1, n2, n3, 0, isgn, a, t, ip, w);
   }
@@ -959,19 +959,19 @@ void ddccst3d(int n1, int n2, int n3, int isgn, prec ***a, prec *t, int *ip,
   }
 }
 
-void ddct3d(int n1, int n2, int n3, int isgn, prec ***a, prec *t, int *ip,
-            prec *w) {
-  void makewt(int nw, int *ip, prec *w);
-  void makect(int nc, int *ip, prec *c);
+void ddct3d(int n1, int n2, int n3, int isgn, double ***a, double *t, int *ip,
+            double *w) {
+  void makewt(int nw, int *ip, double *w);
+  void makect(int nc, int *ip, double *c);
   void ddxt3da_sub(int n1, int n2, int n3, int ics2, int ics3, int isgn,
-                   prec ***a, prec *t, int *ip, prec *w);
-  void ddxt3db_sub(int n1, int n2, int n3, int ics1, int isgn, prec ***a,
-                   prec *t, int *ip, prec *w);
+                   double ***a, double *t, int *ip, double *w);
+  void ddxt3db_sub(int n1, int n2, int n3, int ics1, int isgn, double ***a,
+                   double *t, int *ip, double *w);
 #ifdef USE_FFT3D_THREADS
-  void ddxt3da_subth(int n1, int n2, int n3, int ics, int isgn, prec ***a,
-                     prec *t, int *ip, prec *w);
-  void ddxt3db_subth(int n1, int n2, int n3, int ics, int isgn, prec ***a,
-                     prec *t, int *ip, prec *w);
+  void ddxt3da_subth(int n1, int n2, int n3, int ics, int isgn, double ***a,
+                     double *t, int *ip, double *w);
+  void ddxt3db_subth(int n1, int n2, int n3, int ics, int isgn, double ***a,
+                     double *t, int *ip, double *w);
 #endif /* USE_FFT3D_THREADS */
   int n, nw, nc, itnull, nt;
 
@@ -1006,11 +1006,11 @@ void ddct3d(int n1, int n2, int n3, int isgn, prec ***a, prec *t, int *ip,
     if(n3 == 2) {
       nt >>= 1;
     }
-    t = (prec *)malloc(sizeof(prec) * nt);
+    t = (double *)malloc(sizeof(double) * nt);
     fft3d_alloc_error_check(t);
   }
 #ifdef USE_FFT3D_THREADS
-  if((prec)n1 * n2 * n3 >= (prec)FFT3D_THREADS_BEGIN_N) {
+  if((double)n1 * n2 * n3 >= (double)FFT3D_THREADS_BEGIN_N) {
     ddxt3da_subth(n1, n2, n3, 0, isgn, a, t, ip, w);
     ddxt3db_subth(n1, n2, n3, 0, isgn, a, t, ip, w);
   }
@@ -1025,19 +1025,19 @@ void ddct3d(int n1, int n2, int n3, int isgn, prec ***a, prec *t, int *ip,
   }
 }
 
-void ddst3d(int n1, int n2, int n3, int isgn, prec ***a, prec *t, int *ip,
-            prec *w) {
-  void makewt(int nw, int *ip, prec *w);
-  void makect(int nc, int *ip, prec *c);
+void ddst3d(int n1, int n2, int n3, int isgn, double ***a, double *t, int *ip,
+            double *w) {
+  void makewt(int nw, int *ip, double *w);
+  void makect(int nc, int *ip, double *c);
   void ddxt3da_sub(int n1, int n2, int n3, int ics2, int ics3, int isgn,
-                   prec ***a, prec *t, int *ip, prec *w);
-  void ddxt3db_sub(int n1, int n2, int n3, int ics1, int isgn, prec ***a,
-                   prec *t, int *ip, prec *w);
+                   double ***a, double *t, int *ip, double *w);
+  void ddxt3db_sub(int n1, int n2, int n3, int ics1, int isgn, double ***a,
+                   double *t, int *ip, double *w);
 #ifdef USE_FFT3D_THREADS
-  void ddxt3da_subth(int n1, int n2, int n3, int ics, int isgn, prec ***a,
-                     prec *t, int *ip, prec *w);
-  void ddxt3db_subth(int n1, int n2, int n3, int ics, int isgn, prec ***a,
-                     prec *t, int *ip, prec *w);
+  void ddxt3da_subth(int n1, int n2, int n3, int ics, int isgn, double ***a,
+                     double *t, int *ip, double *w);
+  void ddxt3db_subth(int n1, int n2, int n3, int ics, int isgn, double ***a,
+                     double *t, int *ip, double *w);
 #endif /* USE_FFT3D_THREADS */
   int n, nw, nc, itnull, nt;
 
@@ -1072,11 +1072,11 @@ void ddst3d(int n1, int n2, int n3, int isgn, prec ***a, prec *t, int *ip,
     if(n3 == 2) {
       nt >>= 1;
     }
-    t = (prec *)malloc(sizeof(prec) * nt);
+    t = (double *)malloc(sizeof(double) * nt);
     fft3d_alloc_error_check(t);
   }
 #ifdef USE_FFT3D_THREADS
-  if((prec)n1 * n2 * n3 >= (prec)FFT3D_THREADS_BEGIN_N) {
+  if((double)n1 * n2 * n3 >= (double)FFT3D_THREADS_BEGIN_N) {
     ddxt3da_subth(n1, n2, n3, 1, isgn, a, t, ip, w);
     ddxt3db_subth(n1, n2, n3, 1, isgn, a, t, ip, w);
   }
@@ -1093,10 +1093,10 @@ void ddst3d(int n1, int n2, int n3, int isgn, prec ***a, prec *t, int *ip,
 
 /* -------- child routines -------- */
 
-void xdft3da_sub(int n1, int n2, int n3, int icr, int isgn, prec ***a, prec *t,
-                 int *ip, prec *w) {
-  void cdft(int n, int isgn, prec *a, int *ip, prec *w);
-  void rdft(int n, int isgn, prec *a, int *ip, prec *w);
+void xdft3da_sub(int n1, int n2, int n3, int icr, int isgn, double ***a, double *t,
+                 int *ip, double *w) {
+  void cdft(int n, int isgn, double *a, int *ip, double *w);
+  void rdft(int n, int isgn, double *a, int *ip, double *w);
   int i, j, k;
 
   for(i = 0; i < n1; i++) {
@@ -1173,9 +1173,9 @@ void xdft3da_sub(int n1, int n2, int n3, int icr, int isgn, prec ***a, prec *t,
   }
 }
 
-void cdft3db_sub(int n1, int n2, int n3, int isgn, prec ***a, prec *t, int *ip,
-                 prec *w) {
-  void cdft(int n, int isgn, prec *a, int *ip, prec *w);
+void cdft3db_sub(int n1, int n2, int n3, int isgn, double ***a, double *t, int *ip,
+                 double *w) {
+  void cdft(int n, int isgn, double *a, int *ip, double *w);
   int i, j, k;
 
   if(n3 > 4) {
@@ -1241,9 +1241,9 @@ void cdft3db_sub(int n1, int n2, int n3, int isgn, prec ***a, prec *t, int *ip,
   }
 }
 
-void rdft3d_sub(int n1, int n2, int isgn, prec ***a) {
+void rdft3d_sub(int n1, int n2, int isgn, double ***a) {
   int n1h, n2h, i, j, k, l;
-  prec xi;
+  double xi;
 
   n1h = n1 >> 1;
   n2h = n2 >> 1;
@@ -1332,9 +1332,9 @@ void rdft3d_sub(int n1, int n2, int isgn, prec ***a) {
 }
 
 void ddxt3da_sub(int n1, int n2, int n3, int ics2, int ics3, int isgn,
-                 prec ***a, prec *t, int *ip, prec *w) {
-  void ddct(int n, int isgn, prec *a, int *ip, prec *w);
-  void ddst(int n, int isgn, prec *a, int *ip, prec *w);
+                 double ***a, double *t, int *ip, double *w) {
+  void ddct(int n, int isgn, double *a, int *ip, double *w);
+  void ddst(int n, int isgn, double *a, int *ip, double *w);
   int i, j, k;
 
   for(i = 0; i < n1; i++) {
@@ -1397,10 +1397,10 @@ void ddxt3da_sub(int n1, int n2, int n3, int ics2, int ics3, int isgn,
   }
 }
 
-void ddxt3db_sub(int n1, int n2, int n3, int ics, int isgn, prec ***a, prec *t,
-                 int *ip, prec *w) {
-  void ddct(int n, int isgn, prec *a, int *ip, prec *w);
-  void ddst(int n, int isgn, prec *a, int *ip, prec *w);
+void ddxt3db_sub(int n1, int n2, int n3, int ics, int isgn, double ***a, double *t,
+                 int *ip, double *w) {
+  void ddct(int n, int isgn, double *a, int *ip, double *w);
+  void ddst(int n, int isgn, double *a, int *ip, double *w);
   int i, j, k;
 
   if(n3 > 2) {
@@ -1464,15 +1464,15 @@ struct fft3d_arg_st {
   int n3;
   int ic;
   int isgn;
-  prec ***a;
-  prec *t;
+  double ***a;
+  double *t;
   int *ip;
-  prec *w;
+  double *w;
 };
 typedef struct fft3d_arg_st fft3d_arg_t;
 
-void xdft3da_subth(int n1, int n2, int n3, int icr, int isgn, prec ***a,
-                   prec *t, int *ip, prec *w) {
+void xdft3da_subth(int n1, int n2, int n3, int icr, int isgn, double ***a,
+                   double *t, int *ip, double *w) {
   void *xdft3da_th(void *p);
   fft3d_thread_t th[FFT3D_MAX_THREADS];
   fft3d_arg_t ag[FFT3D_MAX_THREADS];
@@ -1508,8 +1508,8 @@ void xdft3da_subth(int n1, int n2, int n3, int icr, int isgn, prec ***a,
   }
 }
 
-void cdft3db_subth(int n1, int n2, int n3, int isgn, prec ***a, prec *t,
-                   int *ip, prec *w) {
+void cdft3db_subth(int n1, int n2, int n3, int isgn, double ***a, double *t,
+                   int *ip, double *w) {
   void *cdft3db_th(void *p);
   fft3d_thread_t th[FFT3D_MAX_THREADS];
   fft3d_arg_t ag[FFT3D_MAX_THREADS];
@@ -1544,8 +1544,8 @@ void cdft3db_subth(int n1, int n2, int n3, int isgn, prec ***a, prec *t,
   }
 }
 
-void ddxt3da_subth(int n1, int n2, int n3, int ics, int isgn, prec ***a,
-                   prec *t, int *ip, prec *w) {
+void ddxt3da_subth(int n1, int n2, int n3, int ics, int isgn, double ***a,
+                   double *t, int *ip, double *w) {
   void *ddxt3da_th(void *p);
   fft3d_thread_t th[FFT3D_MAX_THREADS];
   fft3d_arg_t ag[FFT3D_MAX_THREADS];
@@ -1578,8 +1578,8 @@ void ddxt3da_subth(int n1, int n2, int n3, int ics, int isgn, prec ***a,
   }
 }
 
-void ddxt3db_subth(int n1, int n2, int n3, int ics, int isgn, prec ***a,
-                   prec *t, int *ip, prec *w) {
+void ddxt3db_subth(int n1, int n2, int n3, int ics, int isgn, double ***a,
+                   double *t, int *ip, double *w) {
   void *ddxt3db_th(void *p);
   fft3d_thread_t th[FFT3D_MAX_THREADS];
   fft3d_arg_t ag[FFT3D_MAX_THREADS];
@@ -1613,10 +1613,10 @@ void ddxt3db_subth(int n1, int n2, int n3, int ics, int isgn, prec ***a,
 }
 
 void *xdft3da_th(void *p) {
-  void cdft(int n, int isgn, prec *a, int *ip, prec *w);
-  void rdft(int n, int isgn, prec *a, int *ip, prec *w);
+  void cdft(int n, int isgn, double *a, int *ip, double *w);
+  void rdft(int n, int isgn, double *a, int *ip, double *w);
   int nthread, n0, n1, n2, n3, icr, isgn, *ip, i, j, k;
-  prec ***a, *t, *w;
+  double ***a, *t, *w;
 
   nthread = ((fft3d_arg_t *)p)->nthread;
   n0 = ((fft3d_arg_t *)p)->n0;
@@ -1705,9 +1705,9 @@ void *xdft3da_th(void *p) {
 }
 
 void *cdft3db_th(void *p) {
-  void cdft(int n, int isgn, prec *a, int *ip, prec *w);
+  void cdft(int n, int isgn, double *a, int *ip, double *w);
   int nthread, n0, n1, n2, n3, isgn, *ip, i, j, k;
-  prec ***a, *t, *w;
+  double ***a, *t, *w;
 
   nthread = ((fft3d_arg_t *)p)->nthread;
   n0 = ((fft3d_arg_t *)p)->n0;
@@ -1784,10 +1784,10 @@ void *cdft3db_th(void *p) {
 }
 
 void *ddxt3da_th(void *p) {
-  void ddct(int n, int isgn, prec *a, int *ip, prec *w);
-  void ddst(int n, int isgn, prec *a, int *ip, prec *w);
+  void ddct(int n, int isgn, double *a, int *ip, double *w);
+  void ddst(int n, int isgn, double *a, int *ip, double *w);
   int nthread, n0, n1, n2, n3, ics, isgn, *ip, i, j, k;
-  prec ***a, *t, *w;
+  double ***a, *t, *w;
 
   nthread = ((fft3d_arg_t *)p)->nthread;
   n0 = ((fft3d_arg_t *)p)->n0;
@@ -1862,10 +1862,10 @@ void *ddxt3da_th(void *p) {
 }
 
 void *ddxt3db_th(void *p) {
-  void ddct(int n, int isgn, prec *a, int *ip, prec *w);
-  void ddst(int n, int isgn, prec *a, int *ip, prec *w);
+  void ddct(int n, int isgn, double *a, int *ip, double *w);
+  void ddst(int n, int isgn, double *a, int *ip, double *w);
   int nthread, n0, n1, n2, n3, ics, isgn, *ip, i, j, k;
-  prec ***a, *t, *w;
+  double ***a, *t, *w;
 
   nthread = ((fft3d_arg_t *)p)->nthread;
   n0 = ((fft3d_arg_t *)p)->n0;

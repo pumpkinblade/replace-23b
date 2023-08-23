@@ -34,7 +34,8 @@ namespace replace
         incrementalPlaceMode_(false),
         useLocalDensity_(false),
         initLocalAlpha_(1e-12f), initLocalBeta_(1e-11f),
-        useTheta_(false)
+        useTheta_(false),
+        macroPostMaxIter_(10000)
   {
   }
 
@@ -154,7 +155,7 @@ namespace replace
     LOG_TRACE("start Replace::doMacroLegalization");
 
     MacroLegalizerVars mlgVars;
-    mlgVars.maxPostLegalizeIter = 10000;
+    mlgVars.maxPostLegalizeIter = macroPostMaxIter_;
 
     MacroLegalizer mlg(mlgVars, pb_);
     mlg.doLegalization();
@@ -318,5 +319,10 @@ namespace replace
   void Replace::setIncrementalPlaceMode(bool mode)
   {
     incrementalPlaceMode_ = mode;
+  }
+
+  void Replace::setMacroPostMaxIter(int iter)
+  {
+    macroPostMaxIter_ = iter;
   }
 }
