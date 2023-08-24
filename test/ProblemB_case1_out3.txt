@@ -1,0 +1,19 @@
+TopDiePlacement 4
+Inst C1 2 0 R0
+Inst C2 23 0 R0
+Inst C6 23 12 R0
+Inst C4 9 0 R0
+
+BottomDiePlacement 4
+Inst C7 3 0 R0
+Inst C8 15 0 R0
+Inst C3 22 4 R0
+Inst C5 10 15 R0
+
+NumTerminals 5
+Terminal N2 10 8
+Terminal N4 21 19
+Terminal N5 32 19
+Terminal N3 21 8
+Terminal N6 32 8
+

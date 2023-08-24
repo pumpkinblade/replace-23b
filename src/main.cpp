@@ -127,9 +127,13 @@ int main(int argc, const char *argv[])
 
       // then we do partition
       Partitioner partitioner(1.0);
+      // partitioner.partitioning2(pb);
       // partitioner.hmetistest(pb);
       // partitioner.do_run_kahypar();
-      partitioner.partitionInstance(pb);
+      // partitioner.partitionInstance(pb);
+      // partitioner.partitionTest();
+      partitioner.mtPartitionInstance(pb);
+      // partitioner.mtKahyparTest();
       Plot::plot(pb.get(), "./plot/cell", "after_partition");
       // then we do optimization
       LOG_INFO("optimization");
@@ -156,7 +160,8 @@ int main(int argc, const char *argv[])
       LOG_INFO("finalgp");
       rp.doNesterovPlace("finalgp");
       Plot::plot(pb.get(), "./plot/cell", "after_finalgp");
-
+      int64_t hpwl = pb->hpwl();
+      LOG_INFO("after finalgp: {}", hpwl);
       // rp.doAbacusLegalization();
       {
         AbaxLegalizer abax(pb);
@@ -164,7 +169,7 @@ int main(int argc, const char *argv[])
       }
       Plot::plot(pb.get(), "./plot/cell", "after_clg");
       tm.recover();
-      int64_t hpwl = pb->hpwl();
+      hpwl = pb->hpwl();
       LOG_INFO("Result HPWL: {}", hpwl);
       Plot::plot(pb.get(), "./plot/cell", "result");
 

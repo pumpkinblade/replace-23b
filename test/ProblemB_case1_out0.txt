@@ -1,0 +1,19 @@
+TopDiePlacement 2
+Inst C2 3 18 R0
+Inst C6 5 6 R0
+
+BottomDiePlacement 6
+Inst C1 0 3004 R0
+Inst C5 0 1855 R0
+Inst C7 0 3097 R0
+Inst C8 0 2951 R0
+Inst C3 1 12 R0
+Inst C4 5 1972 R0
+
+NumTerminals 5
+Terminal N1 8 3040
+Terminal N2 8 3085
+Terminal N4 8 3094
+Terminal N5 9 2018
+Terminal N3 18 3069
+

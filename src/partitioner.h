@@ -15,11 +15,15 @@ namespace replace
     Partitioner(float targetDensity);
     ~Partitioner() = default;
 
-    void partitioning(std::shared_ptr<PlacerBase> &pb_);
     void partitioning2(std::shared_ptr<PlacerBase> pb_);
-    void do_run_kahypar();
 
     void partitionInstance(std::shared_ptr<PlacerBase> &pb_);
+
+    void mtPartitionInstance(std::shared_ptr<PlacerBase> &pb_);
+
+    void partitionTest();
+
+    void mtKahyparTest();
 
 private:
     // std::shared_ptr<Placer23b> placer23b_;

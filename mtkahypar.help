@@ -1,0 +1,487 @@
+
+Required Options:
+  -h [ --hypergraph ] <string>          Hypergraph filename
+  -k [ --blocks ] <int>                 Number of blocks
+  -e [ --epsilon ] <double>             Imbalance parameter epsilon
+  -o [ --objective ] <string>           Objective: 
+                                         - cut : cut-net metric (FM only supports km1 metric) 
+                                         - km1 : (lambda-1) metric
+                                         - soed: sum-of-external-degree metric
+                                         - steiner_tree: maps a (hyper)graph onto a graph and optimizes
+                                        the Steiner tree metric
+
+Preset Options:
+  -p [ --preset ] <string>              Context Presets (see config directory):
+                                         - <path-to-custom-ini-file>
+
+General Options:
+  --help                                show help message
+  --deterministic <bool> (=0)           Shortcut to enables deterministic partitioning mode, where 
+                                        results are reproducible across runs. If set, the specific 
+                                        deterministic subroutines don't need to be set manually.
+  -v [ --verbose ] <bool> (=1)          Verbose main partitioning output
+  -f [ --fixed ] <string>               Fixed vertex filename
+  --write-partition-file <bool> (=0)    If true, then partition output file is generated
+  --partition-output-folder <string>    Output folder for partition file
+  -m [ --mode ] <string>                Partitioning mode: 
+                                         - direct: direct k-way partitioning
+                                         - rb: recursive bipartitioning
+                                         - deep: deep multilevel partitioning
+  --input-file-format <string>          Input file format: 
+                                         - hmetis : hMETIS hypergraph file format 
+                                         - metis : METIS graph file format
+  --instance-type <string>              Instance Type: 
+                                         - graph
+                                         - hypergraph
+  --preset-type <string>                Preset Types: 
+                                         - deterministic
+                                         - large_k
+                                         - default
+                                         - quality
+                                         - highest_quality
+  --seed <int> (=0)                     Seed for random number generator
+  --num-vcycles <size_t> (=0)           Number of V-Cycles
+  --perform-parallel-recursion-in-deep-multilevel <bool> (=1)
+                                        If true, then we perform parallel recursion within the deep 
+                                        multilevel scheme.
+  --smallest-maxnet-threshold <uint32_t>
+                                        No hyperedge whose size is smaller than this threshold is 
+                                        removed in the large hyperedge removal step (see 
+                                        maxnet-removal-factor)
+  --maxnet-removal-factor <double> (=0.01)
+                                        Hyperedges larger than max(|V| * (this factor), 
+                                        p-smallest-maxnet-threshold) are removed before partitioning.
+  --maxnet-ignore <uint64_t> (=1000)    Hyperedges larger than this threshold are ignored during 
+                                        partitioning.
+  --show-detailed-timings <bool> (=0)   If true, shows detailed subtimings of each multilevel phase at 
+                                        the end of the partitioning process.
+  --show-detailed-clustering-timings <bool> (=0)
+                                        If true, shows detailed timings of each clustering iteration.
+  --measure-detailed-uncontraction-timings <bool> (=0)
+                                        If true, measure and show detailed timings for n-level 
+                                        uncontraction.
+  --timings-output-depth <size_t>       Number of levels shown in timing output
+  --show-memory-consumption <bool> (=0) If true, shows detailed information on how much memory was 
+                                        allocated and how memory was reused throughout partitioning.
+  --show-advanced-cut-analysis <bool> (=0)
+                                        If true, calculates cut matrix, potential positive gain move 
+                                        matrix and connected cut hyperedge components after 
+                                        partitioning.
+  --enable-progress-bar <bool> (=0)     If true, shows a progress bar during coarsening and refinement 
+                                        phase.
+  --time-limit <int>                    Time limit in seconds (currently not supported)
+  -s [ --sp-process ] <bool> (=0)       Summarize partitioning results in RESULT line compatible with 
+                                        sqlplottools (https://github.com/bingmann/sqlplottools)
+  --csv <bool> (=0)                     Summarize results in CSV format
+  --algorithm-name <std::string> (=MT-KaHyPar)
+                                        An algorithm name to print into the summarized output (csv or 
+                                        sqlplottools). 
+  --part-weights arg                    Use the specified individual part weights instead of epsilon.
+
+Preprocessing Options:
+  --p-stable-io <bool> (=0)             If true, the incident edges of a vertex are sorted after 
+                                        construction, so that the hypergraph data structure is 
+                                        independent of scheduling during construction.
+  --p-enable-community-detection <bool> (=1)
+                                        If true, community detection is used as preprocessing step to 
+                                        restrict contractions to densely coupled regions in coarsening 
+                                        phase
+  --p-disable-community-detection-on-mesh-graphs <bool> (=1)
+                                        If true, community detection is dynamically disabled for mesh 
+                                        graphs (as it is not effective for this type of graphs).
+  --p-louvain-edge-weight-function <string> (=hybrid)
+                                        Louvain edge weight functions:
+                                        - hybrid
+                                        - uniform
+                                        - non_uniform
+                                        - degree
+  --p-max-louvain-pass-iterations <uint32_t> (=5)
+                                        Maximum number of iterations over all nodes of one louvain pass
+  --p-louvain-low-memory-contraction <bool> (=0)
+                                        Maximum number of iterations over all nodes of one louvain pass
+  --p-louvain-min-vertex-move-fraction <long double> (=0.0100000000000000002082)
+                                        Louvain pass terminates if less than that fraction of nodes 
+                                        moves during a pass
+  --p-vertex-degree-sampling-threshold <size_t> (=18446744073709551615)
+                                        If set, then neighbors of a vertex are sampled during rating if
+                                        its degree is greater than this threshold.
+  --p-num-sub-rounds <size_t> (=16)     Number of sub-rounds used for deterministic community detection
+                                        in preprocessing.
+
+Coarsening Options:
+  --c-type <string> (=multilevel_coarsener)
+                                        Coarsening Algorithm:
+                                         - multilevel_coarsener - nlevel_coarsener - 
+                                        deterministic_multilevel_coarsener
+  --c-use-adaptive-edge-size <bool> (=1)
+                                        If true, the rating function uses the number of distinct 
+                                        cluster IDs of a net as edge size rather
+                                        than its original size during multilevel coarsing
+  --c-s <double> (=1)                   The maximum weight of a vertex in the coarsest hypergraph H is:
+                                        (s * w(H)) / (t * k)
+                                        
+  --c-t <int> (=160)                    Coarsening stops when there are no more than t * k hypernodes 
+                                        left
+  --c-deep-t <int>                      Deep multilevel performs coarsening until 2 * deep-t hypernodes
+                                        are left for bipartitioning calls
+  --c-min-shrink-factor <double> (=1.01)
+                                        Minimum factor a hypergraph must shrink in a multilevel pass. 
+                                        Otherwise, we terminate coarsening phase.
+  --c-max-shrink-factor <double> (=2.5) Maximum factor a hypergraph is allowed to shrink in a 
+                                        clustering pass
+  --c-rating-score <string> (=heavy_edge)
+                                        Rating function used to calculate scores for vertex pairs:
+                                        - heavy_edge
+  --c-rating-heavy-node-penalty <string> (=no_penalty)
+                                        Penalty function to discourage heavy vertices:
+                                        - no_penalty
+  --c-rating-acceptance-criterion <string> (=best_prefer_unmatched)
+                                        Acceptance/Tiebreaking criterion for contraction partners 
+                                        having the same score:
+                                        - best_prefer_unmatched
+  --c-vertex-degree-sampling-threshold <size_t> (=18446744073709551615)
+                                        If set, then neighbors of a vertex are sampled during rating if
+                                        its degree is greater than this threshold.
+  --c-num-sub-rounds <size_t> (=16)     Number of sub-rounds used for deterministic coarsening.
+
+Initial Partitioning Options:
+  --i-mode <string> (=rb)               Mode of initial partitioning:
+                                        - direct
+                                        - deep
+                                        - rb
+  --i-enabled-ip-algos arg              Indicate which IP algorithms should be executed. E.g. 
+                                        i-enabled-ip-algos=1 1 0 1 0 1 1 1 0
+                                        indicates that
+                                          1.) greedy_round_robin_fm      (is executed)
+                                          2.) greedy_global_fm           (is executed)
+                                          3.) greedy_sequential_fm       (is NOT executed)
+                                          4.) random                     (is executed)
+                                          5.) bfs                        (is NOT executed)
+                                          6.) label_propagation          (is executed)
+                                          7.) greedy_round_robin_max_net (is executed)
+                                          8.) greedy_global_max_net      (is executed)
+                                          9.) greedy_sequential_max_net  (is NOT executed)
+                                        Note vector must exactly contain 9 values otherwise partitioner
+                                        will exit with failure
+  --i-runs <size_t> (=20)               Number of runs for each bipartitioning algorithm.
+  --i-use-adaptive-ip-runs <bool> (=1)  If true, than each initial partitioner decides if it should 
+                                        further continue partitioning based on thequality produced by 
+                                        itself compared to the quality of the other partitioners. If it
+                                        is not likely that the partitionerwill produce a solution with 
+                                        a quality better than the current best, further runs of that 
+                                        partitioner are omitted.
+  --i-min-adaptive-ip-runs <size_t> (=5)
+                                        If adaptive IP runs is enabled, than each initial partitioner 
+                                        performs minimum min_adaptive_ip_runs runs before
+                                        it decides if it should terminate.
+  --i-population-size <size_t> (=16)    Size of population of flat bipartitions to perform secondary FM
+                                        refinement on in deterministic mode.Values < num threads are 
+                                        set to num threads. Does not affect behavior in 
+                                        non-deterministic mode.
+  --i-perform-refinement-on-best-partitions <bool> (=0)
+                                        If true, then we perform an additional refinement on the best 
+                                        thread local partitions after IP.
+  --i-fm-refinement-rounds <size_t> (=1)
+                                        Maximum number of 2-way FM local searches on each bipartition 
+                                        produced by an initial partitioner.
+  --i-remove-degree-zero-hns-before-ip <bool> (=1)
+                                        If true, degree-zero vertices are removed before initial 
+                                        partitioning.
+  --i-lp-maximum-iterations <size_t> (=20)
+                                        Maximum number of iterations of label propagation initial 
+                                        partitioner
+  --i-lp-initial-block-size <size_t> (=5)
+                                        Initial block size used for label propagation initial 
+                                        partitioner
+
+Refinement Options:
+  --i-r-refine-until-no-improvement <bool> (=0)
+                                        Executes all refinement algorithms as long as they find an 
+                                        improvement on the current partition.
+  --i-r-relative-improvement-threshold <double> (=0)
+                                        If the relative improvement during a refinement pass is less 
+                                        than this threshold, than refinement is aborted.
+  --i-r-max-batch-size <size_t> (=1000) Maximum size of an uncontraction batch (n-Level Partitioner).
+  --i-r-min-border-vertices-per-thread <size_t> (=0)
+                                        Minimum number of border vertices per thread with which we 
+                                        perform a localized search (n-Level Partitioner).
+  --i-r-lp-type <string> (=label_propagation)
+                                        Label Propagation Algorithm:
+                                        - label_propagation
+                                        - deterministic
+                                        - do_nothing
+  --i-r-lp-maximum-iterations <size_t> (=5)
+                                        Maximum number of label propagation rounds
+  --i-r-sync-lp-sub-rounds <size_t> (=5)
+                                        Number of sub-rounds for deterministic synchronous label 
+                                        propagation
+  --i-r-sync-lp-active-nodeset <bool> (=1)
+                                        Number of sub-rounds for deterministic synchronous label 
+                                        propagation
+  --i-r-lp-rebalancing <bool> (=1)      If true, then zero gain moves are only performed if they 
+                                        improve the balance of the solution (only in label propagation)
+  --i-r-lp-he-size-activation-threshold <size_t> (=100)
+                                        LP refiner activates only neighbors of moved vertices that are 
+                                        part of hyperedges with a size less than this threshold
+  --i-r-fm-type <string> (=kway_fm)     FM Algorithm:
+                                        - kway_fm
+                                        - do_nothing
+  --i-r-fm-multitry-rounds <size_t> (=10)
+                                        Number of FM rounds within one level of the multilevel 
+                                        hierarchy.
+  --i-r-fm-perform-moves-global <bool> (=0)
+                                        If true, then all moves performed during FM are immediately 
+                                        visible to other searches.
+                                        Otherwise, only move sequences that yield an improvement are 
+                                        applied to the global view of the partition.
+  --i-r-fm-seed-nodes <size_t> (=25)    Number of nodes to start the 'highly localized FM' with.
+  --i-r-fm-rollback-parallel <bool> (=1)
+                                        Perform gain and balance recalculation, and reverting to best 
+                                        prefix in parallel.
+  --i-r-fm-iter-moves-on-recalc <bool> (=0)
+                                        Touch only incident hyperedges of moved vertices for parallel 
+                                        gain recalculation.
+  --i-r-fm-rollback-balance-violation-factor <double> (=1.25)
+                                        Used to relax or disable the balance constraint during the 
+                                        rollback phase of parallel FM.Set to 0 for disabling. Set to a 
+                                        value > 1.0 to multiply epsilon with this value.
+  --i-r-fm-min-improvement <double> (=-1)
+                                        Min improvement for FM (default disabled)
+  --i-r-fm-release-nodes <bool> (=1)    FM releases nodes that weren't moved, so they might be found by
+                                        another search.
+  --i-r-fm-obey-minimal-parallelism <bool> (=1)
+                                        If true, then parallel FM refinement stops if more than a 
+                                        certain number of threads are finished.
+  --i-r-fm-time-limit-factor <double> (=0.25)
+                                        If the FM time exceeds time_limit := k * factor * 
+                                        coarsening_time, than the FM config is switched into a light 
+                                        version.If the FM refiner exceeds 2 * time_limit, than the 
+                                        current multitry FM run is aborted and the algorithm proceeds 
+                                        tothe next finer level.
+  --i-r-use-global-fm <bool> (=0)       If true, than we execute a globalized FM local search 
+                                        interleaved with the localized searches.Note, gobalized FM 
+                                        local searches are performed in multilevel style (not after 
+                                        each batch uncontraction)
+  --i-r-global-refine-until-no-improvement <bool> (=0)
+                                        Executes a globalized FM local search as long as it finds an 
+                                        improvement on the current partition.
+  --i-r-global-fm-seed-nodes <size_t> (=25)
+                                        Number of nodes to start the 'highly localized FM' with during 
+                                        the globalized FM local search.
+  --i-r-global-fm-obey-minimal-parallelism <bool> (=1)
+                                        If true, then the globalized FM local search stops if more than
+                                        a certain number of threads are finished.
+  --i-r-rebalancer-type <string> (=do_nothing)
+                                        Rebalancer Algorithm:
+                                        - simple_rebalancer
+                                        - do_nothing
+
+Initial Partitioning Options:
+  --i-r-flow-algo <string> (=do_nothing)
+                                        Flow Algorithms:
+                                        - do_nothing
+                                        - flow_cutter
+  --i-r-flow-parallel-search-multiplier <double>
+                                        Active block scheduling starts min(num_threads, mult * k) 
+                                        parallel searches
+  --i-r-flow-max-bfs-distance <size_t>  Flow problems are constructed via BFS search. The maximum BFS 
+                                        distance is the
+                                        maximum distance from a cut hyperedge to any vertex of the 
+                                        problem.
+  --i-r-flow-min-relative-improvement-per-round <double>
+                                        Minimum relative improvement per active block scheduling round.
+                                        If improvement is smaller than flow algorithm terminates.
+  --i-r-flow-time-limit-factor <double> The time limit for each flow problem is time_limit_factor * 
+                                        average running time of all previous searches.
+  --i-r-flow-skip-small-cuts <bool>     If true, than blocks with a cut <= 10 are not considered for 
+                                        refinement
+  --i-r-flow-skip-unpromising-blocks <bool>
+                                        If true, than blocks for which we never found an improvement 
+                                        are skipped
+  --i-r-flow-pierce-in-bulk <bool>      If true, then FlowCutter is accelerated by piercing multiple 
+                                        nodes at a time
+  --i-r-flow-scaling <double>           Size constraint for flow problem: (1 + alpha * epsilon) * c(V) 
+                                        / k - c(V_1) (alpha = r-flow-scaling)
+  --i-r-flow-max-num-pins <uint32_t>    Maximum number of pins a flow problem is allowed to contain
+  --i-r-flow-find-most-balanced-cut <bool>
+                                        If true, than hyperflowcutter searches for the most balanced 
+                                        minimum cut.
+  --i-r-flow-determine-distance-from-cut <bool>
+                                        If true, than flow refiner determines distance of each node 
+                                        from cut which improves the piercing heuristic used in WHFC.
+  --i-r-flow-process-mapping-policy <string>
+                                        This option is only important for the Steiner tree metric. For 
+                                        flow-based refinement on hypergraphs, we cannot.
+                                        guarantee that the improvement found by solving the flow 
+                                        problem matches the exact improvement when we
+                                        applied on the hypergraph. However, we can either guarantee 
+                                        that improvement is an lower or upper bound for
+                                        the actual improvement. Therefore, the supported options are:
+                                        - lower_bound
+                                        - upper_bound
+
+Refinement Options:
+  --r-refine-until-no-improvement <bool> (=0)
+                                        Executes all refinement algorithms as long as they find an 
+                                        improvement on the current partition.
+  --r-relative-improvement-threshold <double> (=0)
+                                        If the relative improvement during a refinement pass is less 
+                                        than this threshold, than refinement is aborted.
+  --r-max-batch-size <size_t> (=1000)   Maximum size of an uncontraction batch (n-Level Partitioner).
+  --r-min-border-vertices-per-thread <size_t> (=0)
+                                        Minimum number of border vertices per thread with which we 
+                                        perform a localized search (n-Level Partitioner).
+  --r-lp-type <string> (=label_propagation)
+                                        Label Propagation Algorithm:
+                                        - label_propagation
+                                        - deterministic
+                                        - do_nothing
+  --r-lp-maximum-iterations <size_t> (=5)
+                                        Maximum number of label propagation rounds
+  --r-sync-lp-sub-rounds <size_t> (=5)  Number of sub-rounds for deterministic synchronous label 
+                                        propagation
+  --r-sync-lp-active-nodeset <bool> (=1)
+                                        Number of sub-rounds for deterministic synchronous label 
+                                        propagation
+  --r-lp-rebalancing <bool> (=1)        If true, then zero gain moves are only performed if they 
+                                        improve the balance of the solution (only in label propagation)
+  --r-lp-he-size-activation-threshold <size_t> (=100)
+                                        LP refiner activates only neighbors of moved vertices that are 
+                                        part of hyperedges with a size less than this threshold
+  --r-fm-type <string> (=kway_fm)       FM Algorithm:
+                                        - kway_fm
+                                        - do_nothing
+  --r-fm-multitry-rounds <size_t> (=10) Number of FM rounds within one level of the multilevel 
+                                        hierarchy.
+  --r-fm-perform-moves-global <bool> (=0)
+                                        If true, then all moves performed during FM are immediately 
+                                        visible to other searches.
+                                        Otherwise, only move sequences that yield an improvement are 
+                                        applied to the global view of the partition.
+  --r-fm-seed-nodes <size_t> (=25)      Number of nodes to start the 'highly localized FM' with.
+  --r-fm-rollback-parallel <bool> (=1)  Perform gain and balance recalculation, and reverting to best 
+                                        prefix in parallel.
+  --r-fm-iter-moves-on-recalc <bool> (=0)
+                                        Touch only incident hyperedges of moved vertices for parallel 
+                                        gain recalculation.
+  --r-fm-rollback-balance-violation-factor <double> (=1.25)
+                                        Used to relax or disable the balance constraint during the 
+                                        rollback phase of parallel FM.Set to 0 for disabling. Set to a 
+                                        value > 1.0 to multiply epsilon with this value.
+  --r-fm-min-improvement <double> (=-1) Min improvement for FM (default disabled)
+  --r-fm-release-nodes <bool> (=1)      FM releases nodes that weren't moved, so they might be found by
+                                        another search.
+  --r-fm-obey-minimal-parallelism <bool> (=1)
+                                        If true, then parallel FM refinement stops if more than a 
+                                        certain number of threads are finished.
+  --r-fm-time-limit-factor <double> (=0.25)
+                                        If the FM time exceeds time_limit := k * factor * 
+                                        coarsening_time, than the FM config is switched into a light 
+                                        version.If the FM refiner exceeds 2 * time_limit, than the 
+                                        current multitry FM run is aborted and the algorithm proceeds 
+                                        tothe next finer level.
+  --r-use-global-fm <bool> (=0)         If true, than we execute a globalized FM local search 
+                                        interleaved with the localized searches.Note, gobalized FM 
+                                        local searches are performed in multilevel style (not after 
+                                        each batch uncontraction)
+  --r-global-refine-until-no-improvement <bool> (=0)
+                                        Executes a globalized FM local search as long as it finds an 
+                                        improvement on the current partition.
+  --r-global-fm-seed-nodes <size_t> (=25)
+                                        Number of nodes to start the 'highly localized FM' with during 
+                                        the globalized FM local search.
+  --r-global-fm-obey-minimal-parallelism <bool> (=1)
+                                        If true, then the globalized FM local search stops if more than
+                                        a certain number of threads are finished.
+  --r-rebalancer-type <string> (=do_nothing)
+                                        Rebalancer Algorithm:
+                                        - simple_rebalancer
+                                        - do_nothing
+
+Initial Partitioning Options:
+  --r-flow-algo <string> (=do_nothing)  Flow Algorithms:
+                                        - do_nothing
+                                        - flow_cutter
+  --r-flow-parallel-search-multiplier <double>
+                                        Active block scheduling starts min(num_threads, mult * k) 
+                                        parallel searches
+  --r-flow-max-bfs-distance <size_t>    Flow problems are constructed via BFS search. The maximum BFS 
+                                        distance is the
+                                        maximum distance from a cut hyperedge to any vertex of the 
+                                        problem.
+  --r-flow-min-relative-improvement-per-round <double>
+                                        Minimum relative improvement per active block scheduling round.
+                                        If improvement is smaller than flow algorithm terminates.
+  --r-flow-time-limit-factor <double>   The time limit for each flow problem is time_limit_factor * 
+                                        average running time of all previous searches.
+  --r-flow-skip-small-cuts <bool>       If true, than blocks with a cut <= 10 are not considered for 
+                                        refinement
+  --r-flow-skip-unpromising-blocks <bool>
+                                        If true, than blocks for which we never found an improvement 
+                                        are skipped
+  --r-flow-pierce-in-bulk <bool>        If true, then FlowCutter is accelerated by piercing multiple 
+                                        nodes at a time
+  --r-flow-scaling <double>             Size constraint for flow problem: (1 + alpha * epsilon) * c(V) 
+                                        / k - c(V_1) (alpha = r-flow-scaling)
+  --r-flow-max-num-pins <uint32_t>      Maximum number of pins a flow problem is allowed to contain
+  --r-flow-find-most-balanced-cut <bool>
+                                        If true, than hyperflowcutter searches for the most balanced 
+                                        minimum cut.
+  --r-flow-determine-distance-from-cut <bool>
+                                        If true, than flow refiner determines distance of each node 
+                                        from cut which improves the piercing heuristic used in WHFC.
+  --r-flow-process-mapping-policy <string>
+                                        This option is only important for the Steiner tree metric. For 
+                                        flow-based refinement on hypergraphs, we cannot.
+                                        guarantee that the improvement found by solving the flow 
+                                        problem matches the exact improvement when we
+                                        applied on the hypergraph. However, we can either guarantee 
+                                        that improvement is an lower or upper bound for
+                                        the actual improvement. Therefore, the supported options are:
+                                        - lower_bound
+                                        - upper_bound
+
+Mapping Options:
+  -g [ --target-graph-file ] <string>   Path to a target architecture graph in Metis file format.
+  --one-to-one-mapping-strategy <string>
+                                        Strategy for solving the one-to-one mapping problem after 
+                                        initial partitioning.
+                                        Available strategies:
+                                         - greedy_mapping
+                                         - identity
+  --mapping-use-local-search <bool>     If true, uses local search to improve the initial mapping.
+  --use-two-phase-approach <bool>       If true, then we first compute a k-way partition via optimizing
+                                        the connectivity metric.
+                                        Afterwards, each block of the partition is mapped onto a block 
+                                        of the target architecture graph.
+  --max-steiner-tree-size <size_t>      We precompute all optimal steiner trees up to this size in the 
+                                        target graph.
+  --mapping-largest-he-fraction <double>
+                                        If x% (x = process-mapping-largest-he-fraction) of the largest 
+                                        hyperedges covers more than y% of the pins
+                                        (y = process-mapping-min-pin-coverage), then we ignore 
+                                        hyperedges larger than the x%-percentile in
+                                        when counting adjacent blocks of a node.
+  --mapping-min-pin-coverage <double>   If x% (x = process-mapping-largest-he-fraction) of the largest 
+                                        hyperedges covers more than y% of the pins
+                                        (y = process-mapping-min-pin-coverage), then we ignore 
+                                        hyperedges larger than the x%-percentile in
+                                        when counting adjacent blocks of a node.
+
+Shared Memory Options:
+  -t [ --s-num-threads ] <size_t>       Number of Threads
+  --s-static-balancing-work-packages <size_t>
+                                        Some sub-routines (sorting, shuffling) used in the 
+                                        deterministic presets employ static load balancing.This 
+                                        parameter sets the number of work packages, in order to achieve
+                                        deterministic results across different numbers of threads.The 
+                                        default value is 128, and these sub-routines have little work, 
+                                        so there should rarely be a reason to change it. Max value is 
+                                        256.It does not affect the non-deterministic configs, unless 
+                                        you activate one of the deterministic algorithms.
+  --s-use-localized-random-shuffle <bool>
+                                        If true, localized parallel random shuffle is performed.
+  --s-shuffle-block-size <size_t>       If we perform a localized random shuffle in parallel, we 
+                                        perform a parallel for over blocks of size'shuffle_block_size' 
+                                        and shuffle them sequential.
+ 
