@@ -46,3 +46,5 @@ result
 output.txt
 !module/glpk/*.dll
 !module/glpk/*.lib
+!module/glpk/*.so
+!module/glpk/*.a
