@@ -64,7 +64,8 @@ int main(int argc, const char *argv[])
 
   // then we do partition
   Partitioner partitioner(targetDensity);
-  partitioner.partitioning2(pb);
+  // partitioner.partitioning2(pb);
+  partitioner.mtPartitionInstance(pb);
   Plot::plot(pb.get(), "./plot/cell", "after_partition");
 
   // then we do optimization
@@ -74,7 +75,7 @@ int main(int argc, const char *argv[])
   rp.setInitialPlaceMinIter(5);
   rp.doInitialPlace();
   rp.setNesterovUseTheta(true);
-  rp.setNesterovPlaceUseLocalDensity(false);
+  rp.setNesterovPlaceUseLocalDensity(true);
   rp.doNesterovPlace("postgp");
   Plot::plot(pb.get(), "./plot/cell", "after_postgp");
 
@@ -90,8 +91,8 @@ int main(int argc, const char *argv[])
   }
 
   rp.doInitialPlace();
-  rp.setNesterovUseTheta(false);
-  rp.setNesterovPlaceUseLocalDensity(false);
+  rp.setNesterovUseTheta(true);
+  rp.setNesterovPlaceUseLocalDensity(true);
   rp.doNesterovPlace("finalgp");
   Plot::plot(pb.get(), "./plot/cell", "after_finalgp");
   rp.doAbacusLegalization();

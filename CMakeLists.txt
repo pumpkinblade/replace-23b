@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.12)
 
 project(replace)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -24,6 +24,12 @@ set(STB_HOME
 )
 set(GLPK_HOME
   ${PROJECT_SOURCE_DIR}/module/glpk
+)
+set(KAHYPAR_HOME
+    ${PROJECT_SOURCE_DIR}/module/kahypar
+)
+set(MTKAHYPAR_HOME
+    ${PROJECT_SOURCE_DIR}/module/mtkahypar
 )
 
 set(PLACE_HEADER
@@ -69,12 +75,24 @@ set(PLACE_SRC
 
 add_executable(replace ${PLACE_SRC} ${PLACE_HEADER})
 
+add_library( kahypar SHARED IMPORTED )
+set_target_properties( kahypar PROPERTIES IMPORTED_LOCATION ${KAHYPAR_HOME}/libkahypar.so )
+
+add_library( mtkahypar SHARED IMPORTED )
+set_target_properties( mtkahypar PROPERTIES IMPORTED_LOCATION ${MTKAHYPAR_HOME}/libmtkahypar.so )
+
 target_include_directories(replace PRIVATE ${SPDLOG_HOME}/include)
 target_include_directories(replace PRIVATE ${TCLAP_HOME}/include)
 target_include_directories(replace PRIVATE ${EIGEN_HOME}/include)
 target_include_directories(replace PRIVATE ${STB_HOME})
 target_include_directories(replace PRIVATE ${CIMG_HOME})
 target_include_directories(replace PRIVATE ${GLPK_HOME})
+target_include_directories(replace PRIVATE ${KAHYPAR_HOME}/include)
+target_include_directories(replace PRIVATE ${MTKAHYPAR_HOME}/include)
+
+target_link_libraries(replace PRIVATE kahypar)
+target_link_libraries(replace PRIVATE mtkahypar)
+
 
 target_compile_definitions(replace PRIVATE -Dcimg_display=0)
 

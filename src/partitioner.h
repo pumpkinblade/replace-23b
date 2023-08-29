@@ -15,10 +15,22 @@ namespace replace
     Partitioner(float targetDensity);
     ~Partitioner() = default;
 
-    void partitioning(std::shared_ptr<PlacerBase> &pb_);
-    void partitioning2(std::shared_ptr<PlacerBase> pb);
+    void partitioning2(std::shared_ptr<PlacerBase> pb_);
 
-  private:
+    void partitionInstance(std::shared_ptr<PlacerBase> &pb_);
+
+    void mtPartitionInstance(std::shared_ptr<PlacerBase> &pb_);
+
+    void partitionTest();
+
+    void mtKahyparTest();
+
+    // analysis the different technology
+    double getAverageTechRatio(std::shared_ptr<PlacerBase> &pb_);
+
+    int getMacroStdcellAreaRatio(std::shared_ptr<PlacerBase> &pb_);
+
+private:
     // std::shared_ptr<Placer23b> placer23b_;
     // std::shared_ptr<Technology> technology_;
     // std::shared_ptr<PlacerBase> placerBase_;
