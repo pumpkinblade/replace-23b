@@ -200,6 +200,8 @@ namespace replace
         int uy = std::min(inst1->uy(), inst2->uy());
         if (lx < ux && ly < uy)
             return static_cast<double>(ux - lx) * (uy - ly);
+        else
+            return 0;
     }
 
     double MacroLegalizer::getMacroOverlap(Instance *macro, const std::vector<Instance *> &macros)

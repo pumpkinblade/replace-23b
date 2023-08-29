@@ -419,7 +419,7 @@ namespace replace
       inst->setMacro(libcell->isMacro());
       int lx = pb->die("top")->coreLx();
       int ly = pb->die("top")->coreLy();
-      inst->setBox(lx, ly, lx + libcell->sizeX(), ly + libcell->sizeY());
+      inst->setOrientSize(*pb->die("top")->tech(), Orientation::R0);
     }
     
     // Process net

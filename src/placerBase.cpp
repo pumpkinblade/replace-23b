@@ -15,7 +15,7 @@ namespace replace
   Instance::Instance()
       : lx_(0), ly_(0), ux_(0), uy_(0), 
         isMacro_(false), isFixed_(false),
-        libCellId_(-1), extId_(-1)
+        libCellId_(-1), extId_(-1), orient_(Orientation::R0)
   {
   }
 
