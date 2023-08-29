@@ -50,6 +50,8 @@ namespace replace
 
         void postLegalize(const std::vector<Instance *> macros, Die *die);
 
+        bool checkLegal(const std::vector<Instance *> macros, Die *die);
+
     private:
         /* data */
         std::shared_ptr<PlacerBase> pb_;

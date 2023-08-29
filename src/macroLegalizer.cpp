@@ -41,8 +41,10 @@ namespace replace
                     macros.push_back(inst);
                 }
             }
-            saLegalize(macros, die);
-            postLegalize(macros, die);
+            if(!checkLegal(macros, die))
+                saLegalize(macros, die);
+            if(!checkLegal(macros, die))
+                postLegalize(macros, die);
         }
     }
 
@@ -403,5 +405,30 @@ namespace replace
                 break;
             }
         }
+    }
+
+    bool MacroLegalizer::checkLegal(const std::vector<Instance *> macros, Die *die)
+    {
+        bool isLegal = true;
+        for (int i = 0; i < macros.size(); i++)
+        {
+            // check boundary
+            Instance *m1 = macros[i];
+            if (m1->lx() < die->coreLx())
+                isLegal = false;
+            if (m1->ly() < die->coreLy())
+                isLegal = false;
+            if (m1->ux() > die->coreUx())
+                isLegal = false;
+            if (m1->uy() > die->coreUy())
+                isLegal = false;
+            for (int j = 0; j < i && isLegal; j++)
+            {
+                Instance *m2 = macros[j];
+                if(getOverlapArea(m1, m2) > 0)
+                    isLegal = false;
+            }
+        }
+        return isLegal;
     }
 }
