@@ -42,16 +42,34 @@ namespace replace
                 }
             }
             saLegalize(macros, die);
-            // postLegalize(macros, die);
-            // LOG_DEBUG("[MacroLegalization] Die {} ", die->name());
+            postLegalize(macros, die);
         }
     }
 
-    void MacroLegalizer::saLegalize(const std::vector<Instance *> macros, Die *die)
+    ////////////////////////////////
+    // saLegalize
+
+    static std::mt19937 rng;
+
+    void MacroLegalizer::saLegalize(const std::vector<Instance *> &macros, Die *die)
     {
         if (macros.size() == 0)
             return;
-        for (int iter = 0; iter < vars_.sa_max_iter; iter++)
+        // 初始化参数
+        double tot_mac_hpwl = 0;
+        for(Instance* macro : macros)
+            tot_mac_hpwl += getMacroHpwl(macro);
+        double tot_mac_ovlp = getAllMacroOverlap(macros);
+        lgVars_.sa_hpwl_wgt = 1.0;
+        lgVars_.sa_den_wgt = 0.0; // ignore
+        lgVars_.sa_ovlp_wgt = tot_mac_hpwl / tot_mac_ovlp;
+        lgVars_.sa_hpwl_cof = 1.0;
+        lgVars_.sa_den_cof = 1.0;
+        lgVars_.sa_ovlp_cof = 1.5;
+        lgVars_.sa_max_iter0 = 1000;
+
+        double isLegal = false;
+        for (int iter = 0; iter < lgVars_.sa_max_iter && !isLegal; iter++)
         {
             // 初始化参数
             double cooling_rate;
@@ -64,49 +82,52 @@ namespace replace
             int max_sa_r_y = static_cast<int>(tot_place_region / sqrt(macros.size()) * rcof);
 
             // 为使结果可复现，应手动设置seed
-            srand(iter * 114 + 514);
-            // double cooling_rate_ = cooling_rate;
-            //  选择一个宏单元
-            int index = rand() % macros.size();
-
-            for (int i = 0; i < vars_.sa_max_iter0; i++)
+            rng.seed(iter * 114 + 514);
+            std::uniform_int_distribution<int> uni(0, macros.size() - 1);
+            std::uniform_real_distribution<double> unf(0.0, 1.0);
+            for (int i = 0; i < lgVars_.sa_max_iter0 && !isLegal; i++)
             {
-                double temp = temp_0 + (temp_max - temp_0) * (double)(i / vars_.sa_max_iter0);
-                Instance *cell = macros[index];
+                double temp = temp_0 + (temp_max - temp_0) * (double)(i / lgVars_.sa_max_iter0);
+                //  选择一个宏单元
+                int index = uni(rng);
+                Instance *macro = macros[index];
                 // 计算宏单元的成本函数
-                double old_cost = calc_cost(macros, die);
+                double old_cost = getMacroCost(macro, macros);
                 // 随机移动
-                std::pair<int, int> move = getRandomMove(cell, iter, die, max_sa_r_x, max_sa_r_y);
+                std::pair<int, int> move = getRandomMove(macro, iter, die, max_sa_r_x, max_sa_r_y);
                 // 尝试将宏单元移动到新的位置
-                cell->setLocation(cell->lx() + move.first, cell->ly() + move.second);
+                macro->setLocation(macro->lx() + move.first, macro->ly() + move.second);
+                updateMacroNetBox(macro);
                 // 计算宏单元的成本函数
-                double new_cost = calc_cost(macros, die);
+                double new_cost = getMacroCost(macro, macros);
                 // 判断是否接受新的解
                 double delta = (new_cost - old_cost) / old_cost;
-                double tau = (double)rand() / RAND_MAX;
-                double p = exp(-1.0 * delta / temp);
-                int isAccept=0;
+                double tau = unf(rng);
+                double p = std::exp(-1.0 * delta / temp);
+                int isAccept = 0;
                 LOG_DEBUG("[MacroLegalization] old_cost: {} new_cost: {} move: {}-{} delta{}", old_cost, new_cost, move.first, move.second, delta);
                 if (p > tau)
                 {
                     // 接受新的解
                     // 判断是否满足要求
-                    isAccept=1;
-                    int om = getMacrosOverlap(macros, die);
-                    if (om == 0)
-                    {
-                        break;
-                    }
+                    isAccept = 1;
+                    int om = getAllMacroOverlap(macros);
+                    isLegal = (om == 0);
                 }
                 else
                 {
                     // 拒绝新的解
-                    isAccept=0;
-                    cell->setLocation(cell->lx() - move.first, cell->ly() - move.second);
+                    isAccept = 0;
+                    macro->setLocation(macro->lx() - move.first, macro->ly() - move.second);
+                    updateMacroNetBox(macro);
                 }
-
                 LOG_DEBUG("[MacroLegalization] Iter {} new_cost: {} accept: {}", i, new_cost, isAccept);
             }
+
+            // update param
+            lgVars_.sa_hpwl_wgt *= lgVars_.sa_hpwl_cof;
+            lgVars_.sa_den_wgt *= lgVars_.sa_den_cof;
+            lgVars_.sa_ovlp_wgt *= lgVars_.sa_ovlp_cof;
         }
     }
 
@@ -123,14 +144,15 @@ namespace replace
         int duy = die->dieUy();
         int diewidth = dux - dlx;
         int dieheight = duy - dly;
-        int rndx = rand();
-        int rndy = rand();
+        std::uniform_real_distribution<float> unf(-0.5f, 0.5f);
+        float rndx = unf(rng);
+        float rndy = unf(rng);
         int rh = die->rowHeight();
         double rcof = 0.05 * pow(1.5, (double)iter);
         double rx = (max_sa_r_x - rh) / (double)(iter + 1); // 1 = rowheight
         double ry = (max_sa_r_y - rh) / (double)(iter + 1);
-        int moveX = int((rndx / RAND_MAX - 0.5) * rx);
-        int moveY = int((rndy / RAND_MAX - 0.5) * ry);
+        int moveX = static_cast<int>(rndx * rx);
+        int moveY = static_cast<int>(rndy * ry);
         LOG_DEBUG("[MacroLegalization] moveX: {} moveY: {} ", moveX, moveY);
         // 计算移动后的 Macro 的四个角坐标
         int newcux = cux + moveX;
@@ -161,96 +183,66 @@ namespace replace
         return std::make_pair(moveX, moveY);
     }
 
-    // 计算两个矩形的重叠面积
-    int MacroLegalizer::overlapArea(Instance *cell1, Instance *cell2)
+    double MacroLegalizer::getMacroCost(Instance *macro, const std::vector<Instance *> &macros)
     {
-        int x_overlap = std::max(0, std::min(cell1->ux(), cell2->ux()) - std::max(cell2->lx(), cell2->lx()));
-        int y_overlap = std::max(0, std::min(cell1->uy(), cell2->uy()) - std::max(cell2->ly(), cell2->ly()));
-        return x_overlap * y_overlap;
+        double hpwlCost = getMacroHpwl(macro);
+        double denCost = 0;
+        double overlapCost = getMacroOverlap(macro, macros);
+        double totalCost = lgVars_.sa_hpwl_wgt * hpwlCost + lgVars_.sa_den_wgt * denCost + lgVars_.sa_ovlp_wgt * overlapCost;
+        return totalCost;
     }
 
-    int MacroLegalizer::get_hpwl(const std::vector<Instance *> &macros, Die *die)
+    double MacroLegalizer::getOverlapArea(Instance *inst1, Instance *inst2)
     {
-        return pb_->hpwl();
-        /*
-        int64_t getHpwl();
-
-        nt64_t NesterovBase::getHpwl()
-        {
-        int64_t hpwl = 0;
-        for(auto& gNet : gNets_)
-        {
-            gNet->updateBox();
-            hpwl += gNet->hpwl();
-        }
-        return hpwl;
-        }
-
-        int64_t
-        GNet::hpwl() {
-        return static_cast<int64_t>((ux_ - lx_) + (uy_ - ly_));
-        }
-
-        void Net::updateBox()
-        {
-            lx_ = INT_MAX;
-            ly_ = INT_MAX;
-            ux_ = INT_MIN;
-            uy_ = INT_MIN;
-
-            for (const Pin *p : pins_)
-            {
-            lx_ = std::min(p->cx(), lx_);
-            ux_ = std::max(p->cx(), ux_);
-            ly_ = std::min(p->cy(), ly_);
-            uy_ = std::max(p->cy(), uy_);
-            }
-        }
-        */
+        int lx = std::max(inst1->lx(), inst2->lx());
+        int ux = std::min(inst1->ux(), inst2->ux());
+        int ly = std::max(inst1->ly(), inst2->ly());
+        int uy = std::min(inst1->uy(), inst2->uy());
+        if (lx < ux && ly < uy)
+            return static_cast<double>(ux - lx) * (uy - ly);
     }
 
-    int MacroLegalizer::getCellMacroOverlap(const std::vector<Instance *> &macros, Die *die)
+    double MacroLegalizer::getMacroOverlap(Instance *macro, const std::vector<Instance *> &macros)
     {
-        // TODO: use quadtree
-
-        int totalOverlap = 0;
-        // 外层macro里层stdcell
-        for (int i = 0; i < macros.size(); i++)
+        double totalOvarlap = 0;
+        for (Instance *mac : macros)
         {
-            for (int j = 0; j < die->insts().size(); j++)
-            {
-                if (!die->insts()[j]->isMacro())
-                {
-                    totalOverlap += overlapArea(macros[i], die->insts()[j]);
-                }
-            }
+            if (mac == macro)
+                continue;
+            totalOvarlap += getOverlapArea(mac, macro);
         }
-        return totalOverlap;
+        return totalOvarlap;
     }
 
-    int MacroLegalizer::getMacrosOverlap(const std::vector<Instance *> &macros, Die *die)
+    double MacroLegalizer::getAllMacroOverlap(const std::vector<Instance *> &macros)
     {
-        int totalOverlap = 0;
+        double totalOverlap = 0;
         for (int i = 0; i < macros.size(); i++)
         {
             for (int j = i + 1; j < macros.size(); j++)
-            {
-                totalOverlap += overlapArea(macros[i], macros[j]);
-            }
+                totalOverlap += getOverlapArea(macros[i], macros[j]);
         }
         return totalOverlap;
     }
 
-    // 计算宏单元的成本函数
-    double MacroLegalizer::calc_cost(const std::vector<Instance *> &macros, Die *die)
+    double MacroLegalizer::getMacroHpwl(Instance *macro)
     {
-        // HPWL
-        double hpwl = get_hpwl(macros, die);
-        // 宏单元与标准单元重叠
-        double den = 0;//getCellMacroOverlap(macros, die);
-        // 宏单元与宏单元重叠
-        double ov = getMacrosOverlap(macros, die)-get_all_macro_ovlp(macros,die); 
-        return vars_.sa_hpwl_wgt * hpwl + vars_.sa_den_wgt * den + vars_.sa_ovlp_wgt * ov;
+        int64_t macroHpwl = 0;
+        for (Pin *pin : macro->pins())
+        {
+            Net *net = pin->net();
+            macroHpwl += net->hpwl();
+        }
+        return static_cast<double>(macroHpwl);
+    }
+
+    void MacroLegalizer::updateMacroNetBox(Instance *macro)
+    {
+        for (Pin *pin : macro->pins())
+        {
+            Net *net = pin->net();
+            net->updateBox();
+        }
     }
 
     //////////////////////////////////
@@ -336,7 +328,8 @@ namespace replace
 
     void MacroLegalizer::postLegalize(const std::vector<Instance *> insts, Die *die)
     {
-        srand(114);
+        rng.seed(514);
+        std::uniform_real_distribution<float> unf(0.f, 1.f);
         for (int iter = 0; iter < lgVars_.maxPostLegalizeIter; iter++)
         {
             bool isLegal = true;
@@ -388,9 +381,8 @@ namespace replace
                         // y overlap
                         auto yOk = repel(inst1->ly(), inst1->uy(), inst2->ly(), inst2->uy(),
                                          die->coreLy(), die->coreUy(), &dy1, &dy2);
-                        double thres = (double)(std::abs(dx1) + std::abs(dx2))
-                                     / (std::abs(dx1) + std::abs(dx2) + std::abs(dy1) + std::abs(dy2));
-                        if ((double)rand() / (double)RAND_MAX < thres)
+                        double thres = (double)(std::abs(dx1) + std::abs(dx2)) / (std::abs(dx1) + std::abs(dx2) + std::abs(dy1) + std::abs(dy2));
+                        if (unf(rng) < thres)
                         {
                             inst1->setLocation(inst1->lx() + dx1, inst1->ly());
                             inst2->setLocation(inst2->lx() + dx2, inst2->ly());
@@ -408,165 +400,6 @@ namespace replace
             {
                 break;
             }
-        }
-    }
-    /// OVLP of macros with stdcells ///
-    int *ovlp_y;
-
-    struct seg_tree_node{
-        int l;
-        int r;
-        int ml;
-        int mr;
-        int s;
-        int len;
-    };
-    static seg_tree_node *ovlp_a;
-
-    struct NODE {
-        int x;
-        int y1;
-        int y2;
-        int flg;
-    };
-    static NODE *ovlp_node;
-
-    int ovlp_node_cmp(const void* a, const void* b) {
-      struct NODE* aa = (struct NODE*)a;
-      struct NODE* bb = (struct NODE*)b;
-
-      return aa->x > bb->x ? 1 : 0;
-    }
-
-    int int_cmp(const void* a, const void* b) {
-      int* aa = (int*)a;
-      int* bb = (int*)b;
-
-      return *aa > *bb ? 1 : 0;
-    }
-
-    void MacroLegalizer::build_seg_tree(int i, int left, int right) {
-        ovlp_a[i].l = left;
-        ovlp_a[i].r = right;
-        ovlp_a[i].ml = ovlp_y[left];
-        ovlp_a[i].mr = ovlp_y[right];
-        ovlp_a[i].s = 0;
-        ovlp_a[i].len = 0;
-
-        if(ovlp_a[i].l + 1 == ovlp_a[i].r) { //stop build at leaves
-            return;
-        }
-        else {
-            int moduleID = (left + right) >> 1; // left + right / 2 = next
-            build_seg_tree(i * 2, left, moduleID); 
-            build_seg_tree(i * 2 + 1, moduleID, right);
-        }
-    }
-    
-    /*
-    int MacroLegalizer::iGetCommonAreaXY(POS aLL, POS aUR, POS bLL, POS bUR) {              
-        int xLL = max(aLL.x, bLL.x), yLL = max(aLL.y, bLL.y),   
-            xUR = min(aUR.x, bUR.x), yUR = min(aUR.y, bUR.y);
-
-        if(xLL >= xUR || yLL >= yUR) {
-            return 0;
-        }
-        else {
-            return (xUR - xLL) * (yUR - yLL);
-        }
-    }
-    */
-
-    int MacroLegalizer::get_all_macro_ovlp(const std::vector<Instance *> &macros, Die *die) {
-        int i = 0, t = 0;
-        int sum_ovlp = 0;
-        int x1 = 0, x2 = 0;
-        int y1 = 0, y2 = 0;
-        struct Instance *mac = NULL;
-        int n = macros.size();
-
-        t = 1;
-
-        for(i = 0; i < n; i++) {
-            mac = macros[i];
-
-            x1 = mac->lx();
-            y1 = mac->ly();
-
-            x2 = mac->ux();
-            y2 = mac->uy();
-
-            ovlp_node[t].x = x1;
-            ovlp_node[t].y1 = y1;
-            ovlp_node[t].y2 = y2;
-            ovlp_node[t].flg = 1;
-            ovlp_y[t++] = y1;
-
-            ovlp_node[t].x = x2;
-            ovlp_node[t].y1 = y1;
-            ovlp_node[t].y2 = y2;
-            ovlp_node[t].flg = -1;
-            ovlp_y[t++] = y2;
-        }
-
-        qsort(ovlp_node + 1, 2 * n, sizeof(struct NODE), ovlp_node_cmp);
-        qsort(ovlp_y + 1, 2 * n, sizeof(int), int_cmp);
-
-        build_seg_tree(1, 1, t - 1);
-
-        updata(1, ovlp_node[1]);
-
-        for(i = 2; i < t; i++) {
-            sum_ovlp += ovlp_a[1].len * (ovlp_node[i].x - ovlp_node[i - 1].x);
-            updata(1, ovlp_node[i]);
-        }
-
-        return sum_ovlp;
-    }
-
-    void MacroLegalizer::updata(int i, struct NODE b) {
-        if(ovlp_a[i].ml == b.y1 && ovlp_a[i].mr == b.y2) {
-            ovlp_a[i].s += b.flg;
-            callen(i);
-            return;
-        }
-
-        if(b.y2 <= ovlp_a[i * 2].mr)
-            updata(i * 2, b);
-        else if(b.y1 >= ovlp_a[i * 2 + 1].ml)
-            updata(i * 2 + 1, b);
-        else {
-            struct NODE temp = b;
-            temp.y2 = ovlp_a[i * 2].mr;
-            updata(i * 2, temp);
-            temp = b;
-            temp.y1 = ovlp_a[i * 2 + 1].ml;
-            updata(i * 2 + 1, temp);
-        }
-        callen(i);
-        return;
-    }
-
-    void MacroLegalizer::callen(int i) {
-    /*
-    struct seg_tree_node {
-        int l;
-        int r;
-        int ml;
-        int mr;
-        int s;
-        int len;
-    };
-    sum_ovlp += ovlp_a[1].len * (ovlp_node[i].x - ovlp_node[i - 1].x);
-    */
-        if(ovlp_a[i].s > 0) {
-            ovlp_a[i].len = ovlp_a[i].mr - ovlp_a[i].ml;
-        }
-        else if(ovlp_a[i].r - ovlp_a[i].l == 1) { // leaf
-            ovlp_a[i].len = 0; //length = 0 to not calculate its ovlp area
-        }
-        else {
-            ovlp_a[i].len = ovlp_a[i * 2].len + ovlp_a[i * 2 + 1].len;
         }
     }
 }

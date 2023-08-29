@@ -1100,7 +1100,7 @@ namespace replace
         double overlapArea = getOverlapDensityArea(bin, gCell) * gCell->densityScale();
         electroForce.x += bell * overlapArea * bin->electroForceX();
         electroForce.y += bell * overlapArea * bin->electroForceY();
-        gradTheta += derive * overlapArea * bin->electroPhi();
+        gradTheta -= derive * overlapArea;
       }
     }
 
@@ -1126,7 +1126,7 @@ namespace replace
           double overlapArea = (overlapUx - overlapLx) * (overlapUy - overlapLy) * gCell->densityScale();
           electroForce.x += bell * overlapArea * bin->electroForceX();
           electroForce.y += bell * overlapArea * bin->electroForceY();
-          gradTheta += derive * overlapArea * bin->electroPhi();
+          gradTheta -= derive * overlapArea;
         }
       }
     }
@@ -1230,7 +1230,7 @@ namespace replace
         grad.x += bell * commonMul * bin->electroForceX();
         grad.y += bell * dAdy * commonVal;
         grad.y += bell * commonMul * bin->electroForceY();
-        gradTheta += derive * nu * shareArea * bin->electroPhi();
+        gradTheta -= derive * nu * shareArea;
       }
     }
 
@@ -1277,7 +1277,7 @@ namespace replace
         grad.x += bell * commonMul * bin->electroForceX();
         grad.y += bell * dAdy * commonVal;
         grad.y += bell * commonMul * bin->electroForceY();
-        gradTheta += derive * nu * shareArea * bin->electroPhi();
+        gradTheta -= derive * nu * shareArea;
       }
     }
     return grad;
