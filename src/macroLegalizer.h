@@ -47,8 +47,14 @@ namespace replace
         int get_hpwl(const std::vector<Instance *> &macros, Die *die);
         double calc_cost(const std::vector<Instance *> &macros, Die *die);
 
-        void postLegalize(std::vector<Instance *>& macros, Die *die);
+        void postLegalize(const std::vector<Instance *> macros, Die *die);
 
+        ///OVLP///
+        void build_seg_tree(int i, int left, int right) ;
+        int get_mac_ovlp(const std::vector<Instance *> macros,int index, Die *die);
+        int get_all_macro_ovlp(const std::vector<Instance *> &macros ,Die *die);
+        void updata(int i, struct NODE b);
+        void callen(int i);
     private:
         /* data */
         std::shared_ptr<PlacerBase> pb_;

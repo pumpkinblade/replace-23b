@@ -7,6 +7,7 @@
 #include <cmath>
 #include <ctime>
 #include "log.h"
+#include <stdlib.h>
 
 namespace replace
 {
@@ -14,7 +15,7 @@ namespace replace
     // MacroLegalizerVars
 
     MacroLegalizerVars::MacroLegalizerVars()
-        : maxPostLegalizeIter(100000)
+        : maxPostLegalizeIter(1000)
     {
     }
 
@@ -40,8 +41,8 @@ namespace replace
                     macros.push_back(inst);
                 }
             }
-            // saLegalize(macros, die);
-            postLegalize(macros, die);
+            saLegalize(macros, die);
+            // postLegalize(macros, die);
             // LOG_DEBUG("[MacroLegalization] Die {} ", die->name());
         }
     }
@@ -246,9 +247,9 @@ namespace replace
         // HPWL
         double hpwl = get_hpwl(macros, die);
         // 宏单元与标准单元重叠
-        double den = getCellMacroOverlap(macros, die);
+        double den = 0;//getCellMacroOverlap(macros, die);
         // 宏单元与宏单元重叠
-        double ov = getMacrosOverlap(macros, die);
+        double ov = getMacrosOverlap(macros, die)-get_all_macro_ovlp(macros,die); 
         return vars_.sa_hpwl_wgt * hpwl + vars_.sa_den_wgt * den + vars_.sa_ovlp_wgt * ov;
     }
 
@@ -333,15 +334,12 @@ namespace replace
         return true;
     }
 
-    void MacroLegalizer::postLegalize(std::vector<Instance *>& insts, Die *die)
+    void MacroLegalizer::postLegalize(const std::vector<Instance *> insts, Die *die)
     {
-        bool isLegal = true;
-        std::mt19937 rng(514);
-        std::uniform_real_distribution<float> unf(0.0f, 1.0f);
+        srand(114);
         for (int iter = 0; iter < lgVars_.maxPostLegalizeIter; iter++)
         {
-            std::shuffle(insts.begin(), insts.end(), rng);
-            isLegal = true;
+            bool isLegal = true;
             for (int i = 0; i < insts.size(); i++)
             {
                 // check boundary
@@ -390,10 +388,9 @@ namespace replace
                         // y overlap
                         auto yOk = repel(inst1->ly(), inst1->uy(), inst2->ly(), inst2->uy(),
                                          die->coreLy(), die->coreUy(), &dy1, &dy2);
-                        float thres = static_cast<float>(std::abs(dx1) + std::abs(dx2))
-                                    / (std::abs(dx1) + std::abs(dx2) + std::abs(dy1) + std::abs(dy2));
-                        if (unf(rng) > thres)
-                        //if (std::abs(dx1) + std::abs(dx2) < std::abs(dy1) + std::abs(dy2))
+                        double thres = (double)(std::abs(dx1) + std::abs(dx2))
+                                     / (std::abs(dx1) + std::abs(dx2) + std::abs(dy1) + std::abs(dy2));
+                        if ((double)rand() / (double)RAND_MAX < thres)
                         {
                             inst1->setLocation(inst1->lx() + dx1, inst1->ly());
                             inst2->setLocation(inst2->lx() + dx2, inst2->ly());
@@ -412,9 +409,164 @@ namespace replace
                 break;
             }
         }
-        if (!isLegal)
-        {
-          LOG_ERROR("Macro Legalization Failed!!");
+    }
+    /// OVLP of macros with stdcells ///
+    int *ovlp_y;
+
+    struct seg_tree_node{
+        int l;
+        int r;
+        int ml;
+        int mr;
+        int s;
+        int len;
+    };
+    static seg_tree_node *ovlp_a;
+
+    struct NODE {
+        int x;
+        int y1;
+        int y2;
+        int flg;
+    };
+    static NODE *ovlp_node;
+
+    int ovlp_node_cmp(const void* a, const void* b) {
+      struct NODE* aa = (struct NODE*)a;
+      struct NODE* bb = (struct NODE*)b;
+
+      return aa->x > bb->x ? 1 : 0;
+    }
+
+    int int_cmp(const void* a, const void* b) {
+      int* aa = (int*)a;
+      int* bb = (int*)b;
+
+      return *aa > *bb ? 1 : 0;
+    }
+
+    void MacroLegalizer::build_seg_tree(int i, int left, int right) {
+        ovlp_a[i].l = left;
+        ovlp_a[i].r = right;
+        ovlp_a[i].ml = ovlp_y[left];
+        ovlp_a[i].mr = ovlp_y[right];
+        ovlp_a[i].s = 0;
+        ovlp_a[i].len = 0;
+
+        if(ovlp_a[i].l + 1 == ovlp_a[i].r) { //stop build at leaves
+            return;
+        }
+        else {
+            int moduleID = (left + right) >> 1; // left + right / 2 = next
+            build_seg_tree(i * 2, left, moduleID); 
+            build_seg_tree(i * 2 + 1, moduleID, right);
+        }
+    }
+    
+    /*
+    int MacroLegalizer::iGetCommonAreaXY(POS aLL, POS aUR, POS bLL, POS bUR) {              
+        int xLL = max(aLL.x, bLL.x), yLL = max(aLL.y, bLL.y),   
+            xUR = min(aUR.x, bUR.x), yUR = min(aUR.y, bUR.y);
+
+        if(xLL >= xUR || yLL >= yUR) {
+            return 0;
+        }
+        else {
+            return (xUR - xLL) * (yUR - yLL);
+        }
+    }
+    */
+
+    int MacroLegalizer::get_all_macro_ovlp(const std::vector<Instance *> &macros, Die *die) {
+        int i = 0, t = 0;
+        int sum_ovlp = 0;
+        int x1 = 0, x2 = 0;
+        int y1 = 0, y2 = 0;
+        struct Instance *mac = NULL;
+        int n = macros.size();
+
+        t = 1;
+
+        for(i = 0; i < n; i++) {
+            mac = macros[i];
+
+            x1 = mac->lx();
+            y1 = mac->ly();
+
+            x2 = mac->ux();
+            y2 = mac->uy();
+
+            ovlp_node[t].x = x1;
+            ovlp_node[t].y1 = y1;
+            ovlp_node[t].y2 = y2;
+            ovlp_node[t].flg = 1;
+            ovlp_y[t++] = y1;
+
+            ovlp_node[t].x = x2;
+            ovlp_node[t].y1 = y1;
+            ovlp_node[t].y2 = y2;
+            ovlp_node[t].flg = -1;
+            ovlp_y[t++] = y2;
+        }
+
+        qsort(ovlp_node + 1, 2 * n, sizeof(struct NODE), ovlp_node_cmp);
+        qsort(ovlp_y + 1, 2 * n, sizeof(int), int_cmp);
+
+        build_seg_tree(1, 1, t - 1);
+
+        updata(1, ovlp_node[1]);
+
+        for(i = 2; i < t; i++) {
+            sum_ovlp += ovlp_a[1].len * (ovlp_node[i].x - ovlp_node[i - 1].x);
+            updata(1, ovlp_node[i]);
+        }
+
+        return sum_ovlp;
+    }
+
+    void MacroLegalizer::updata(int i, struct NODE b) {
+        if(ovlp_a[i].ml == b.y1 && ovlp_a[i].mr == b.y2) {
+            ovlp_a[i].s += b.flg;
+            callen(i);
+            return;
+        }
+
+        if(b.y2 <= ovlp_a[i * 2].mr)
+            updata(i * 2, b);
+        else if(b.y1 >= ovlp_a[i * 2 + 1].ml)
+            updata(i * 2 + 1, b);
+        else {
+            struct NODE temp = b;
+            temp.y2 = ovlp_a[i * 2].mr;
+            updata(i * 2, temp);
+            temp = b;
+            temp.y1 = ovlp_a[i * 2 + 1].ml;
+            updata(i * 2 + 1, temp);
+        }
+        callen(i);
+        return;
+    }
+
+    void MacroLegalizer::callen(int i) {
+    /*
+    struct seg_tree_node {
+        int l;
+        int r;
+        int ml;
+        int mr;
+        int s;
+        int len;
+    };
+    sum_ovlp += ovlp_a[1].len * (ovlp_node[i].x - ovlp_node[i - 1].x);
+    */
+        if(ovlp_a[i].s > 0) {
+            ovlp_a[i].len = ovlp_a[i].mr - ovlp_a[i].ml;
+        }
+        else if(ovlp_a[i].r - ovlp_a[i].l == 1) { // leaf
+            ovlp_a[i].len = 0; //length = 0 to not calculate its ovlp area
+        }
+        else {
+            ovlp_a[i].len = ovlp_a[i * 2].len + ovlp_a[i * 2 + 1].len;
         }
     }
 }
