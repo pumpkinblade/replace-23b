@@ -48,3 +48,6 @@ output.txt
 !module/glpk/*.lib
 !module/glpk/*.so
 !module/glpk/*.a
+!module/kahypar/*.so
+!module/mtkahypar/*.so
+/test/*

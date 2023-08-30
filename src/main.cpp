@@ -65,7 +65,8 @@ int main(int argc, const char *argv[])
   // then we do partition
   Partitioner partitioner(targetDensity);
   // partitioner.partitioning2(pb);
-  partitioner.mtPartitionInstance(pb);
+  partitioner.partitionInstance(pb);
+  // partitioner.mtPartitionInstance(pb);
   Plot::plot(pb.get(), "./plot/cell", "after_partition");
 
   // then we do optimization
@@ -91,7 +92,6 @@ int main(int argc, const char *argv[])
   }
 
   rp.doInitialPlace();
-  rp.setNesterovUseTheta(true);
   rp.setNesterovPlaceUseLocalDensity(true);
   rp.doNesterovPlace("finalgp");
   Plot::plot(pb.get(), "./plot/cell", "after_finalgp");
