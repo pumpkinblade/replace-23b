@@ -15,7 +15,7 @@ namespace replace
     // MacroLegalizerVars
 
     MacroLegalizerVars::MacroLegalizerVars()
-        : maxPostLegalizeIter(1000)
+        : maxPostLegalizeIter(100000)
     {
     }
 
@@ -42,9 +42,9 @@ namespace replace
                 }
             }
             if(!checkLegal(macros, die))
-                saLegalize(macros, die);
+              saLegalize(macros, die);
             if(!checkLegal(macros, die))
-                postLegalize(macros, die);
+              postLegalize(macros, die);
         }
     }
 
@@ -53,10 +53,10 @@ namespace replace
 
     static std::mt19937 rng;
 
-    void MacroLegalizer::saLegalize(const std::vector<Instance *> &macros, Die *die)
+    bool MacroLegalizer::saLegalize(const std::vector<Instance *> &macros, Die *die)
     {
         if (macros.size() == 0)
-            return;
+            return true;
         // 初始化参数
         double tot_mac_hpwl = 0;
         for(Instance* macro : macros)
@@ -131,6 +131,8 @@ namespace replace
             lgVars_.sa_den_wgt *= lgVars_.sa_den_cof;
             lgVars_.sa_ovlp_wgt *= lgVars_.sa_ovlp_cof;
         }
+
+        return isLegal;
     }
 
     std::pair<int, int> MacroLegalizer::getRandomMove(Instance *cell, int iter, Die *die, int max_sa_r_x, int max_sa_r_y)
@@ -330,7 +332,7 @@ namespace replace
         return true;
     }
 
-    void MacroLegalizer::postLegalize(const std::vector<Instance *> insts, Die *die)
+    bool MacroLegalizer::postLegalize(const std::vector<Instance *> insts, Die *die)
     {
         rng.seed(514);
         std::uniform_real_distribution<float> unf(0.f, 1.f);
@@ -402,9 +404,10 @@ namespace replace
 
             if (isLegal)
             {
-                break;
+                return true;
             }
         }
+        return false;
     }
 
     bool MacroLegalizer::checkLegal(const std::vector<Instance *> macros, Die *die)
