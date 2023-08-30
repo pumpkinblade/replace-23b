@@ -1,9 +1,11 @@
 #include "placerBase.h"
 #include "nesterovBase.h"
 #include "nesterovPlace.h"
+#include "macroLegalizer.h"
 #include "log.h"
 #include "plot.h"
 #include <glpk.h>
+#include <random>
 
 using namespace std;
 
@@ -685,8 +687,10 @@ namespace replace
 
   void NesterovPlace::updatePlacerBase()
   {
+    LOG_TRACE("Begin updatePlacerBase");
     if (npVars_.useTheta)
       determinMacroOrient();
+    LOG_TRACE("End updatePlacerBase");
     for (auto &gCell : nb_->gCells())
     {
       if (gCell->isInstance())
@@ -703,7 +707,9 @@ namespace replace
     for (BinGrid *bg : nb_->binGrids())
     {
       const Technology &tech = *bg->die()->tech();
-      std::vector<GCell *> macros;
+      std::vector<GCell*> macros, macrosILP;
+      std::vector<bool> rot, rotILP;
+
       for (int i = 0; i < useThetaMacroCount; i++)
       {
         GCell *gcell = nb_->gCells()[i];
@@ -713,43 +719,81 @@ namespace replace
         int idx = static_cast<int>(ori);
         if (std::abs(LEGAL_THETA[idx] - gcell->theta()) < 0.1 * PI)
         {
-          gcell->setTheta(LEGAL_THETA[idx]);
-          gcell->instance()->setOrientSize(tech, ori);
+          macros.push_back(gcell);
+          rot.push_back((ori == Orientation::R90) || (ori == Orientation::R270));
         }
         else
         {
           macros.push_back(gcell);
+          rot.push_back(false);
+          macrosILP.push_back(gcell);
+          rotILP.push_back(false);
         }
       }
-      std::vector<bool> isRot(macros.size(), false);
-      ilpSolve(macros, isRot);
-      for (int u = 0; u < macros.size(); u++)
+
+      LOG_TRACE("Begin ILP Solve");
+      ilpSolve(macrosILP, rotILP);
+      LOG_TRACE("Finish ILP Solve");
+
+      LOG_DEBUG("macros.size() = {}, rot.size() = {}, macrosILP.size = {}, rotILP.size() = {}", 
+                macros.size(), rot.size(), macrosILP.size(), rotILP.size());
+      for(int i = 0, j = 0; i < rot.size() && j < rotILP.size(); i++)
       {
-        if (isRot[u])
+        LOG_DEBUG("i = {}, j = {}", i, j);
+        if (macros[i] == macrosILP[j])
         {
-          if (std::abs(macros[u]->theta() - 0.5 * PI) < std::abs(macros[u]->theta() - 1.5 * PI))
-          {
-            macros[u]->setTheta(0.5 * PI);
-            macros[u]->instance()->setOrientSize(tech, Orientation::R90);
-          }
-          else
-          {
-            macros[u]->setTheta(1.5 * PI);
-            macros[u]->instance()->setOrientSize(tech, Orientation::R270);
-          }
+          rot[i] = rotILP[j];
+          ++j;
         }
+      }
+
+      MacroLegalizer lg;
+      std::mt19937 rng(114514);
+      std::bernoulli_distribution bn(0.2);
+      const int iter = 100000;
+      std::vector<std::pair<Orientation, Orientation>> preferOri(macros.size());
+      std::vector<Instance*> macroInstances(macros.size());
+      for(int i = 0; i < macros.size(); i++)
+      {
+        if(std::abs(macros[i]->theta()) < std::abs(macros[i]->theta() - PI) || 
+          std::abs(macros[i]->theta() - 2 * PI) < std::abs(macros[i]->theta() - PI))
+          preferOri[i].first = Orientation::R0;
+        else
+          preferOri[i].first = Orientation::R180;
+
+        if(std::abs(macros[i]->theta() - 0.5 * PI) < std::abs(macros[i]->theta() - 1.5 * PI))
+          preferOri[i].second = Orientation::R90;
+        else
+          preferOri[i].second = Orientation::R270;
+
+        macroInstances[i] = macros[i]->instance();
+      }
+
+      for(int i = 0; i < iter; i++)
+      {
+        for(int i = 0; i < rot.size(); i++)
+        {
+          // set macro's location by gcell's location
+          int cx = static_cast<int>(macros[i]->cx());
+          int cy = static_cast<int>(macros[i]->cy());
+          macroInstances[i]->setCenterLocation(cx, cy);
+          
+          // apply rotation
+          if(rot[i])
+            macroInstances[i]->setOrientSize(tech, preferOri[i].first);
+          else
+            macroInstances[i]->setOrientSize(tech, preferOri[i].second);
+        }
+        
+        // try do post legalization
+        bool ok = lg.postLegalize(macroInstances, bg->die());
+        if(ok)
+          break;
         else
         {
-          if (std::abs(macros[u]->theta()) < std::abs(macros[u]->theta() - PI) || std::abs(macros[u]->theta() - 2.0 * PI) < std::abs(macros[u]->theta() - PI))
-          {
-            macros[u]->setTheta(0.0);
-            macros[u]->instance()->setOrientSize(tech, Orientation::R0);
-          }
-          else
-          {
-            macros[u]->setTheta(PI);
-            macros[u]->instance()->setOrientSize(tech, Orientation::R180);
-          }
+          // each macro has 20% probability to rotate
+          for(int i = 0; i < rot.size(); i++)
+            rot[i] = bn(rng) ^ rot[i];
         }
       }
     }

@@ -8,6 +8,9 @@ namespace replace
 {
   class PlacerBase;
   class NesterovBase;
+  class Net;
+  class Die;
+  class Instance;
 
   class Plotter;
 
@@ -38,6 +41,16 @@ namespace replace
                      PlotNesterovType type,
                      const std::string &imgDir,
                      const std::string &prefix);
+
+    static void plotNetR1(const PlacerBase *pb,
+                          const Die* die,
+                          const Net* net,
+                          const std::string& imgDir,
+                          const std::string &prefix);
+    static void plotCNetR1(const PlacerBase *pb,
+                           const Instance* term,
+                           const std::string& imgDir,
+                           const std::string &prefix);
 
   private:
     static std::unique_ptr<Plotter> splotter_;

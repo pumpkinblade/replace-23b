@@ -44,10 +44,6 @@ core.[0-9]*
 module/CImg/.github
 result
 output.txt
-!module/glpk/*.dll
-!module/glpk/*.lib
-!module/glpk/*.so
-!module/glpk/*.a
-!module/kahypar/*.so
-!module/mtkahypar/*.so
-/test/*
+!module/*/*.dll
+!module/*/*.lib
+!module/*/*.so

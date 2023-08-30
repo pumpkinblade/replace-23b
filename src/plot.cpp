@@ -4,6 +4,7 @@
 #include "log.h"
 #include <array>
 #include <vector>
+#include <set>
 #include <CImg.h>
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb_image_write.h>
@@ -36,6 +37,15 @@ namespace replace
               PlotNesterovType type,
               const std::string &imgDir,
               const std::string &prefix);
+    void plotNetR1(const PlacerBase *pb,
+                   const Die* die,
+                   const Net* net,
+                   const std::string& imgDir,
+                   const std::string& prefix);
+    void plotCNetR1(const PlacerBase *pb,
+                    const Instance* term,
+                    const std::string& imgDir,
+                    const std::string& prefix);
 
   private:
     void initContext(const Die *die);
@@ -48,8 +58,10 @@ namespace replace
     void drawGCells(const BinGrid *bg, float opacity);
     void drawBins(const BinGrid *bg, float opacity);
     void drawArrows(const BinGrid *bg, float opacity);
+    void drawNetR1(const Net* net, const Die* die, float opacity);
 
     void cimgDrawArrow(int x1, int y1, int x3, int y3, float thick, const Color &color, float opacity);
+    void cimgDrawLine(int x1, int y1, int x2, int y2, float thick, const Color& color, float opacity);
     void cimgWriteJpeg(const std::string& name, unsigned int quality);
     void cimgWritePng(const std::string& name);
 
@@ -140,6 +152,49 @@ namespace replace
 
       LOG_TRACE("{} has been saved.", saveName);
     }
+  }
+
+  void Plotter::plotNetR1(const PlacerBase *pb,
+                          const Die* die,
+                          const Net* net,
+                          const std::string& imgDir,
+                          const std::string& prefix)
+  {
+    initContext(die);
+
+    drawNetR1(net, die, 0.9f);
+
+    std::string title = prefix;
+    img_->draw_text(0, 0, title.c_str(), g_black.data(), NULL, 1, 30);
+
+    std::string saveName = imgDir + "/" + title + ".jpg";
+    cimgWriteJpeg(saveName, 70);
+
+    LOG_TRACE("{} has been saved.", saveName);
+  }
+
+  void Plotter::plotCNetR1(const PlacerBase *pb,
+                          const Instance* term,
+                          const std::string& imgDir,
+                          const std::string& prefix)
+  {
+    initContext(pb->die("top"));
+    const Net* net1 = term->pins()[0]->net();
+    drawNetR1(net1, pb->die("top"), 0.9f);
+    std::string title = prefix + "_top";
+    img_->draw_text(0, 0, title.c_str(), g_black.data(), NULL, 1, 30);
+    std::string saveName = imgDir + "/" + title + ".jpg";
+    cimgWriteJpeg(saveName, 70);
+    LOG_TRACE("{} has been saved.", saveName);
+
+    initContext(pb->die("bottom"));
+    const Net* net2 = term->pins()[1]->net();
+    drawNetR1(net2, pb->die("bottom"), 0.9f);
+    title = prefix + "_bot";
+    img_->draw_text(0, 0, title.c_str(), g_black.data(), NULL, 1, 30);
+    saveName = imgDir + "/" + title + ".jpg";
+    cimgWriteJpeg(saveName, 70);
+    LOG_TRACE("{} has been saved.", saveName);
   }
 
   void Plotter::initContext(const Die *die)
@@ -334,6 +389,55 @@ namespace replace
     }
   }
 
+  void Plotter::drawNetR1(const Net* net, const Die* die, float opacity)
+  {
+    // draw instance
+    for(const Instance *inst : die->insts())
+    {
+      int x1 = getImageX(inst->lx());
+      int y1 = getImageY(inst->ly());
+      int x3 = getImageX(inst->ux());
+      int y3 = getImageY(inst->uy());
+      img_->draw_rectangle(x1, y1, x3, y3, g_blue.data());
+    }
+
+    // draw boundary
+    int lx = getImageX(net->lx());
+    int ly = getImageY(net->ly());
+    int ux = getImageX(net->ux());
+    int uy = getImageY(net->uy());
+    cimgDrawLine(lx, ly, lx, uy, 4.0f, g_green, 1.0f);
+    cimgDrawLine(lx, uy, ux, uy, 4.0f, g_green, 1.0f);
+    cimgDrawLine(ux, uy, ux, ly, 4.0f, g_green, 1.0f);
+    cimgDrawLine(ux, ly, lx, ly, 4.0f, g_green, 1.0f);
+
+    // find net instance
+    std::set<const Instance*> insts;
+    for(const Pin* pin : net->pins())
+      insts.insert(pin->instance());
+    // draw instances
+    const Instance* term = nullptr;
+    for (const Instance *inst : insts)
+    {
+      int x1 = getImageX(inst->lx());
+      int y1 = getImageY(inst->ly());
+      int x3 = getImageX(inst->ux());
+      int y3 = getImageY(inst->uy());
+      if(inst->name().front() == 'N')
+        term = inst;
+      else
+        img_->draw_rectangle(x1, y1, x3, y3, g_pink.data());
+    }
+    if(term)
+    {
+      int x1 = getImageX(term->lx());
+      int y1 = getImageY(term->ly());
+      int x3 = getImageX(term->ux());
+      int y3 = getImageY(term->uy());
+      img_->draw_rectangle(x1, y1, x3, y3, g_red.data());
+    }
+  }
+
   void Plotter::cimgDrawArrow(int x1, int y1, int x3, int y3, float thick, const Color &color, float opacity)
   {
     // ARROW HEAD DRAWING
@@ -386,6 +490,36 @@ namespace replace
     headPoints(2, 1) = uPointY;
 
     img_->draw_polygon(headPoints, color.data());
+  }
+
+  void Plotter::cimgDrawLine(int x1, int y1, int x2, int y2, float thick, const Color &color, float opacity)
+  {
+    if (x1 == x2 && y1 == y2)
+      return;
+    // Convert line (p1, p2) to polygon (pa, pb, pc, pd)
+    const double x_diff = std::abs(x1 - x2);
+    const double y_diff = std::abs(y1 - y2);
+    const double w_diff = thick / 2.0;
+
+    // Triangle between pa and p1: x_adj^2 + y_adj^2 = w_diff^2
+    // Triangle between p1 and p2: x_diff^2 + y_diff^2 = length^2 
+    // Similar triangles: y_adj / x_diff = x_adj / y_diff = w_diff / length
+    // -> y_adj / x_diff = w_diff / sqrt(x_diff^2 + y_diff^2) 
+    const int x_adj = y_diff * w_diff / std::sqrt(std::pow(x_diff, 2) + std::pow(y_diff, 2));
+    const int y_adj = x_diff * w_diff / std::sqrt(std::pow(x_diff, 2) + std::pow(y_diff, 2));
+
+    // Points are listed in clockwise order, starting from top-left
+    cimg_library::CImg<int> points(4, 2);
+    points(0, 0) = x1 - x_adj;
+    points(0, 1) = y1 + y_adj;
+    points(1, 0) = x1 + x_adj;
+    points(1, 1) = y1 - y_adj;
+    points(2, 0) = x2 + x_adj;
+    points(2, 1) = y2 - y_adj;
+    points(3, 0) = x2 - x_adj;
+    points(3, 1) = y2 + y_adj;
+
+    img_->draw_polygon(points, color.data(), opacity);
   }
 
   void Plotter::cimgWriteJpeg(const std::string& name, unsigned int quality)
@@ -443,6 +577,36 @@ namespace replace
     else
     {
       splotter_->plot(nb, type, imgDir, prefix);
+    }
+  }
+
+  void Plot::plotNetR1(const PlacerBase *pb,
+                       const Die* die,
+                       const Net* net,
+                       const std::string& imgDir,
+                       const std::string &prefix)
+  {
+    if (splotter_ == nullptr)
+    {
+      LOG_WARN("Couldn't find suitable plotter. This process will be skipped.");
+    }
+    else
+    {
+      splotter_->plotNetR1(pb, die, net, imgDir, prefix);
+    }
+  }
+  void Plot::plotCNetR1(const PlacerBase *pb,
+                        const Instance* term,
+                        const std::string& imgDir,
+                        const std::string &prefix)
+  {
+    if (splotter_ == nullptr)
+    {
+      LOG_WARN("Couldn't find suitable plotter. This process will be skipped.");
+    }
+    else
+    {
+      splotter_->plotCNetR1(pb, term, imgDir, prefix);
     }
   }
 }
