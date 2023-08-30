@@ -47,3 +47,4 @@ output.txt
 !module/*/*.dll
 !module/*/*.lib
 !module/*/*.so
+test/*
