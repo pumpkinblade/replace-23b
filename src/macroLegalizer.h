@@ -39,7 +39,7 @@ namespace replace
 
         void doLegalization();
 
-        void saLegalize(const std::vector<Instance *> &macros, Die *die);
+        bool saLegalize(const std::vector<Instance *> &macros, Die *die);
         std::pair<int, int> getRandomMove(Instance *cell, int iter, Die *die, int max_sa_r_x, int max_sa_r_y);
         double getMacroCost(Instance *macro, const std::vector<Instance *> &macros);
         double getOverlapArea(Instance *inst1, Instance *inst2);
@@ -48,7 +48,7 @@ namespace replace
         double getMacroHpwl(Instance *macro);
         void updateMacroNetBox(Instance *macro);
 
-        void postLegalize(const std::vector<Instance *> macros, Die *die);
+        bool postLegalize(const std::vector<Instance *> macros, Die *die);
 
         bool checkLegal(const std::vector<Instance *> macros, Die *die);
 
