@@ -1,4 +1,4 @@
-[09:07:06] [info]: start partition
+[17:56:28] [info]: start partition
 ----------1----------
 init_block_weights[0]: 3
 init_block_weights[1]: 2
@@ -137,11 +137,11 @@ Name :
 HE size             HE weight           HN degree           HN weight 
 | min= 0            | min= 1            | min= 1            | min= 1           
 | Q1 = 0            | Q1 = 1            | Q1 = 1            | Q1 = 1           
-| med= 1            | med= 1            | med= 2            | med= 1           
-| Q3 = 1            | Q3 = 1            | Q3 = 2            | Q3 = 1           
-| max= 2            | max= 1            | max= 3            | max= 1           
-| avg= 1.2          | avg= 1            | avg= 2            | avg= 1           
-| sd = 0.83666      | sd = 0            | sd = 1            | sd = 0           
+| med= 1            | med= 2            | med= 2            | med= 1           
+| Q3 = 1            | Q3 = 2            | Q3 = 2            | Q3 = 1           
+| max= 2            | max= 2            | max= 3            | max= 1           
+| avg= 1.2          | avg= 1.6          | avg= 2            | avg= 1           
+| sd = 0.83666      | sd = 0.547723     | sd = 1            | sd = 0           
 
 ******************************************************************************** 
 *                              Preprocessing...                                * 
@@ -164,11 +164,11 @@ Name : Coarsened Hypergraph
 HE size             HE weight           HN degree           HN weight 
 | min= 0            | min= 1            | min= 1            | min= 1           
 | Q1 = 0            | Q1 = 1            | Q1 = 1            | Q1 = 1           
-| med= 1            | med= 1            | med= 2            | med= 1           
-| Q3 = 1            | Q3 = 1            | Q3 = 2            | Q3 = 1           
-| max= 2            | max= 1            | max= 3            | max= 1           
-| avg= 1.2          | avg= 1            | avg= 2            | avg= 1           
-| sd = 0.83666      | sd = 0            | sd = 1            | sd = 0           
+| med= 1            | med= 2            | med= 2            | med= 1           
+| Q3 = 1            | Q3 = 2            | Q3 = 2            | Q3 = 1           
+| max= 2            | max= 2            | max= 3            | max= 1           
+| avg= 1.2          | avg= 1.6          | avg= 2            | avg= 1           
+| sd = 0.83666      | sd = 0.547723     | sd = 1            | sd = 0           
 
 ******************************************************************************** 
 *                           Initial Partitioning...                            * 
@@ -185,15 +185,15 @@ Number of Initial Partitioning Calls = 1
 Average Number of Thread per IP Call = 16 
  
 [1mAlgorithm                      Avg. Quality    Total Time (s)  Total Best Total Best (%)[0m
-greedy_round_robin_fm          1               0.0014304       0          0               
-greedy_global_fm               1               0.00125876      0          0               
-greedy_sequential_fm           1               0.00097455      0          0               
-random                         1.3             9.9501e-05      0          0               
-bfs                            1               0.000852278     0          0               
-label_propagation              1               0.00112606      0          0               
-greedy_round_robin_max_net     1               0.000581557     0          0               
-greedy_global_max_net          1               0.00126196      1          100             
-greedy_sequential_max_net      1               0.000416114     0          0               
+greedy_round_robin_fm          1               0.00120514      0          0               
+greedy_global_fm               1               0.000864523     0          0               
+greedy_sequential_fm           1               0.00125671      0          0               
+random                         1.3             0.000106113     0          0               
+bfs                            1               0.000666117     0          0               
+label_propagation              1               0.000693717     1          100             
+greedy_round_robin_max_net     1               0.000697825     0          0               
+greedy_global_max_net          1               0.00121715      0          0               
+greedy_sequential_max_net      1               0.000212945     0          0               
 
 ******************************************************************************** 
 *                               Local Search...                                * 
@@ -217,26 +217,27 @@ Name : Uncoarsened Hypergraph
 HE size             HE weight           HN degree           HN weight 
 | min= 0            | min= 1            | min= 1            | min= 1           
 | Q1 = 0            | Q1 = 1            | Q1 = 1            | Q1 = 1           
-| med= 1            | med= 1            | med= 2            | med= 1           
-| Q3 = 1            | Q3 = 1            | Q3 = 2            | Q3 = 1           
-| max= 2            | max= 1            | max= 3            | max= 1           
-| avg= 1.2          | avg= 1            | avg= 2            | avg= 1           
-| sd = 0.83666      | sd = 0            | sd = 1            | sd = 0           
+| med= 1            | med= 2            | med= 2            | med= 1           
+| Q3 = 1            | Q3 = 2            | Q3 = 2            | Q3 = 1           
+| max= 2            | max= 2            | max= 3            | max= 1           
+| avg= 1.2          | avg= 1.6          | avg= 2            | avg= 1           
+| sd = 0.83666      | sd = 0.547723     | sd = 1            | sd = 0           
 -------------------------------------------------------------------------------- 
-[09:07:06] [info]: ---------------------
+[17:56:28] [info]: ---------------------
 ---------------------1
 Partitioning Results:
 Imbalance         = 0
 Km1               = 1
 Weight of Block 0 = 2
 Weight of Block 1 = 1
-Run time = 0.0177s
+Run time = 0.00633s
 maxMacroNum: 2
 init_block_weights[0]: 6
 init_block_weights[1]: 4
-macroId: 1  partition1[macroIds]1
-macroId: 2  partition1[macroIds]26736
-macroId: 5  partition1[macroIds]0
+----------2----------
+macroId: 1  partition1 0
+macroId: 2  partition1 0
+macroId: 5  partition1 1
 *******************************************************************************
 *                            Partitioning Context                             *
 *******************************************************************************
@@ -372,11 +373,11 @@ Name :
 HE size             HE weight           HN degree           HN weight 
 | min= 1            | min= 1            | min= 1            | min= 1           
 | Q1 = 2            | Q1 = 1            | Q1 = 1            | Q1 = 1           
-| med= 2            | med= 3            | med= 2            | med= 1           
-| Q3 = 3            | Q3 = 3            | Q3 = 2            | Q3 = 1           
-| max= 3            | max= 3            | max= 3            | max= 1           
-| avg= 2.33333      | avg= 2.33333      | avg= 1.75         | avg= 1           
-| sd = 0.816497     | sd = 1.0328       | sd = 0.707107     | sd = 0           
+| med= 2            | med= 1            | med= 2            | med= 1           
+| Q3 = 3            | Q3 = 1            | Q3 = 2            | Q3 = 1           
+| max= 3            | max= 1            | max= 3            | max= 1           
+| avg= 2.33333      | avg= 1            | avg= 1.75         | avg= 1           
+| sd = 0.816497     | sd = 0            | sd = 0.707107     | sd = 0           
 [1m 
 Hypergraph contains fixed vertices [0m 
 Fixed vertex weight of block 0:   w( 0 ) = 2  max( 0 ) = 6
@@ -403,11 +404,11 @@ Name : Coarsened Hypergraph
 HE size             HE weight           HN degree           HN weight 
 | min= 1            | min= 1            | min= 1            | min= 1           
 | Q1 = 2            | Q1 = 1            | Q1 = 1            | Q1 = 1           
-| med= 2            | med= 3            | med= 2            | med= 1           
-| Q3 = 3            | Q3 = 3            | Q3 = 2            | Q3 = 1           
-| max= 3            | max= 3            | max= 3            | max= 1           
-| avg= 2.33333      | avg= 2.33333      | avg= 1.75         | avg= 1           
-| sd = 0.816497     | sd = 1.0328       | sd = 0.707107     | sd = 0           
+| med= 2            | med= 1            | med= 2            | med= 1           
+| Q3 = 3            | Q3 = 1            | Q3 = 2            | Q3 = 1           
+| max= 3            | max= 1            | max= 3            | max= 1           
+| avg= 2.33333      | avg= 1            | avg= 1.75         | avg= 1           
+| sd = 0.816497     | sd = 0            | sd = 0.707107     | sd = 0           
 [1m 
 Hypergraph contains fixed vertices [0m 
 Fixed vertex weight of block 0:   w( 0 ) = 2  max( 0 ) = 6
@@ -425,18 +426,18 @@ Part sizes and weights:
  
 Initial Partitioning Algorithm Summary: 
 Number of Initial Partitioning Calls = 1 
-Average Number of Thread per IP Call = 15 
+Average Number of Thread per IP Call = 16 
  
 [1mAlgorithm                      Avg. Quality    Total Time (s)  Total Best Total Best (%)[0m
-greedy_round_robin_fm          1               0.000339777     0          0               
-greedy_global_fm               1               0.000287615     1          100             
-greedy_sequential_fm           1               0.000251427     0          0               
-random                         1               9.3458e-05      0          0               
-bfs                            1               0.000173859     0          0               
-label_propagation              1               0.000219752     0          0               
-greedy_round_robin_max_net     1               0.000229138     0          0               
-greedy_global_max_net          1               0.000363821     0          0               
-greedy_sequential_max_net      1               0.000161104     0          0               
+greedy_round_robin_fm          1               0.000307696     0          0               
+greedy_global_fm               1               0.000273868     0          0               
+greedy_sequential_fm           1               0.000229238     0          0               
+random                         1               0.000123325     0          0               
+bfs                            1               0.000273041     0          0               
+label_propagation              1               0.000211167     0          0               
+greedy_round_robin_max_net     1               0.00055931      0          0               
+greedy_global_max_net          1               0.000310658     1          100             
+greedy_sequential_max_net      1               0.000228722     0          0               
 
 ******************************************************************************** 
 *                               Local Search...                                * 
@@ -454,21 +455,256 @@ Name : Uncoarsened Hypergraph
 HE size             HE weight           HN degree           HN weight 
 | min= 1            | min= 1            | min= 1            | min= 1           
 | Q1 = 2            | Q1 = 1            | Q1 = 1            | Q1 = 1           
-| med= 2            | med= 3            | med= 2            | med= 1           
-| Q3 = 3            | Q3 = 3            | Q3 = 2            | Q3 = 1           
-| max= 3            | max= 3            | max= 3            | max= 1           
-| avg= 2.33333      | avg= 2.33333      | avg= 1.75         | avg= 1           
-| sd = 0.816497     | sd = 1.0328       | sd = 0.707107     | sd = 0           
+| med= 2            | med= 1            | med= 2            | med= 1           
+| Q3 = 3            | Q3 = 1            | Q3 = 2            | Q3 = 1           
+| max= 3            | max= 1            | max= 3            | max= 1           
+| avg= 2.33333      | avg= 1            | avg= 1.75         | avg= 1           
+| sd = 0.816497     | sd = 0            | sd = 0.707107     | sd = 0           
 [1m 
 Hypergraph contains fixed vertices [0m 
 Fixed vertex weight of block 0:   w( 0 ) = 2  max( 0 ) = 6
 Fixed vertex weight of block 1:   w( 1 ) = 1  max( 1 ) = 4
 -------------------------------------------------------------------------------- 
-[09:07:06] [info]: ---------------------
+[17:56:28] [info]: ---------------------
 ---------------------1
 Partitioning Results:
 Imbalance         = 0
 Km1               = 1
 Weight of Block 0 = 5
 Weight of Block 1 = 3
-Run time = 0.00243s
+Run time = 0.00271s
+topDieUtilizeRatio: 1.5e+03
+botDieUtilizeRatio: inf
+*******************************************************************************
+*                            Partitioning Context                             *
+*******************************************************************************
+Partitioning Parameters:
+  Hypergraph:                         
+  Mode:                               direct_kway
+  Objective:                          cut
+  Gain Policy:                        cut
+  Input File Format:                  hMetis
+  Instance Type:                      hypergraph
+  Preset Type:                        default
+  Partition Type:                     multilevel_hypergraph_partitioning
+  k:                                  2
+  epsilon:                            0.99
+  seed:                               0
+  Number of V-Cycles:                 0
+  Ignore HE Size Threshold:           1000
+  Large HE Size Threshold:            100
+  Individual Part Weights:            1 1500 
+-------------------------------------------------------------------------------
+Preprocessing Parameters:
+  Use Community Detection:            true
+  Disable C. D. for Mesh Graphs:      true
+
+  Community Detection Parameters:
+    Edge Weight Function:                uniform
+    Maximum Louvain-Pass Iterations:     5
+    Minimum Vertex Move Fraction:        0.01
+    Vertex Degree Sampling Threshold:    200000
+    Number of subrounds (deterministic): 16
+-------------------------------------------------------------------------------
+Coarsening Parameters:
+  Algorithm:                          multilevel_coarsener
+  Use Adaptive Edge Size:             true
+  Max Allowed Weight Multiplier:      1
+  Maximum Allowed Hypernode Weight:   1
+  Contraction Limit Multiplier:       160
+  Deep ML Contraction Limit Multi.:   4294967295
+  Contraction Limit:                  320
+  Minimum Shrink Factor:              1.01
+  Maximum Shrink Factor:              2.5
+  Vertex Degree Sampling Threshold:   200000
+  Number of subrounds (deterministic):16
+
+  Rating Parameters:
+    Rating Function:                  heavy_edge
+    Heavy Node Penalty:               no_penalty
+    Acceptance Policy:                best_prefer_unmatched
+-------------------------------------------------------------------------------
+Initial Partitioning Parameters:
+  Initial Partitioning Mode:          recursive_bipartitioning
+  Number of Runs:                     20
+  Use Adaptive IP Runs:               true
+  Min Adaptive IP Runs:               5
+  Perform Refinement On Best:         true
+  Fm Refinement Rounds:               1
+  Remove Degree-Zero HNs Before IP:   true
+  Maximum Iterations of LP IP:        20
+  Initial Block Size of LP IP:        5
+
+Initial Partitioning Refinement Parameters:
+  Rebalancing Algorithm:              do_nothing
+  Refine Until No Improvement:        false
+  Relative Improvement Threshold:     0
+  Maximum Batch Size:                 18446744073709551615
+  Min Border Vertices Per Thread:     0
+
+  Label Propagation Parameters:
+    Algorithm:                        label_propagation
+    Maximum Iterations:               5
+    Rebalancing:                      true
+    HE Size Activation Threshold:     100
+
+  FM Parameters: 
+    Algorithm:                        kway_fm
+    Multitry Rounds:                  5
+    Perform Moves Globally:           false
+    Parallel Global Rollbacks:        true
+    Rollback Bal. Violation Factor:   1
+    Num Seed Nodes:                   25
+    Enable Random Shuffle:            true
+    Obey Minimal Parallelism:         false
+    Minimum Improvement Factor:       -1
+    Release Nodes:                    true
+    Time Limit Factor:                0.25
+
+  Flow Parameters: 
+    Algorithm:                        do_nothing
+
+-------------------------------------------------------------------------------
+Refinement Parameters:
+  Rebalancing Algorithm:              simple_rebalancer
+  Refine Until No Improvement:        false
+  Relative Improvement Threshold:     0
+  Maximum Batch Size:                 18446744073709551615
+  Min Border Vertices Per Thread:     0
+
+  Label Propagation Parameters:
+    Algorithm:                        label_propagation
+    Maximum Iterations:               5
+    Rebalancing:                      true
+    HE Size Activation Threshold:     100
+
+  FM Parameters: 
+    Algorithm:                        kway_fm
+    Multitry Rounds:                  10
+    Perform Moves Globally:           false
+    Parallel Global Rollbacks:        true
+    Rollback Bal. Violation Factor:   1.25
+    Num Seed Nodes:                   25
+    Enable Random Shuffle:            true
+    Obey Minimal Parallelism:         true
+    Minimum Improvement Factor:       -1
+    Release Nodes:                    true
+    Time Limit Factor:                0.25
+
+  Flow Parameters: 
+    Algorithm:                        do_nothing
+-------------------------------------------------------------------------------
+Shared Memory Parameters:             
+  Number of Threads:                  16
+  Number of used NUMA nodes:          1
+  Use Localized Random Shuffle:       false
+  Random Shuffle Block Size:          2
+------------------------------------------------------------------------------- 
+
+******************************************************************************** 
+*                                    Input                                     * 
+******************************************************************************** 
+Hypergraph Information 
+Name :  
+# HNs : 8 # HEs : 6 # pins: 14 # graph edges: 2 
+HE size             HE weight           HN degree           HN weight 
+| min= 1            | min= 1            | min= 1            | min= 1           
+| Q1 = 2            | Q1 = 1            | Q1 = 1            | Q1 = 1           
+| med= 2            | med= 1            | med= 2            | med= 1           
+| Q3 = 3            | Q3 = 1            | Q3 = 2            | Q3 = 1           
+| max= 3            | max= 1            | max= 3            | max= 1           
+| avg= 2.33333      | avg= 1            | avg= 1.75         | avg= 1           
+| sd = 0.816497     | sd = 0            | sd = 0.707107     | sd = 0           
+[1m 
+Hypergraph contains fixed vertices [0m 
+Fixed vertex weight of block 0:   w( 0 ) =    2  max( 0 ) =    1
+Fixed vertex weight of block 1:   w( 1 ) =    1  max( 1 ) = 1500
+
+******************************************************************************** 
+*                              Preprocessing...                                * 
+******************************************************************************** 
+# Communities : 3 
+# HNs Per Community # Internal Pins     Internal Degree Sum 
+| min= 2            | min= 4            | min= 4           
+| Q1 = 2            | Q1 = 4            | Q1 = 4           
+| med= 3            | med= 5            | med= 5           
+| Q3 = 3            | Q3 = 5            | Q3 = 5           
+| max= 3            | max= 5            | max= 5           
+| avg= 2.66667      | avg= 4.66667      | avg= 4.66667     
+| sd = 0            | sd = 0            | sd = 0           
+******************************************************************************** 
+*                                Coarsening...                                 * 
+******************************************************************************** 
+Hypergraph Information 
+Name : Coarsened Hypergraph 
+# HNs : 8 # HEs : 6 # pins: 14 # graph edges: 2 
+HE size             HE weight           HN degree           HN weight 
+| min= 1            | min= 1            | min= 1            | min= 1           
+| Q1 = 2            | Q1 = 1            | Q1 = 1            | Q1 = 1           
+| med= 2            | med= 1            | med= 2            | med= 1           
+| Q3 = 3            | Q3 = 1            | Q3 = 2            | Q3 = 1           
+| max= 3            | max= 1            | max= 3            | max= 1           
+| avg= 2.33333      | avg= 1            | avg= 1.75         | avg= 1           
+| sd = 0.816497     | sd = 0            | sd = 0.707107     | sd = 0           
+[1m 
+Hypergraph contains fixed vertices [0m 
+Fixed vertex weight of block 0:   w( 0 ) =    2  max( 0 ) =    1
+Fixed vertex weight of block 1:   w( 1 ) =    1  max( 1 ) = 1500
+
+******************************************************************************** 
+*                           Initial Partitioning...                            * 
+******************************************************************************** 
+Initial Partitioning Results: 
+cut       = 4 
+imbalance = 1 
+Part sizes and weights: 
+[1;91m|block 0| = 2  w( 0 ) = 2  max( 0 ) = 1
+[0m|block 1| = 6  w( 1 ) = 6  max( 1 ) = 1500
+ 
+Initial Partitioning Algorithm Summary: 
+Number of Initial Partitioning Calls = 1 
+Average Number of Thread per IP Call = 14 
+ 
+[1mAlgorithm                      Avg. Quality    Total Time (s)  Total Best Total Best (%)[0m
+greedy_round_robin_fm          4               0.000403869     0          0               
+greedy_global_fm               4               0.000299898     0          0               
+greedy_sequential_fm           4               0.000221839     0          0               
+random                         4               0.000109718     0          0               
+bfs                            4               0.000230717     0          0               
+label_propagation              3.3             0.000282649     0          0               
+greedy_round_robin_max_net     4               0.000348021     0          0               
+greedy_global_max_net          4               0.000361338     1          100             
+greedy_sequential_max_net      4               0.000110441     0          0               
+
+******************************************************************************** 
+*                               Local Search...                                * 
+******************************************************************************** 
+[1;91m Partition is imbalanced (Current Imbalance: 1 ) [0m 
+Part weights: (violations in red) 
+[1;91m|block 0| = 2  w( 0 ) = 2  max( 0 ) = 1
+[0m|block 1| = 6  w( 1 ) = 6  max( 1 ) = 1500
+[1;91m Start rebalancing! [0m 
+[1;92m Rebalancer improves solution quality by 0 (Current Imbalance: 1 ) [0m 
+Local Search Results: 
+cut       = 4 
+imbalance = 1 
+Part sizes and weights: 
+[1;91m|block 0| = 2  w( 0 ) = 2  max( 0 ) = 1
+[0m|block 1| = 6  w( 1 ) = 6  max( 1 ) = 1500
+ 
+Hypergraph Information 
+Name : Uncoarsened Hypergraph 
+# HNs : 8 # HEs : 6 # pins: 14 # graph edges: 2 
+HE size             HE weight           HN degree           HN weight 
+| min= 1            | min= 1            | min= 1            | min= 1           
+| Q1 = 2            | Q1 = 1            | Q1 = 1            | Q1 = 1           
+| med= 2            | med= 1            | med= 2            | med= 1           
+| Q3 = 3            | Q3 = 1            | Q3 = 2            | Q3 = 1           
+| max= 3            | max= 1            | max= 3            | max= 1           
+| avg= 2.33333      | avg= 1            | avg= 1.75         | avg= 1           
+| sd = 0.816497     | sd = 0            | sd = 0.707107     | sd = 0           
+[1m 
+Hypergraph contains fixed vertices [0m 
+Fixed vertex weight of block 0:   w( 0 ) =    2  max( 0 ) =    1
+Fixed vertex weight of block 1:   w( 1 ) =    1  max( 1 ) = 1500
+-------------------------------------------------------------------------------- 

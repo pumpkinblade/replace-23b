@@ -98,8 +98,7 @@ if(WIN32)
       $<TARGET_FILE_DIR:${CMAKE_PROJECT_NAME}>/kahypar.dll
   )
 else()
-  add_library( glpk SHARED IMPORTED )
-  set_target_properties( glpk PROPERTIES IMPORTED_LOCATION ${GLPK_HOME}/libglpk.so.40 )
+  target_link_libraries(replace PRIVATE ${GLPK_HOME}/libglpk.so.40 )
 
   add_library( kahypar SHARED IMPORTED )
   set_target_properties( kahypar PROPERTIES IMPORTED_LOCATION ${KAHYPAR_HOME}/libkahypar.so )

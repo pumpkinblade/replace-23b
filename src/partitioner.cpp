@@ -256,20 +256,193 @@ namespace replace
   void Partitioner::partitionInstance(std::shared_ptr<PlacerBase> &pb_){
     // convert the instance and net to hypergraph
     LOG_INFO("start partition");
-    // cheat: using extId
+    std::vector<int> macroIds;
+    int macroIdCount=0;
+    int minTechAvgArea=0;
     for(int i = 0; i < pb_->insts().size(); i++)
     {
       pb_->insts()[i]->setExtId(i);
+      if(pb_->insts()[i]->isMacro()){
+        macroIds.push_back(i);
+        pb_->insts()[i]->setMacroId(macroIdCount);
+        macroIdCount++;
+      }else{
+        pb_->insts()[i]->setMacroId(-1);
+        int techAvgArea=0;
+        for(auto Tech:pb_->techs_){
+          LibCell* libcell=Tech->libCell(pb_->insts()[i]->libCellId());
+          int area=libcell->sizeX()*libcell->sizeY();
+          techAvgArea=(techAvgArea+area)/2;
+        }
+        if(minTechAvgArea==0){
+          minTechAvgArea=techAvgArea;
+        }else if(techAvgArea<minTechAvgArea){
+          minTechAvgArea=techAvgArea;
+        }
+      }
     }
     int instanceNum=pb_->insts_.size();
+    std::vector<Net*> netList = pb_->nets();
     int netNum=pb_->nets().size();
-    const kahypar_hypernode_id_t num_vertices = instanceNum;
-    const kahypar_hyperedge_id_t num_hyperedges = netNum;
 
-    std::unique_ptr<kahypar_hyperedge_weight_t[]> hyperedge_weights = std::make_unique<kahypar_hyperedge_weight_t[]>(netNum);
+    int macroNums[netNum];
+    std::vector<Net*> hasMacroNets;
+    int maxMacroNum=1;
+    for(int i=0;i<netNum;i++){
+      bool hasMacro = false;
+      int macroNum=0;
+      // check if this net has macro
+      Net* tmpNet = netList[i];
+      for(int j=0;j<tmpNet->pins().size();j++){
+        Pin* tmpPin = tmpNet->pins()[j];
+        Instance* tmpInst = tmpPin->instance();
+        if(tmpInst->isMacro()){
+          if(macroNum==0){
+            hasMacroNets.push_back(tmpNet);
+          }
+          macroNum++;
+        }
+      }
+      if(macroNum>maxMacroNum){
+          maxMacroNum=macroNum;
+      }
+      macroNums[i]=macroNum;
+    }
+    // std::cout<<"maxMacroNum: "<<maxMacroNum<<std::endl;
+    // has macro hypergraph index num
+    int hasMacroNetNum = hasMacroNets.size();
+    int MacroNetIndxNum=0;
+    int hasMacroNetsMNums[hasMacroNetNum]={0};
+    for(int i=0;i<hasMacroNetNum;i++){
+      auto net = hasMacroNets[i];
+      for(int j=0;j<net->pins().size();j++){
+        Instance* tmpInst = net->pins()[j]->instance();
+        if(tmpInst->isMacro()){
+          MacroNetIndxNum++;
+          hasMacroNetsMNums[i]++;
+        }
+      }
+    }
+
+    int macroNumTot = macroIds.size();
+    // initial hypergraph1
+    const kahypar_hypernode_id_t num_vertices1 = macroNumTot;
+    const kahypar_hyperedge_id_t num_hyperedges1 = hasMacroNetNum;
+
+    std::unique_ptr<kahypar_hyperedge_weight_t[]> hyperedge_weights1 = std::make_unique<kahypar_hyperedge_weight_t[]>(hasMacroNetNum);
+
+    for(int i=0;i<hasMacroNetNum;i++){
+      hyperedge_weights1[i] = maxMacroNum-hasMacroNetsMNums[i]+1;
+      // hyperedge_weights1[i] = 1;
+    }
+    // get macro and stdcell ratio
+    // int macroStdcellAreaRatio=this->getMacroStdcellAreaRatio(pb_);
+    long vertex_weights_sum1=0;
+    std::unique_ptr<kahypar_hypernode_weight_t[]> vertex_weights1 = std::make_unique<kahypar_hypernode_weight_t[]>(macroNumTot);
+    for(int i=0;i<macroNumTot;i++){
+      vertex_weights1[i] = 1;
+      vertex_weights_sum1+=1;
+    }
+
+    std::unique_ptr<kahypar_hyperedge_id_t[]> hyperedges1 = std::make_unique<kahypar_hyperedge_id_t[]>(MacroNetIndxNum);
+    std::unique_ptr<size_t[]> hyperedge_indices1 = std::make_unique<size_t[]>(hasMacroNetNum+1);
+    int indicesIdx1 = 0;
+    std::cout<<"----------1----------"<<std::endl;
+    for(int i=0;i<hasMacroNetNum;i++){
+      hyperedge_indices1[i]=indicesIdx1;
+      Net* curNet = hasMacroNets[i];
+      for(int j=0 ; j<curNet->pins().size(); j++){
+        Instance* tmpInst = curNet->pins()[j]->instance();
+        if(tmpInst->isMacro()){
+          int nodeIndex=tmpInst->macroId();
+          hyperedges1[indicesIdx1]=nodeIndex;
+          indicesIdx1++;
+        }
+      }
+    }
+    // std::cout<<"----------2----------"<<std::endl;
+    hyperedge_indices1[hasMacroNetNum]=indicesIdx1-1;
+
+    kahypar_context_t* context = kahypar_context_new();
+    
+    const kahypar_partition_id_t num_blocks=2;
+    std::unique_ptr<kahypar_hypernode_weight_t[]> init_block_weights = std::make_unique<kahypar_hypernode_weight_t[]>(num_blocks);
+    
+    // get average technology ratio
+    double averageRatio=this->getAverageTechRatio(pb_);
+
+    // get blocks max weights
+    if(averageRatio==1){
+      double ratioA=0.5;
+      std::cout<<"averageRatio: "<<averageRatio<<std::endl;
+      init_block_weights[0]=int(ratioA*vertex_weights_sum1*1.2+1);
+      init_block_weights[1]=int(ratioA*vertex_weights_sum1*1.2+1);
+    }
+    else{
+      double ratioA=averageRatio/(averageRatio+1);
+      double ratioB=1/(averageRatio+1);
+      string topTech=pb_->die("top")->tech()->name();
+      string botTech=pb_->die("bottom")->tech()->name();
+      string Tech1Name=pb_->techs()[0]->name();
+      string Tech2Name=pb_->techs()[1]->name();
+      if(topTech==Tech1Name){
+        init_block_weights[1]=int(ratioA*vertex_weights_sum1*1.2+1);
+        init_block_weights[0]=int(ratioB*vertex_weights_sum1*1.2+1);
+      }else if(topTech==Tech2Name){
+        init_block_weights[0]=int(ratioA*vertex_weights_sum1*1.2+1);
+        init_block_weights[1]=int(ratioB*vertex_weights_sum1*1.2+1);
+      }
+    }
+
+    std::cout<<"init_block_weights[0]: "<<init_block_weights[0]<<std::endl;
+    std::cout<<"init_block_weights[1]: "<<init_block_weights[1]<<std::endl;
+
+    kahypar_set_custom_target_block_weights(num_blocks,init_block_weights.get() , context);
+    const double imbalance = 0.1;
+
+    kahypar_hyperedge_weight_t objective = 0;
+
+    std::vector<kahypar_partition_id_t> partition1(num_vertices1, -1);
+
+    kahypar_configure_context_from_file(context, "./test/cut_rKaHyPar_sea20.ini");
+    
+    kahypar_set_seed(context, 42);
+
+    kahypar_hypergraph_t* hypergraph1 = kahypar_create_hypergraph(num_blocks, num_vertices1, num_hyperedges1, hyperedge_indices1.get(), hyperedges1.get(), hyperedge_weights1.get(), vertex_weights1.get());
+              
+    kahypar_partition_hypergraph(hypergraph1, num_blocks, imbalance, &objective, context, partition1.data());
+    std::cout<<"finish partition1"<<std::endl;
+
+    // initial hypergraph2
+    const kahypar_hypernode_id_t num_vertices2 = instanceNum;
+    const kahypar_hyperedge_id_t num_hyperedges2 = netNum;
+
+    long vertex_weights_sum2=0;
+    std::unique_ptr<kahypar_hypernode_weight_t[]> vertex_weights2 = std::make_unique<mt_kahypar_hypernode_weight_t[]>(instanceNum);
+    for(int i=0;i<instanceNum;i++){
+      Instance* inst_=pb_->insts()[i];
+      if(inst_->isMacro()){
+        // vertex_weights[i] = macroStdcellAreaRatio;
+        // vertex_weights_sum += macroStdcellAreaRatio;
+        vertex_weights2[i] = 20;
+        vertex_weights_sum2 += vertex_weights2[i];
+      }
+      else{
+        int techAvgArea=0;
+        for(auto Tech:pb_->techs_){
+          LibCell* libcell=Tech->libCell(pb_->insts()[i]->libCellId());
+          int area=libcell->sizeX()*libcell->sizeY();
+          techAvgArea=(techAvgArea+area)/2;
+        }
+        vertex_weights2[i] = int(techAvgArea/minTechAvgArea);
+        vertex_weights_sum2+=vertex_weights2[i];
+      }
+    }
+
+    std::unique_ptr<kahypar_hyperedge_weight_t[]> hyperedge_weights2 = std::make_unique<kahypar_hyperedge_weight_t[]>(netNum);
 
     for(int i=0;i<netNum;i++){
-      hyperedge_weights[i] = 1;
+      hyperedge_weights2[i] = 1;
     }
 
     // calculate the length of hyperedges
@@ -280,26 +453,24 @@ namespace replace
     }
 
     // initial hyperedges
-    std::unique_ptr<kahypar_hyperedge_id_t[]> hyperedges = std::make_unique<kahypar_hyperedge_id_t[]>(hyperedgesLength);
-    std::unique_ptr<size_t[]> hyperedge_indices = std::make_unique<size_t[]>(netNum+1);
-    int indicesIdx = 0;
+    std::unique_ptr<kahypar_hyperedge_id_t[]> hyperedges2 = std::make_unique<kahypar_hyperedge_id_t[]>(hyperedgesLength);
+    std::unique_ptr<size_t[]> hyperedge_indices2 = std::make_unique<size_t[]>(netNum+1);
+    int indicesIdx2 = 0;
     for(int i=0;i<netNum;i++){
-      hyperedge_indices[i]=indicesIdx;
+      hyperedge_indices2[i]=indicesIdx2;
       Net* curNet = pb_->nets()[i];
       for(int j=0 ; j<curNet->pins().size(); j++){
         Pin* curPin = curNet->pins()[j];
         int nodeIndex=curPin->instance()->extId();
         // std::cout<<"extid: "<<nodeIndex<<std::endl;
-        hyperedges[indicesIdx]=nodeIndex;
-        indicesIdx++;
+        hyperedges2[indicesIdx2]=nodeIndex;
+        indicesIdx2++;
       }
     }
+    hyperedge_indices2[netNum]=indicesIdx2-1;
 
     const kahypar_partition_id_t k=2;
-    std::unique_ptr<kahypar_hypernode_weight_t[]> init_block_weights = std::make_unique<kahypar_hypernode_weight_t[]>(2);
-    
-    // get average technology ratio
-    double averageRatio=this->getAverageTechRatio(pb_);
+
     if(averageRatio==1){
       double ratioA=0.5;
       std::cout<<"averageRatio: "<<averageRatio<<std::endl;
@@ -314,37 +485,42 @@ namespace replace
       string Tech1Name=pb_->techs()[0]->name();
       string Tech2Name=pb_->techs()[1]->name();
       if(topTech==Tech1Name){
-        init_block_weights[1]=int(ratioA*instanceNum*1.1);
-        init_block_weights[0]=int(ratioB*instanceNum*1.1);
+        init_block_weights[1]=int(ratioA*vertex_weights_sum2*1.1);
+        init_block_weights[0]=int(ratioB*vertex_weights_sum2*1.1);
       }else if(topTech==Tech2Name){
-        init_block_weights[0]=int(ratioA*instanceNum*1.1);
-        init_block_weights[1]=int(ratioB*instanceNum*1.1);
+        init_block_weights[0]=int(ratioA*vertex_weights_sum2*1.1);
+        init_block_weights[1]=int(ratioB*vertex_weights_sum2*1.1);
       }
     }
 
     std::cout<<"init_block_weights[0]: "<<init_block_weights[0]<<std::endl;
     std::cout<<"init_block_weights[1]: "<<init_block_weights[1]<<std::endl;
 
-    kahypar_context_t* context = kahypar_context_new();
-
     kahypar_set_custom_target_block_weights(k,init_block_weights.get() , context);
+    // fix macro
+    std::unique_ptr<kahypar_partition_id_t[]> fixed_vertices2 = std::make_unique<mt_kahypar_partition_id_t[]>(instanceNum);
+    int j=0;
+    for(int i=0;i<instanceNum;i++){
+      if(i==macroIds[j]){
+        fixed_vertices2[i]=partition1[j];
+        std::cout<<"macroId: "<<macroIds[j]<<"  partition1 "<<partition1[j]<<std::endl;
+        j++;
+      }else{
+        fixed_vertices2[i]=-1;
+      }
+    }
 
-    hyperedge_indices[netNum]=indicesIdx-1;
-    const double imbalance = 0.1;
+    kahypar_hypergraph_t* hypergraph2 = kahypar_create_hypergraph(k, num_vertices2, num_hyperedges2, hyperedge_indices2.get(), hyperedges2.get(), hyperedge_weights2.get(), vertex_weights2.get());
 
-    kahypar_hyperedge_weight_t objective = 0;
+    kahypar_set_fixed_vertices(hypergraph2, fixed_vertices2.get());
 
-    std::vector<kahypar_partition_id_t> partition(num_vertices, -1);
+    std::vector<kahypar_partition_id_t> partition2(num_vertices2, -1);
 
-    kahypar_configure_context_from_file(context, "./test/cut_rKaHyPar_sea20.ini");
+    kahypar_configure_context_from_file(context, "./test/cut_kKaHyPar_sea20.ini");
     
     kahypar_set_seed(context, 42);
 
-    kahypar_partition(num_vertices, num_hyperedges,
-                      imbalance, k,
-                      /*vertex_weights */ nullptr, hyperedge_weights.get(),
-                      hyperedge_indices.get(), hyperedges.get(),
-                      &objective, context, partition.data());
+    kahypar_partition_hypergraph(hypergraph2, k, imbalance, &objective, context, partition2.data());
 
     // for(int i = 0; i != num_vertices; ++i) {
     //   std::cout << i << ":" << partition[i] << std::endl;
@@ -361,18 +537,13 @@ namespace replace
     std::vector<Instance*> macros;
     for(Instance* inst : pb_->insts())
     {
-      // collect all macro
-      if(inst->isMacro()){
-        macros.push_back(inst);
-        continue;
-      }
       auto instTopArea = inst->dx() * (long long)inst->dy();
       LibCell* botLibCell = botdie->tech()->libCell(inst->libCellId());
       auto instBotArea = botLibCell->sizeX() * (long long)botLibCell->sizeY();
 
       bool moveToTop, moveToBot;
       auto extid=inst->extId();
-      if (partition[extid] == 0)
+      if (partition2[extid] == 0)
       {
         moveToTop =  true;
         moveToBot = false;
@@ -398,20 +569,6 @@ namespace replace
     std::cout<<"---------------------2"<<std::endl;
     std::sort(macros.begin(), macros.end(), [](const Instance* left,
     const Instance* right){ return left->size() > right->size(); });
-    // A greedy macro partition method, which may be not optimal.
-    int topMacroSize = 0;
-    int bottomMacroSize = 0;
-    // for(Instance* macro : macros){
-    //   if(topMacroSize > bottomMacroSize){
-    //     isBot[macro->extId()] = true;
-    //     macro->setSize(*botdie->tech());
-    //     topdie->removeInstance(macro);
-    //     botdie->addInstance(macro);
-    //     bottomMacroSize += macro->size();
-    //   }else {
-    //     topMacroSize += macro->size();
-    //   }
-    // }
     std::cout<<"---------------------3"<<std::endl;
     // generate terminals
     int numTerms = 0;
@@ -967,12 +1124,28 @@ namespace replace
     return ratio;
   }
 
+  double Partitioner::getDieUtilizeRatio(Die* die_){
+    int instanceNum=die_->insts().size();
+    float maxUtil = die_->maxUtil();
+    int dieArea=die_->coreDx()*die_->coreDy();
+    int instAreaSum=0;
+    for(auto inst : die_->insts()){
+      int instArea=inst->dx()*inst->dy();
+      instAreaSum += instArea;
+    }
+    double utilizeRatio=(double)instAreaSum/(double)dieArea;
+    double maxUtilRatio=(double)utilizeRatio/(double)maxUtil;
+    return maxUtilRatio;
+
+  }
+
   void Partitioner::mtPartitionInstance2(std::shared_ptr<PlacerBase> &pb_){
     // convert the instance and net to hypergraph
     LOG_INFO("start partition");
     // cheat: using extId and get macroIds
     std::vector<int> macroIds;
     int macroIdCount=0;
+    int minTechAvgArea=0;
     for(int i = 0; i < pb_->insts().size(); i++)
     {
       pb_->insts()[i]->setExtId(i);
@@ -982,6 +1155,17 @@ namespace replace
         macroIdCount++;
       }else{
         pb_->insts()[i]->setMacroId(-1);
+        int techAvgArea=0;
+        for(auto Tech:pb_->techs_){
+          LibCell* libcell=Tech->libCell(pb_->insts()[i]->libCellId());
+          int area=libcell->sizeX()*libcell->sizeY();
+          techAvgArea=(techAvgArea+area)/2;
+        }
+        if(minTechAvgArea==0){
+          minTechAvgArea=techAvgArea;
+        }else if(techAvgArea<minTechAvgArea){
+          minTechAvgArea=techAvgArea;
+        }
       }
     }
     int instanceNum=pb_->insts_.size();
@@ -1087,8 +1271,8 @@ namespace replace
     if(averageRatio==1){
       double ratioA=0.5;
       std::cout<<"averageRatio: "<<averageRatio<<std::endl;
-      init_block_weights[0]=int(ratioA*vertex_weights_sum1*1.1+1);
-      init_block_weights[1]=int(ratioA*vertex_weights_sum1*1.1+1);
+      init_block_weights[0]=int(ratioA*vertex_weights_sum1*1.05+1);
+      init_block_weights[1]=int(ratioA*vertex_weights_sum1*1.05+1);
     }
     else{
       double ratioA=averageRatio/(averageRatio+1);
@@ -1098,11 +1282,11 @@ namespace replace
       string Tech1Name=pb_->techs()[0]->name();
       string Tech2Name=pb_->techs()[1]->name();
       if(topTech==Tech1Name){
-        init_block_weights[1]=int(ratioA*vertex_weights_sum1*1.1+1);
-        init_block_weights[0]=int(ratioB*vertex_weights_sum1*1.1+1);
+        init_block_weights[1]=int(ratioA*vertex_weights_sum1*1.2+1);
+        init_block_weights[0]=int(ratioB*vertex_weights_sum1*1.2+1);
       }else if(topTech==Tech2Name){
-        init_block_weights[0]=int(ratioA*vertex_weights_sum1*1.1+1);
-        init_block_weights[1]=int(ratioB*vertex_weights_sum1*1.1+1);
+        init_block_weights[0]=int(ratioA*vertex_weights_sum1*1.2+1);
+        init_block_weights[1]=int(ratioB*vertex_weights_sum1*1.2+1);
       }
     }
 
@@ -1171,19 +1355,29 @@ namespace replace
     std::unique_ptr<mt_kahypar_hypernode_weight_t[]> vertex_weights2 = std::make_unique<mt_kahypar_hypernode_weight_t[]>(instanceNum);
     for(int i=0;i<instanceNum;i++){
       Instance* inst_=pb_->insts()[i];
-      // if(inst_->isMacro()){
-      //   // vertex_weights[i] = macroStdcellAreaRatio;
-      //   // vertex_weights_sum += macroStdcellAreaRatio;
-      //   vertex_weights[i] = 10;
-      //   vertex_weights_sum += 10;
-      // }
-      // else{
-      //   vertex_weights[i] = 1;
-      //   vertex_weights_sum+=1;
-      // }
-      vertex_weights2[i] = 1;
-      vertex_weights_sum2+=1;
+      if(inst_->isMacro()){
+        // vertex_weights[i] = macroStdcellAreaRatio;
+        // vertex_weights_sum += macroStdcellAreaRatio;
+        vertex_weights2[i] = 1;
+        vertex_weights_sum2 += vertex_weights2[i];
+      }
+      else{
+        int techAvgArea=0;
+        for(auto Tech:pb_->techs_){
+          LibCell* libcell=Tech->libCell(inst_->libCellId());
+          int area=libcell->sizeX()*libcell->sizeY();
+          if(techAvgArea==0){
+            techAvgArea=area;
+          }
+          else{
+            techAvgArea=(techAvgArea+area)/2;
+          }
+        }
+        vertex_weights2[i] = int(techAvgArea/minTechAvgArea)+1;
+        vertex_weights_sum2+=vertex_weights2[i];
+      }
     }
+    std::cout<<"vertex_weights_sums2: "<<vertex_weights_sum2<<std::endl;
     for(int i=0;i<netNum;i++){
       // hyperedge_weights2[i] = maxMacroNum-macroNums[i]+1;
       hyperedge_weights2[i] = 1;
@@ -1209,12 +1403,32 @@ namespace replace
       }
     }
     hyperedge_indices2[netNum]=indicesIdx-1;
+    Die* topdie = pb_->die("top");
+    Die* botdie = pb_->die("bottom");
+    long areaTot=topdie->coreDx()*topdie->coreDy()*topdie->maxUtil();
+    areaTot+=botdie->coreDx()*botdie->coreDy()*botdie->maxUtil();
+
+    
+    int max_vertex_weights_sum2=areaTot/minTechAvgArea;
+    std::cout<<"max_vertex_weights_sum2: "<<max_vertex_weights_sum2<<std::endl;
+
 
     if(averageRatio==1){
       double ratioA=0.5;
       std::cout<<"averageRatio: "<<averageRatio<<std::endl;
-      init_block_weights[0]=int(ratioA*vertex_weights_sum2*1.1+1);
-      init_block_weights[1]=int(ratioA*vertex_weights_sum2*1.1+1);
+      int topRestWeights=int(ratioA*max_vertex_weights_sum2);
+      int botRestWeights=int(ratioA*max_vertex_weights_sum2);
+      for(int i=0;i<macroNumTot;i++){
+        if(partition1[i]==0){
+          int macroWeight=(pb_->insts()[macroIds[i]]->dx()*pb_->insts()[macroIds[i]]->dy())/minTechAvgArea;
+          topRestWeights=topRestWeights-macroWeight+1;
+        }else{
+          int macroWeight=(pb_->insts()[macroIds[i]]->dx()*pb_->insts()[macroIds[i]]->dy())/minTechAvgArea;
+          botRestWeights=botRestWeights-macroWeight+1;
+        }
+      }
+      init_block_weights[0]=topRestWeights;
+      init_block_weights[1]=botRestWeights;
     }
     else{
       double ratioA=averageRatio/(averageRatio+1);
@@ -1224,11 +1438,33 @@ namespace replace
       string Tech1Name=pb_->techs()[0]->name();
       string Tech2Name=pb_->techs()[1]->name();
       if(topTech==Tech1Name){
-        init_block_weights[1]=int(ratioA*vertex_weights_sum2*1.1+1);
-        init_block_weights[0]=int(ratioB*vertex_weights_sum2*1.1+1);
+        int topRestWeights=int(ratioB*max_vertex_weights_sum2);
+        int botRestWeights=int(ratioA*max_vertex_weights_sum2);
+        for(int i=0;i<macroNumTot;i++){
+          if(partition1[i]==0){
+            int macroWeight=int((pb_->insts()[macroIds[i]]->dx()*pb_->insts()[macroIds[i]]->dy())/minTechAvgArea);
+            topRestWeights=topRestWeights-macroWeight+1;
+          }else{
+            int macroWeight=int((pb_->insts()[macroIds[i]]->dx()*pb_->insts()[macroIds[i]]->dy())/minTechAvgArea);
+            botRestWeights=botRestWeights-macroWeight+1;
+          }
+        }
+        init_block_weights[0]=topRestWeights;
+        init_block_weights[1]=botRestWeights;
       }else if(topTech==Tech2Name){
-        init_block_weights[0]=int(ratioA*vertex_weights_sum2*1.1+1);
-        init_block_weights[1]=int(ratioB*vertex_weights_sum2*1.1+1);
+        int topRestWeights=int(ratioA*max_vertex_weights_sum2);
+        int botRestWeights=int(ratioB*max_vertex_weights_sum2);
+        for(int i=0;i<macroNumTot;i++){
+          if(partition1[i]==0){
+            int macroWeight=(pb_->insts()[macroIds[i]]->dx()*pb_->insts()[macroIds[i]]->dy())/minTechAvgArea;
+            topRestWeights=topRestWeights-macroWeight+1;
+          }else{
+            int macroWeight=(pb_->insts()[macroIds[i]]->dx()*pb_->insts()[macroIds[i]]->dy())/minTechAvgArea;
+            botRestWeights=botRestWeights-macroWeight+1;
+          }
+        }
+        init_block_weights[0]=topRestWeights;
+        init_block_weights[1]=botRestWeights;
       }
     }
 
@@ -1263,64 +1499,79 @@ namespace replace
 
     struct timeval begin2, end2;
     gettimeofday(&begin2, 0);
-
-    // Partition Hypergraph
-    mt_kahypar_partitioned_hypergraph_t partitioned_hg2 =
-      mt_kahypar_partition(hypergraph2, context);
-    
-    // Extract Partition
+    mt_kahypar_partitioned_hypergraph_t partitioned_hg2;
     std::unique_ptr<mt_kahypar_partition_id_t[]> partition2 =
-      std::make_unique<mt_kahypar_partition_id_t[]>(mt_kahypar_num_hypernodes(hypergraph2));
-    mt_kahypar_get_partition(partitioned_hg2, partition2.get());
+    std::make_unique<mt_kahypar_partition_id_t[]>(mt_kahypar_num_hypernodes(hypergraph2));
+    std::unique_ptr<mt_kahypar_hypernode_weight_t[]> block_weights2 = std::make_unique<mt_kahypar_hypernode_weight_t[]>(2);
 
-    // Extract Block Weights
-    std::unique_ptr<mt_kahypar_hypernode_weight_t[]> block_weights2 =
-      std::make_unique<mt_kahypar_hypernode_weight_t[]>(2);
-    mt_kahypar_get_block_weights(partitioned_hg2, block_weights2.get());
-
-    // Compute Metrics
-    const double imbalance2 = mt_kahypar_imbalance(partitioned_hg2, context);
-    const double km12 = mt_kahypar_km1(partitioned_hg2);
-
-    // Stop measuring time and calculate the elapsed time
-    gettimeofday(&end2, 0);
-    long seconds2 = end2.tv_sec - begin2.tv_sec;
-    long microseconds2 = end2.tv_usec - begin2.tv_usec;
-    double elapsed2 = seconds2 + microseconds2*1e-6;
-
-    // move the instance to the bottom die
-    // create bottom nets
-    LOG_INFO("---------------------");
-    std::cout<<"---------------------1"<<std::endl;
-
-    // Output Results
-    std::cout << "Partitioning Results:" << std::endl;
-    std::cout << "Imbalance         = " << imbalance2 << std::endl;
-    std::cout << "Km1               = " << km12 << std::endl;
-    std::cout << "Weight of Block 0 = " << block_weights2[0] << std::endl;
-    std::cout << "Weight of Block 1 = " << block_weights2[1] << std::endl;
-    std::cout << "Run time = " << std::setprecision(3)<< elapsed2 <<"s"<< std::endl;
-    Die* topdie = pb_->die("top");
-    Die* botdie = pb_->die("bottom");
     std::vector<bool> isBot(pb_->insts().size(), false);
-    std::vector<Instance*> macros;
-    for(Instance* inst : pb_->insts())
-    {
-      // auto instTopArea = inst->dx() * (long long)inst->dy();
-      // LibCell* botLibCell = botdie->tech()->libCell(inst->libCellId());
-      // auto instBotArea = botLibCell->sizeX() * (long long)botLibCell->sizeY();
 
-      auto extid=inst->extId();
-      if (partition2[extid] == 1){
-        isBot[extid] = true;
-        inst->setSize(*botdie->tech());
-        topdie->removeInstance(inst);
-        botdie->addInstance(inst);
-      }else{
-        isBot[extid] = false;
+    bool isLegal=false;
+    while(!isLegal){
+      // Partition Hypergraph
+      partitioned_hg2 = mt_kahypar_partition(hypergraph2, context);
+      // Extract Partition
+      mt_kahypar_get_partition(partitioned_hg2, partition2.get());
+      // Extract Block Weights
+      mt_kahypar_get_block_weights(partitioned_hg2, block_weights2.get());
+      // Compute Metrics
+      const double imbalance2 = mt_kahypar_imbalance(partitioned_hg2, context);
+      const double km12 = mt_kahypar_km1(partitioned_hg2);
+
+      // Stop measuring time and calculate the elapsed time
+      gettimeofday(&end2, 0);
+      long seconds2 = end2.tv_sec - begin2.tv_sec;
+      long microseconds2 = end2.tv_usec - begin2.tv_usec;
+      double elapsed2 = seconds2 + microseconds2*1e-6;
+
+      // move the instance to the bottom die
+      // create bottom nets
+      LOG_INFO("---------------------");
+      std::cout<<"---------------------1"<<std::endl;
+
+      // Output Results
+      std::cout << "Partitioning Results:" << std::endl;
+      std::cout << "Imbalance         = " << imbalance2 << std::endl;
+      std::cout << "Km1               = " << km12 << std::endl;
+      std::cout << "Weight of Block 0 = " << block_weights2[0] << std::endl;
+      std::cout << "Weight of Block 1 = " << block_weights2[1] << std::endl;
+      std::cout << "Run time = " << std::setprecision(3)<< elapsed2 <<"s"<< std::endl;
+      for(Instance* inst : pb_->insts())
+      {
+        // auto instTopArea = inst->dx() * (long long)inst->dy();
+        // LibCell* botLibCell = botdie->tech()->libCell(inst->libCellId());
+        // auto instBotArea = botLibCell->sizeX() * (long long)botLibCell->sizeY();
+        auto extid=inst->extId();
+        if (partition2[extid] == 1){
+          isBot[extid] = true;
+          inst->setSize(*botdie->tech());
+          topdie->removeInstance(inst);
+          botdie->addInstance(inst);
+        }else{
+          isBot[extid] = false;
+        }
       }
-
+      // calculate the utilize of each die
+      // double topDieUtilizeRatio=this->getDieUtilizeRatio(topdie);
+      // double botDieUtilizeRatio=this->getDieUtilizeRatio(botdie);
+      // std::cout<<"topDieUtilizeRatio: "<<topDieUtilizeRatio<<std::endl;
+      // std::cout<<"botDieUtilizeRatio: "<<botDieUtilizeRatio<<std::endl;
+      // if(topDieUtilizeRatio<=1 && botDieUtilizeRatio<=1){
+      //   isLegal=true;
+      //   break;
+      // }else{
+        // int init_block_weights_sum=init_block_weights[0]+init_block_weights[1];
+        // if(topDieUtilizeRatio>1){
+        //   init_block_weights[0]=int(block_weights2[0]/topDieUtilizeRatio)+1;
+        //   init_block_weights[1]=init_block_weights_sum-init_block_weights[0];
+        // }else if(botDieUtilizeRatio>1){
+        //   init_block_weights[1]=int(block_weights2[1]/botDieUtilizeRatio)+1;
+        //   init_block_weights[0]=init_block_weights_sum-init_block_weights[1];       
+        // }
+      // }
+    isLegal=true;
     }
+    
     mt_kahypar_free_context(context);
     mt_kahypar_free_hypergraph(hypergraph1);
     mt_kahypar_free_hypergraph(hypergraph2);
@@ -1403,7 +1654,6 @@ namespace replace
         net2->addPin(pinBot);
       }
     }
-
     // clear net name
     pb_->netNameStor_ = std::vector<string>();
     std::cout<<"---------------------4"<<std::endl;

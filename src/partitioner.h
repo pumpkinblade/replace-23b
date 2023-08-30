@@ -31,6 +31,9 @@ namespace replace
 
     int getMacroStdcellAreaRatio(std::shared_ptr<PlacerBase> &pb_);
 
+    double getDieUtilizeRatio(Die* die_);
+
+
 private:
     // std::shared_ptr<Placer23b> placer23b_;
     // std::shared_ptr<Technology> technology_;

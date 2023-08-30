@@ -83,7 +83,8 @@ int main(int argc, const char *argv[])
 #if defined(WIN32) || defined(_WIN32)
     partitioner.partitionInstance(pb);
 #else
-    partitioner.mtPartitionInstance(pb);
+    // partitioner.partitionInstance(pb);
+    partitioner.mtPartitionInstance2(pb);
 #endif
   }
   else
