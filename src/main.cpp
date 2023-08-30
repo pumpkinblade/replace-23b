@@ -79,12 +79,12 @@ int main(int argc, const char *argv[])
   // partitioner.partitioning2(pb);
   // partitioner.partitionInstance(pb);
   // partitioner.mtPartitionInstance(pb);
-  Partitioner partitioner = Partitioner();
+  // Partitioner partitioner = Partitioner();
   // partitioner.partitioning2(pb);
 #if defined(WIN32) || defined(_WIN32)
   partitioner.partitionInstance(pb);
 #else
-  partitioner.mtPartitionInstance2(pb);
+  partitioner.mtPartitionInstance(pb);
 #endif
   Plot::plot(pb.get(), "./plot/cell", "after_partition");
 

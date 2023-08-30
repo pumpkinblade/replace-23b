@@ -21,6 +21,7 @@ namespace replace
 #if !defined(WIN32) && !defined(_WIN32)
     void mtPartitionInstance(std::shared_ptr<PlacerBase> &pb_);
 
+    void mtPartitionInstance2(std::shared_ptr<PlacerBase> &pb_);
     void partitionTest();
 
     void mtKahyparTest();
@@ -29,8 +30,6 @@ namespace replace
     double getAverageTechRatio(std::shared_ptr<PlacerBase> &pb_);
 
     int getMacroStdcellAreaRatio(std::shared_ptr<PlacerBase> &pb_);
-
-    void mtPartitionInstance2(std::shared_ptr<PlacerBase> &pb_);
 
 private:
     // std::shared_ptr<Placer23b> placer23b_;

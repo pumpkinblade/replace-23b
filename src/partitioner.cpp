@@ -1087,8 +1087,8 @@ namespace replace
     if(averageRatio==1){
       double ratioA=0.5;
       std::cout<<"averageRatio: "<<averageRatio<<std::endl;
-      init_block_weights[0]=int(ratioA*vertex_weights_sum1*1.15+1);
-      init_block_weights[1]=int(ratioA*vertex_weights_sum1*1.15+1);
+      init_block_weights[0]=int(ratioA*vertex_weights_sum1*1.1+1);
+      init_block_weights[1]=int(ratioA*vertex_weights_sum1*1.1+1);
     }
     else{
       double ratioA=averageRatio/(averageRatio+1);
@@ -1098,11 +1098,11 @@ namespace replace
       string Tech1Name=pb_->techs()[0]->name();
       string Tech2Name=pb_->techs()[1]->name();
       if(topTech==Tech1Name){
-        init_block_weights[1]=int(ratioA*vertex_weights_sum1*1.15+1);
-        init_block_weights[0]=int(ratioB*vertex_weights_sum1*1.15+1);
+        init_block_weights[1]=int(ratioA*vertex_weights_sum1*1.1+1);
+        init_block_weights[0]=int(ratioB*vertex_weights_sum1*1.1+1);
       }else if(topTech==Tech2Name){
-        init_block_weights[0]=int(ratioA*vertex_weights_sum1*1.15+1);
-        init_block_weights[1]=int(ratioB*vertex_weights_sum1*1.15+1);
+        init_block_weights[0]=int(ratioA*vertex_weights_sum1*1.1+1);
+        init_block_weights[1]=int(ratioB*vertex_weights_sum1*1.1+1);
       }
     }
 
@@ -1213,8 +1213,8 @@ namespace replace
     if(averageRatio==1){
       double ratioA=0.5;
       std::cout<<"averageRatio: "<<averageRatio<<std::endl;
-      init_block_weights[0]=int(ratioA*vertex_weights_sum2*1.15+1);
-      init_block_weights[1]=int(ratioA*vertex_weights_sum2*1.15+1);
+      init_block_weights[0]=int(ratioA*vertex_weights_sum2*1.1+1);
+      init_block_weights[1]=int(ratioA*vertex_weights_sum2*1.1+1);
     }
     else{
       double ratioA=averageRatio/(averageRatio+1);
@@ -1224,11 +1224,11 @@ namespace replace
       string Tech1Name=pb_->techs()[0]->name();
       string Tech2Name=pb_->techs()[1]->name();
       if(topTech==Tech1Name){
-        init_block_weights[1]=int(ratioA*vertex_weights_sum2*1.15+1);
-        init_block_weights[0]=int(ratioB*vertex_weights_sum2*1.15+1);
+        init_block_weights[1]=int(ratioA*vertex_weights_sum2*1.1+1);
+        init_block_weights[0]=int(ratioB*vertex_weights_sum2*1.1+1);
       }else if(topTech==Tech2Name){
-        init_block_weights[0]=int(ratioA*vertex_weights_sum2*1.15+1);
-        init_block_weights[1]=int(ratioB*vertex_weights_sum2*1.15+1);
+        init_block_weights[0]=int(ratioA*vertex_weights_sum2*1.1+1);
+        init_block_weights[1]=int(ratioB*vertex_weights_sum2*1.1+1);
       }
     }
 
