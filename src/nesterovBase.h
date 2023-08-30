@@ -55,6 +55,12 @@ namespace replace
     double cy() const { return cy_; }
     double dx() const { return dx_; }
     double dy() const { return dy_; }
+    double dLx() const { return cx_ - 0.5f * dDx_; }
+    double dLy() const { return cy_ - 0.5f * dDy_; }
+    double dUx() const { return cx_ + 0.5f * dDx_; }
+    double dUy() const { return cy_ + 0.5f * dDy_; }
+    double dDx() const { return dDx_; }
+    double dDy() const { return dDy_; }
     double theta() const { return theta_; }
 
     void setCenterLocation(double cx, double cy)
@@ -66,6 +72,11 @@ namespace replace
     {
       dx_ = dx;
       dy_ = dy;
+    }
+    void setDensitySize(double dDx, double dDy)
+    {
+      dDx_ = dDx;
+      dDy_ = dDy;
     }
     void setTheta(double theta) { theta_ = theta; }
 
@@ -85,6 +96,8 @@ namespace replace
     double cy_;
     double dx_;
     double dy_;
+    double dDx_; // density size x
+    double dDy_; // density size y
     double theta_;
 
     double densityScale_;
@@ -478,14 +491,16 @@ namespace replace
     Point getDensityGradientWithTheta(const GCell *gCell, double &gradTheta);
 
     // gradient of local density
-    Point getDensityGradientLocal(const GCell *gCell, double alpha, double beta, double &cellDelta);
-    Point getDensityGradientLocalWithTheta(const GCell *gCell, double alpha, double beta, double &cellDelta, double &gradTheta);
+    Point getLocalDensityGradient(const GCell *gCell, double alpha, double beta, double &cellDelta);
+    Point getLocalDensityGradientWithTheta(const GCell *gCell, double alpha, double beta, double &cellDelta, double &gradTheta);
 
     // for preconditioner
     Point getWireLengthPreconditioner(const GCell *gCell);
     Point getDensityPreconditioner(const GCell *gCell);
+    Point getLocalDensityPreconditioner(const GCell *gCell);
     double getWireLengthPreconditionerTheta(const GCell *gCell);
     double getDensityPreconditionerTheta(const GCell *gCell);
+    double getLocalDensityPreconditionerTheta(const GCell *gCell);
 
     // update electrostatic forces within Bin
     void updateDensityForceBin();
