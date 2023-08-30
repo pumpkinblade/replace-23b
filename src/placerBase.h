@@ -54,6 +54,9 @@ namespace replace
     void setExtId(int extId) { extId_ = extId; }
     int extId() const { return extId_; }
 
+    void setMacroId(int macroId) { macroId_ = macroId; }
+    int macroId() const { return macroId_; }
+
     void addPin(Pin *pin);
     const std::vector<Pin *> &pins() const { return pins_; }
 
@@ -83,6 +86,7 @@ namespace replace
     // For 23b
     std::string name_;
     int libCellId_;
+    int macroId_;
   };
 
   // A Pin belongs to one instance, can be connected to no more than one net,

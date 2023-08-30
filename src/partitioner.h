@@ -30,6 +30,8 @@ namespace replace
 
     int getMacroStdcellAreaRatio(std::shared_ptr<PlacerBase> &pb_);
 
+    void mtPartitionInstance2(std::shared_ptr<PlacerBase> &pb_);
+
 private:
     // std::shared_ptr<Placer23b> placer23b_;
     // std::shared_ptr<Technology> technology_;

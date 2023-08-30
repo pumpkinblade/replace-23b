@@ -18,8 +18,8 @@ namespace replace
 
     slogger_ = std::make_shared<spdlog::logger>("replace", begin(logSinks), end(logSinks));
     spdlog::register_logger(slogger_);
-    slogger_->set_level(spdlog::level::info);
-    slogger_->flush_on(spdlog::level::info);
+    slogger_->set_level(spdlog::level::debug);
+    slogger_->flush_on(spdlog::level::debug);
   }
 
 }
