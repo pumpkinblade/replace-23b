@@ -19,12 +19,6 @@
 
 namespace replace
 {
-  Partitioner::Partitioner(float targetDensity)
-  {
-    std::unique_ptr<Replace> rp(new Replace(targetDensity));
-    replace_ = std::move(rp);
-  }
-
   void moveDecide(int64_t topArea, int64_t botArea, int64_t topCap, int64_t botCap,
                   bool* moveToTop, bool* moveToBot)
   {
@@ -503,7 +497,7 @@ namespace replace
     LOG_INFO("finish partition");
   }
 
-#if !defined(WIN32) || !defined(_WIN32)
+#if !defined(WIN32) && !defined(_WIN32)
   void Partitioner::mtPartitionInstance(std::shared_ptr<PlacerBase> &pb_){
     // convert the instance and net to hypergraph
     LOG_INFO("start partition");
