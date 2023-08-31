@@ -18,13 +18,13 @@ namespace replace
     void partitioning2(std::shared_ptr<PlacerBase> pb_);
 
     void partitionInstance(std::shared_ptr<PlacerBase> &pb_);
-
+#if !defined(WIN32) || !defined(_WIN32)
     void mtPartitionInstance(std::shared_ptr<PlacerBase> &pb_);
 
     void partitionTest();
 
     void mtKahyparTest();
-
+#endif
     // analysis the different technology
     double getAverageTechRatio(std::shared_ptr<PlacerBase> &pb_);
 

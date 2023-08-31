@@ -65,8 +65,11 @@ int main(int argc, const char *argv[])
   // then we do partition
   Partitioner partitioner(targetDensity);
   // partitioner.partitioning2(pb);
+#if defined(WIN32) || defined(_WIN32)
   partitioner.partitionInstance(pb);
-  // partitioner.mtPartitionInstance(pb);
+#else
+  partitioner.mtPartitionInstance(pb);
+#endif
   Plot::plot(pb.get(), "./plot/cell", "after_partition");
 
   // then we do optimization

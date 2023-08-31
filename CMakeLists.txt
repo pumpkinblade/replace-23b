@@ -75,36 +75,40 @@ set(PLACE_SRC
 
 add_executable(replace ${PLACE_SRC} ${PLACE_HEADER})
 
-add_library( kahypar SHARED IMPORTED )
-set_target_properties( kahypar PROPERTIES IMPORTED_LOCATION ${KAHYPAR_HOME}/libkahypar.so )
-
-add_library( mtkahypar SHARED IMPORTED )
-set_target_properties( mtkahypar PROPERTIES IMPORTED_LOCATION ${MTKAHYPAR_HOME}/libmtkahypar.so )
-
 target_include_directories(replace PRIVATE ${SPDLOG_HOME}/include)
 target_include_directories(replace PRIVATE ${TCLAP_HOME}/include)
 target_include_directories(replace PRIVATE ${EIGEN_HOME}/include)
 target_include_directories(replace PRIVATE ${STB_HOME})
 target_include_directories(replace PRIVATE ${CIMG_HOME})
-target_include_directories(replace PRIVATE ${GLPK_HOME})
+target_include_directories(replace PRIVATE ${GLPK_HOME}/include)
 target_include_directories(replace PRIVATE ${KAHYPAR_HOME}/include)
-target_include_directories(replace PRIVATE ${MTKAHYPAR_HOME}/include)
-
-target_link_libraries(replace PRIVATE kahypar)
-target_link_libraries(replace PRIVATE mtkahypar)
-
 
 target_compile_definitions(replace PRIVATE -Dcimg_display=0)
 
-target_link_directories(replace PRIVATE ${GLPK_HOME})
 if(WIN32)
-  target_link_libraries(replace PRIVATE glpk_4_65.lib)
+  target_link_libraries(replace PRIVATE ${GLPK_HOME}/glpk_4_65.lib)
+  target_link_libraries(replace PRIVATE ${KAHYPAR_HOME}/kahypar.lib)
   add_custom_command(
-    TARGET replace
-    POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy 
+    TARGET replace POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy 
       ${GLPK_HOME}/glpk_4_65.dll 
       $<TARGET_FILE_DIR:${CMAKE_PROJECT_NAME}>/glpk_4_65.dll
+    COMMAND ${CMAKE_COMMAND} -E copy 
+      ${KAHYPAR_HOME}/kahypar.dll 
+      $<TARGET_FILE_DIR:${CMAKE_PROJECT_NAME}>/kahypar.dll
   )
 else()
-  target_link_libraries(replace PRIVATE glpk)
+  add_library( glpk SHARED IMPORTED )
+  set_target_properties( glpk PROPERTIES IMPORTED_LOCATION ${GLPK_HOME}/libglpk.so.40 )
+
+  add_library( kahypar SHARED IMPORTED )
+  set_target_properties( kahypar PROPERTIES IMPORTED_LOCATION ${KAHYPAR_HOME}/libkahypar.so )
+
+  add_library( mtkahypar SHARED IMPORTED )
+  set_target_properties( mtkahypar PROPERTIES IMPORTED_LOCATION ${MTKAHYPAR_HOME}/libmtkahypar.so )
+
+  target_link_libraries(replace PRIVATE kahypar)
+  target_link_libraries(replace PRIVATE mtkahypar)
+
+  target_include_directories(replace PRIVATE ${MTKAHYPAR_HOME}/include)
 endif()
