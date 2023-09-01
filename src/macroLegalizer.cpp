@@ -29,22 +29,19 @@ namespace replace
 
     void MacroLegalizer::doLegalization()
     {
-        std::vector<Instance *> macros;
         for (Die *die : pb_->dies())
         {
-            macros.clear();
+            macros_.clear();
+            die_ = die;
             for (Instance *inst : die->insts())
             {
                 // regardless of fixed instance
                 if (inst->isMacro())
-                {
-                    macros.push_back(inst);
-                }
+                    macros_.push_back(inst);
             }
-            if(!checkLegal(macros, die))
-              saLegalize(macros, die);
-            if(!checkLegal(macros, die))
-              postLegalize(macros, die);
+            bool isLegal = saLegalize2();
+            if(!isLegal)
+              postLegalize(macros_, die_);
         }
     }
 
@@ -53,7 +50,7 @@ namespace replace
 
     static std::mt19937 rng;
 
-    bool MacroLegalizer::saLegalize(const std::vector<Instance *> &macros, Die *die)
+    bool MacroLegalizer::saLegalize(const std::vector<Instance *> &macros, const Die *die)
     {
         if (macros.size() == 0)
             return true;
@@ -66,6 +63,7 @@ namespace replace
           lx = std::max(std::min(lx, die->coreUx() - macro->dx()), die->coreLx());
           ly = std::max(std::min(ly, die->coreUy() - macro->dy()), die->coreLy());
           macro->setLocation(lx, ly);
+          updateMacroNetBox(macro);
         }
 
         // 初始化参数
@@ -146,7 +144,7 @@ namespace replace
         return isLegal;
     }
 
-    std::pair<int, int> MacroLegalizer::getRandomMove(Instance *cell, int iter, Die *die, int max_sa_r_x, int max_sa_r_y)
+    std::pair<int, int> MacroLegalizer::getRandomMove(const Instance *cell, int iter, const Die *die, int max_sa_r_x, int max_sa_r_y)
     {
         int clx = cell->lx();
         int cly = cell->ly();
@@ -198,7 +196,7 @@ namespace replace
         return std::make_pair(moveX, moveY);
     }
 
-    double MacroLegalizer::getMacroCost(Instance *macro, const std::vector<Instance *> &macros)
+    double MacroLegalizer::getMacroCost(const Instance *macro, const std::vector<Instance *> &macros)
     {
         double hpwlCost = getMacroHpwl(macro);
         double denCost = 0;
@@ -207,7 +205,7 @@ namespace replace
         return totalCost;
     }
 
-    double MacroLegalizer::getOverlapArea(Instance *inst1, Instance *inst2)
+    double MacroLegalizer::getOverlapArea(const Instance *inst1, const Instance *inst2)
     {
         int lx = std::max(inst1->lx(), inst2->lx());
         int ux = std::min(inst1->ux(), inst2->ux());
@@ -219,7 +217,7 @@ namespace replace
             return 0;
     }
 
-    double MacroLegalizer::getMacroOverlap(Instance *macro, const std::vector<Instance *> &macros)
+    double MacroLegalizer::getMacroOverlap(const Instance *macro, const std::vector<Instance *> &macros)
     {
         double totalOvarlap = 0;
         for (Instance *mac : macros)
@@ -242,7 +240,7 @@ namespace replace
         return totalOverlap;
     }
 
-    double MacroLegalizer::getMacroHpwl(Instance *macro)
+    double MacroLegalizer::getMacroHpwl(const Instance *macro)
     {
         int64_t macroHpwl = 0;
         for (Pin *pin : macro->pins())
@@ -260,6 +258,205 @@ namespace replace
             Net *net = pin->net();
             net->updateBox();
         }
+    }
+
+    bool MacroLegalizer::saLegalize2()
+    {
+        if(macros_.size() == 0)
+            return true;
+        sa_init_top();
+        sa_mac_leg_top();
+        return ovlp_free_flg;
+    }
+
+    void MacroLegalizer::sa_init_top()
+    {
+        for (Instance* macro : macros_)
+        {
+            int lx = macro->lx();
+            int ly = macro->ly();
+            // 对齐到row
+            int rowHeight = die_->isSetRow() ? die_->rowHeight() : 1;
+            ly = die_->coreLy() + static_cast<int>((ly - die_->coreLy()) / (double)rowHeight + 0.5) * rowHeight;
+            // 边界处理
+            lx = std::max(std::min(lx, die_->coreUx() - macro->dx()), die_->coreLx());
+            ly = std::max(std::min(ly, die_->coreUy() - macro->dy()), die_->coreLy());
+            macro->setLocation(lx, ly);
+            updateMacroNetBox(macro);
+        }
+
+        tot_mac_hpwl = pb_->hpwl();
+        tot_mac_den = 0;
+        tot_mac_ovlp = getAllMacroOverlap(macros_);
+        ovlp_free_flg = (tot_mac_ovlp == 0);
+
+        sa_param_init_top();
+    }
+
+    void MacroLegalizer::sa_param_init_top()
+    {
+        sa_hpwl_wgt = 1.0;
+        sa_den_wgt = 0.0; // we never use den
+        sa_ovlp_wgt = (tot_mac_hpwl * sa_hpwl_wgt + tot_mac_den * sa_den_wgt) / tot_mac_ovlp;
+        sa_hpwl_cof = 1.0;
+        sa_den_cof = 1.0;
+        sa_ovlp_cof = 1.5;
+        sa_max_iter0 = 1000;
+    }
+
+    void MacroLegalizer::sa_mac_leg_top()
+    {
+        for(int iter = 0; iter < sa_max_iter0 && !ovlp_free_flg; iter++)
+        {
+            sa_param_init(iter);
+            sa_mac_leg(iter);
+            sa_param_update();
+        }
+    }
+
+    void MacroLegalizer::sa_param_init(int iter)
+    {
+        double sa_coef = 0.03;
+        sa_iter_cof = 1;
+        sa_max_iter = 1000;
+        sa_max_iter2 = sa_iter_cof * macros_.size();
+
+        sa_n_disp = 10;
+        sa_init_neg_rate = sa_coef * std::pow(1.5, static_cast<double>(iter));
+        sa_last_neg_rate = 0.0001 * std::pow(1.5, static_cast<double>(iter));
+
+        sa_init_t = sa_init_neg_rate / std::log(2.0);
+        sa_t = sa_init_t;
+        sa_t_cof = std::pow(sa_last_neg_rate / sa_init_neg_rate,
+                            1.0 / static_cast<double>(sa_max_iter));
+
+        sa_n_x = sa_n_y = std::sqrt(static_cast<double>(macros_.size()));
+        sa_ncof_x = sa_ncof_y = 0.05 * std::pow(1.5, static_cast<double>(iter));
+        min_sa_r_x = 1.0;
+        min_sa_r_y = die_->isSetRow() ? die_->rowHeight() : 1;
+        max_sa_r_x = static_cast<double>(die_->coreDx()) / sa_n_x * sa_ncof_x;
+        max_sa_r_y = static_cast<double>(die_->coreDy()) / sa_n_y * sa_ncof_y;
+        max_sa_r_x = std::max(max_sa_r_x, min_sa_r_x);
+        max_sa_r_y = std::max(max_sa_r_y, min_sa_r_y);
+        sa_r_x = max_sa_r_x;
+        sa_r_y = max_sa_r_y;
+        sa_r_stp_x = (max_sa_r_x - min_sa_r_x) / static_cast<double>(sa_max_iter);
+        sa_r_stp_y = (max_sa_r_y - min_sa_r_y) / static_cast<double>(sa_max_iter);
+    }
+
+    void MacroLegalizer::sa_mac_leg(int iter)
+    {
+        for(int i = 0; i < sa_max_iter && !ovlp_free_flg; i++)
+        {
+            for(int j = 0; j < sa_max_iter2 && !ovlp_free_flg; j++)
+                sa_mac_leg_sub();
+            sa_param_update_sub();
+        }
+    }
+
+    void MacroLegalizer::sa_param_update()
+    {
+        sa_hpwl_wgt *= sa_hpwl_cof;
+        sa_den_wgt *= sa_den_cof;
+        sa_ovlp_wgt *= sa_ovlp_cof;
+    }
+
+    void MacroLegalizer::sa_mac_leg_sub()
+    {
+        //  选择一个宏单元
+        int mac_idx = sa_get_mac_idx();
+        Instance* mac = macros_[mac_idx];
+        // macro影响的hpwl
+        double old_mac_hpwl = getMacroHpwl(mac);
+        // 计算宏单元的成本函数
+        double mac_c0 = sa_get_mac_cost(mac);
+        // 随机移动
+        std::pair<int, int> mov = sa_get_mac_mov(mac);
+        sa_do_mac_mov(mac, mov);
+        // macro影响的hpwl
+        double new_mac_hpwl = getMacroHpwl(mac);
+        // 计算宏单元的成本函数
+        double mac_c1 = sa_get_mac_cost(mac);
+        // 判断是否接受新的解
+        bool accept = sa_mov_accept(mac_c0, mac_c1);
+
+        if(accept)
+        {
+            tot_mac_den = 0;
+            tot_mac_ovlp = getAllMacroOverlap(macros_);
+            tot_mac_hpwl += (new_mac_hpwl - old_mac_hpwl);
+            ovlp_free_flg = (tot_mac_ovlp == 0);
+        }
+        else
+        {
+            mov.first = -mov.first;
+            mov.second = -mov.second;
+            sa_do_mac_mov(mac, mov);
+        }
+    }
+
+    void MacroLegalizer::sa_param_update_sub()
+    {
+        sa_t *= sa_t_cof;  // 0.999999 ;
+        sa_r_x -= sa_r_stp_x;
+        sa_r_y -= sa_r_stp_y;
+    }
+
+    int MacroLegalizer::sa_get_mac_idx()
+    {
+        std::uniform_int_distribution<int> uni(0, macros_.size() - 1);
+        return uni(rng);
+    }
+
+    std::pair<int, int> MacroLegalizer::sa_get_mac_mov(const Instance* mac)
+    {
+        std::uniform_real_distribution<float> unf(-0.5f, 0.5f);
+        float rndx = unf(rng);
+        float rndy = unf(rng);
+        int rowHeight = die_->isSetRow() ? die_->rowHeight() : 1;
+        int mov_x = static_cast<int>(rndx * sa_r_x);
+        int mov_y = static_cast<int>(rndy * sa_r_y / rowHeight) * rowHeight;
+
+        int target_lx = mac->lx() + mov_x;
+        int target_ly = mac->ly() + mov_y;
+        target_lx = std::max(die_->coreLx(), target_lx);
+        target_lx = std::min(die_->coreUx() - mac->dx(), target_lx);
+        target_ly = std::max(die_->coreLx(), target_ly);
+        target_ly = std::min(die_->coreUy() - mac->dy(), target_ly);
+
+        mov_x = target_lx - mac->lx();
+        mov_y = target_ly - mac->ly();
+
+        return std::make_pair(mov_x, mov_y);
+    }
+
+    void MacroLegalizer::sa_do_mac_mov(Instance* mac, const std::pair<int, int>& mov)
+    {
+        mac->setLocation(mac->lx() + mov.first, mac->ly() + mov.second);
+        updateMacroNetBox(mac);
+    }
+
+    double MacroLegalizer::sa_get_mac_cost(const Instance* mac)
+    {
+        double hpwl_cost = getMacroHpwl(mac);
+        double den_cost = 0;
+        double ovlp_cost = getMacroOverlap(mac, macros_);
+        double tot_cost = sa_hpwl_wgt * hpwl_cost 
+                         + sa_den_wgt * den_cost
+                         + sa_ovlp_wgt * ovlp_cost;
+        return tot_cost;
+    }
+
+    bool MacroLegalizer::sa_mov_accept(double old_cost, double new_cost)
+    {
+        std::uniform_real_distribution<double> und(0.0, 1.0);
+        double dc = (new_cost - old_cost) / old_cost;
+        double drnd = und(rng);
+        double exp_val = std::exp(-1.0 * dc / sa_t);
+        if(drnd < exp_val)
+            return true;
+        else
+            return false;
     }
 
     //////////////////////////////////
@@ -343,7 +540,7 @@ namespace replace
         return true;
     }
 
-    bool MacroLegalizer::postLegalize(const std::vector<Instance *> insts, Die *die)
+    bool MacroLegalizer::postLegalize(const std::vector<Instance *> &insts, const Die* die)
     {
         rng.seed(514);
         std::uniform_real_distribution<float> unf(0.f, 1.f);
@@ -421,7 +618,7 @@ namespace replace
         return false;
     }
 
-    bool MacroLegalizer::checkLegal(const std::vector<Instance *> macros, Die *die)
+    bool MacroLegalizer::checkLegal(const std::vector<Instance *> &macros, const Die* die)
     {
         bool isLegal = true;
         for (int i = 0; i < macros.size() && isLegal; i++)
