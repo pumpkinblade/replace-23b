@@ -57,6 +57,17 @@ namespace replace
     {
         if (macros.size() == 0)
             return true;
+
+        // 处理边界
+        for (Instance* macro : macros)
+        {
+          int lx = macro->lx();
+          int ly = macro->ly();
+          lx = std::max(std::min(lx, die->coreUx() - macro->dx()), die->coreLx());
+          ly = std::max(std::min(ly, die->coreUy() - macro->dy()), die->coreLy());
+          macro->setLocation(lx, ly);
+        }
+
         // 初始化参数
         double tot_mac_hpwl = 0;
         for(Instance* macro : macros)
@@ -70,7 +81,7 @@ namespace replace
         lgVars_.sa_ovlp_cof = 1.5;
         lgVars_.sa_max_iter0 = 1000;
 
-        double isLegal = false;
+        double isLegal = (tot_mac_ovlp == 0);
         for (int iter = 0; iter < lgVars_.sa_max_iter && !isLegal; iter++)
         {
             // 初始化参数
@@ -107,7 +118,7 @@ namespace replace
                 double tau = unf(rng);
                 double p = std::exp(-1.0 * delta / temp);
                 int isAccept = 0;
-                LOG_DEBUG("[MacroLegalization] old_cost: {} new_cost: {} move: {}-{} delta{}", old_cost, new_cost, move.first, move.second, delta);
+                // LOG_DEBUG("[MacroLegalization] old_cost: {} new_cost: {} move: {}-{} delta{}", old_cost, new_cost, move.first, move.second, delta);
                 if (p > tau)
                 {
                     // 接受新的解
@@ -123,7 +134,7 @@ namespace replace
                     macro->setLocation(macro->lx() - move.first, macro->ly() - move.second);
                     updateMacroNetBox(macro);
                 }
-                LOG_DEBUG("[MacroLegalization] Iter {} new_cost: {} accept: {}", i, new_cost, isAccept);
+                // LOG_DEBUG("[MacroLegalization] Iter {} new_cost: {} accept: {}", i, new_cost, isAccept);
             }
 
             // update param
@@ -157,7 +168,7 @@ namespace replace
         double ry = (max_sa_r_y - rh) / (double)(iter + 1);
         int moveX = static_cast<int>(rndx * rx);
         int moveY = static_cast<int>(rndy * ry);
-        LOG_DEBUG("[MacroLegalization] moveX: {} moveY: {} ", moveX, moveY);
+        // LOG_DEBUG("[MacroLegalization] moveX: {} moveY: {} ", moveX, moveY);
         // 计算移动后的 Macro 的四个角坐标
         int newcux = cux + moveX;
         int newcuy = cuy + moveY;
@@ -413,7 +424,7 @@ namespace replace
     bool MacroLegalizer::checkLegal(const std::vector<Instance *> macros, Die *die)
     {
         bool isLegal = true;
-        for (int i = 0; i < macros.size(); i++)
+        for (int i = 0; i < macros.size() && isLegal; i++)
         {
             // check boundary
             Instance *m1 = macros[i];

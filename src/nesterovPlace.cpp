@@ -241,7 +241,7 @@ namespace replace
       if (npVars_.useLocalDensity)
       {
         delta = refCellDeltas[i];
-        localDensityGrad = nb_->getDensityGradientLocalWithTheta(gCell, localAlpha_, localBeta_, delta, localDensityGradTheta);
+        localDensityGrad = nb_->getLocalDensityGradientWithTheta(gCell, localAlpha_, localBeta_, delta, localDensityGradTheta);
         localDensityGradSumTheta_ += fabs(localDensityGradTheta);
         localDensityGradSum_ += fabs(localDensityGrad.x);
         localDensityGradSum_ += fabs(localDensityGrad.y);
@@ -269,6 +269,12 @@ namespace replace
       Point sumPrecondi(
           wireLengthPrecondi.x + densityPenalty_ * densityPrecondi.x,
           wireLengthPrecondi.y + densityPenalty_ * densityPrecondi.y);
+      if (npVars_.useLocalDensity)
+      {
+        Point localDensityPrecondi = nb_->getLocalDensityPreconditioner(gCell);
+        sumPrecondi.x += delta * localDensityPrecondi.x;
+        sumPrecondi.y += delta * localDensityPrecondi.y;
+      }
       sumPrecondi.x = std::max(sumPrecondi.x, npVars_.minPreconditioner);
       sumPrecondi.y = std::max(sumPrecondi.y, npVars_.minPreconditioner);
       sumGrads[i].x /= sumPrecondi.x;
@@ -279,6 +285,10 @@ namespace replace
       double wireLenghtPrecondiTheta = wireLengthPrecondiTheta_[i];
       double densityPrecondiTheta = densityPrecondiTheta_[i];
       double sumPrecondiTheta = wireLenghtPrecondiTheta + densityPenalty_ * densityPrecondiTheta;
+      if (npVars_.useLocalDensity)
+      {
+        sumPrecondiTheta += delta * nb_->getLocalDensityPreconditionerTheta(gCell);
+      }
       sumPrecondiTheta = std::max(sumPrecondiTheta, npVars_.minPreconditioner);
       sumGradTheta[i] /= sumPrecondiTheta;
       gradSumTheta += fabs(sumGradTheta[i]);
@@ -306,7 +316,7 @@ namespace replace
       if (npVars_.useLocalDensity)
       {
         delta = refCellDeltas[i];
-        localDensityGrad = nb_->getDensityGradientLocal(gCell, localAlpha_, localBeta_, delta);
+        localDensityGrad = nb_->getLocalDensityGradient(gCell, localAlpha_, localBeta_, delta);
         localDensityGradSum_ += fabs(localDensityGrad.x);
         localDensityGradSum_ += fabs(localDensityGrad.y);
         cellDeltaSum += delta;
@@ -331,6 +341,12 @@ namespace replace
           wireLengthPrecondi.y + densityPenalty_ * densityPrecondi.y);
       sumPrecondi.x = std::max(sumPrecondi.x, npVars_.minPreconditioner);
       sumPrecondi.y = std::max(sumPrecondi.y, npVars_.minPreconditioner);
+      if (npVars_.useLocalDensity)
+      {
+        Point localDensityPrecondi = nb_->getLocalDensityPreconditioner(gCell);
+        sumPrecondi.x += delta * localDensityPrecondi.x;
+        sumPrecondi.y += delta * localDensityPrecondi.y;
+      }
       sumGrads[i].x /= sumPrecondi.x;
       sumGrads[i].y /= sumPrecondi.y;
       gradSum += fabs(sumGrads[i].x) + fabs(sumGrads[i].y);

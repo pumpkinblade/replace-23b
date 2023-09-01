@@ -346,9 +346,9 @@ namespace replace
                       hyperedge_indices.get(), hyperedges.get(),
                       &objective, context, partition.data());
 
-    for(int i = 0; i != num_vertices; ++i) {
-      std::cout << i << ":" << partition[i] << std::endl;
-    }
+    // for(int i = 0; i != num_vertices; ++i) {
+    //   std::cout << i << ":" << partition[i] << std::endl;
+    // }
 
     // move the instance to the bottom die
     // create bottom nets

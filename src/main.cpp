@@ -31,6 +31,7 @@ int main(int argc, const char *argv[])
   string outputFilename;
   bool useTheta;
   bool useLocalDensity;
+  bool useKahypar;
   string statFilename;
 
   // Wrap everything in a try block.  Do this every time, because exceptions will be thrown for problems.
@@ -43,6 +44,7 @@ int main(int argc, const char *argv[])
     ValueArg<string> outputArg("o", "output", "path to output file", false, "output.txt", "string");
     SwitchArg thetaArg("R", "rotate", "enable rotation", false);
     SwitchArg localArg("L", "local", "enable local density", false);
+    SwitchArg kahyparArg("K", "kahypar", "enable kahypar", false);
     ValueArg<string> statArg("s", "statistic", "path to statistic file", false, "statistic.log", "string");
 
     cmd.add(txtArg);
@@ -50,6 +52,7 @@ int main(int argc, const char *argv[])
     cmd.add(thetaArg);
     cmd.add(localArg);
     cmd.add(statArg);
+    cmd.add(kahyparArg);
 
     // Parse the args.
     cmd.parse(argc, argv);
@@ -59,6 +62,7 @@ int main(int argc, const char *argv[])
     outputFilename = outputArg.getValue();
     useTheta = thetaArg.getValue();
     useLocalDensity = localArg.getValue();
+    useKahypar = kahyparArg.getValue();
     statFilename = statArg.getValue();
   }
   catch (ArgException &e) // catch any exceptions
@@ -74,12 +78,18 @@ int main(int argc, const char *argv[])
 
   // then we do partition
   Partitioner partitioner;
-  // partitioner.partitioning2(pb);
+  if (useKahypar)
+  {
 #if defined(WIN32) || defined(_WIN32)
-  partitioner.partitionInstance(pb);
+    partitioner.partitionInstance(pb);
 #else
-  partitioner.mtPartitionInstance(pb);
+    partitioner.mtPartitionInstance(pb);
 #endif
+  }
+  else
+  {
+    partitioner.partitioning2(pb);
+  }
   Plot::plot(pb.get(), "./plot/cell", "after_partition");
 
   // then we do optimization
