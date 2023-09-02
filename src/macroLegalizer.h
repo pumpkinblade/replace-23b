@@ -40,10 +40,6 @@ namespace replace
 
         void doLegalization();
 
-        bool saLegalize(const std::vector<Instance *> &macros, const Die* die);
-        std::pair<int, int> getRandomMove(const Instance *cell, int iter, const Die *die, int max_sa_r_x, int max_sa_r_y);
-        double getMacroCost(const Instance *macro, const std::vector<Instance *> &macros);
-
         // 计算两个instance之间重叠面积
         double getOverlapArea(const Instance *inst1, const Instance *inst2);
         // 计算一个macro与其余macro的重叠面积
@@ -67,8 +63,11 @@ namespace replace
         int sa_get_mac_idx();
         std::pair<int, int> sa_get_mac_mov(const Instance* mac);
         void sa_do_mac_mov(Instance* mac, const std::pair<int, int>& mov);
-        double sa_get_mac_cost(const Instance* mac);
+        double sa_get_mac_cost(const Instance* mac, double& hpwl, double& den, double& ovlp);
         bool sa_mov_accept(double old_cost, double new_cost);
+
+        void init_bins();
+        double get_mac_den(const Instance* mac);
 
         bool postLegalize(const std::vector<Instance *> &macros, const Die* die);
 
@@ -81,6 +80,7 @@ namespace replace
         Die* die_;
         MacroLegalizerVars lgVars_;
 
+        // 与搜索半径有关的参数
         double max_sa_r_x;
         double max_sa_r_y;
         double min_sa_r_x;
@@ -89,22 +89,25 @@ namespace replace
         double sa_r_y;
         double sa_r_stp_x;
         double sa_r_stp_y;
-
         double sa_ncof_x;
         double sa_ncof_y;
         double sa_n_x;
         double sa_n_y;
-        int sa_n_disp;
 
+        // 与接受率有关的参数
         double sa_t;
         double sa_init_t;
         double sa_t_cof;
+        double sa_init_neg_rate;
+        double sa_last_neg_rate;
 
+        // 与迭代次数有关的参数
         int sa_max_iter;
         int sa_max_iter2;
         int sa_max_iter0;
         int sa_iter_cof;
 
+        // 权重
         double sa_hpwl_wgt;
         double sa_hpwl_cof;
         double sa_den_wgt;
@@ -112,14 +115,17 @@ namespace replace
         double sa_ovlp_wgt;
         double sa_ovlp_cof;
 
-        double sa_init_neg_rate;
-        double sa_last_neg_rate;
-
         double tot_mac_hpwl;
         double tot_mac_den;
         double tot_mac_ovlp;
 
         bool ovlp_free_flg;
+
+        double bin_size_x;
+        double bin_size_y;
+        int bin_count_x;
+        int bin_count_y;
+        std::vector<double> bin_density;
     };
 
 }

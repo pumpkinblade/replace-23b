@@ -35,7 +35,7 @@ namespace replace
         useLocalDensity_(false),
         initLocalAlpha_(1e-12f), initLocalBeta_(1e-11f),
         useTheta_(false),
-        macroPostMaxIter_(10000)
+        macroPostMaxIter_(2000)
   {
   }
 
