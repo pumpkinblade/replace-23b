@@ -751,11 +751,8 @@ namespace replace
       ilpSolve(macrosILP, rotILP);
       LOG_TRACE("Finish ILP Solve");
 
-      LOG_DEBUG("macros.size() = {}, rot.size() = {}, macrosILP.size = {}, rotILP.size() = {}", 
-                macros.size(), rot.size(), macrosILP.size(), rotILP.size());
       for(int i = 0, j = 0; i < rot.size() && j < rotILP.size(); i++)
       {
-        LOG_DEBUG("i = {}, j = {}", i, j);
         if (macros[i] == macrosILP[j])
         {
           rot[i] = rotILP[j];
