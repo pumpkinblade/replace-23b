@@ -706,7 +706,14 @@ namespace replace
     
     const kahypar_partition_id_t num_blocks=2;
     std::unique_ptr<kahypar_hypernode_weight_t[]> init_block_weights = std::make_unique<kahypar_hypernode_weight_t[]>(num_blocks);
+<<<<<<< HEAD
 
+=======
+    
+    // get average technology ratio
+    double averageMacroRatio=this->getAverageMacroTechRatio(pb_);
+    std::cout<<"averageMacroRatio: "<<averageMacroRatio<<std::endl;
+>>>>>>> fcae570a3b3ce484b90c99960a4f6195f696b65b
 
     const double imbalance = 0.1;
 
@@ -722,12 +729,23 @@ namespace replace
 
     long vertex_weights_sum2=0;
     std::vector<Instance*> macros;
+<<<<<<< HEAD
     std::unique_ptr<kahypar_hypernode_weight_t[]> vertex_weights2 = std::make_unique<kahypar_hypernode_weight_t[]>(instanceNum);
     for(int i=0;i<instanceNum;i++){
       Instance* inst_=pb_->insts()[i];
       if(inst_->isMacro()){
         macros.push_back(inst_);
         vertex_weights2[i] = 1;
+=======
+    std::unique_ptr<kahypar_hypernode_weight_t[]> vertex_weights2 = std::make_unique<mt_kahypar_hypernode_weight_t[]>(instanceNum);
+    for(int i=0;i<instanceNum;i++){
+      Instance* inst_=pb_->insts()[i];
+      if(inst_->isMacro()){
+        // vertex_weights[i] = macroStdcellAreaRatio;
+        // vertex_weights_sum += macroStdcellAreaRatio;
+        macros.push_back(inst_);
+        vertex_weights2[i] = 20;
+>>>>>>> fcae570a3b3ce484b90c99960a4f6195f696b65b
         vertex_weights_sum2 += vertex_weights2[i];
       }
       else{
@@ -777,12 +795,21 @@ namespace replace
 
     double averageStdCellRatio=this->getAverageStdCellTechRatio(pb_);
 
+<<<<<<< HEAD
     vertex_weights_sum2=vertex_weights_sum2*1.1+1;
 
     if(averageStdCellRatio==1){
       double ratioA=0.5;
       init_block_weights[0]=int(ratioA*vertex_weights_sum2+1);
       init_block_weights[1]=int(ratioA*vertex_weights_sum2+1);
+=======
+    vertex_weights_sum2=vertex_weights_sum2*1.1;
+
+    if(averageStdCellRatio==1){
+      double ratioA=0.5;
+      init_block_weights[0]=int(ratioA*vertex_weights_sum2);
+      init_block_weights[1]=int(ratioA*vertex_weights_sum2);
+>>>>>>> fcae570a3b3ce484b90c99960a4f6195f696b65b
     }
     else{
       double ratioA=averageStdCellRatio/(averageStdCellRatio+1);
@@ -792,11 +819,19 @@ namespace replace
       string Tech1Name=pb_->techs()[0]->name();
       string Tech2Name=pb_->techs()[1]->name();
       if(topTech==Tech1Name){
+<<<<<<< HEAD
         init_block_weights[1]=int(ratioA*vertex_weights_sum2+1);
         init_block_weights[0]=int(ratioB*vertex_weights_sum2+1);
       }else if(topTech==Tech2Name){
         init_block_weights[0]=int(ratioA*vertex_weights_sum2+1);
         init_block_weights[1]=int(ratioB*vertex_weights_sum2+1);
+=======
+        init_block_weights[1]=int(ratioA*vertex_weights_sum2);
+        init_block_weights[0]=int(ratioB*vertex_weights_sum2);
+      }else if(topTech==Tech2Name){
+        init_block_weights[0]=int(ratioA*vertex_weights_sum2);
+        init_block_weights[1]=int(ratioB*vertex_weights_sum2);
+>>>>>>> fcae570a3b3ce484b90c99960a4f6195f696b65b
       }
     }
 

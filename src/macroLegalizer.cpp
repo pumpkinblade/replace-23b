@@ -15,7 +15,7 @@ namespace replace
     // MacroLegalizerVars
 
     MacroLegalizerVars::MacroLegalizerVars()
-        : maxPostLegalizeIter(100000)
+        : maxPostLegalizeIter(2000)
     {
     }
 
@@ -49,161 +49,6 @@ namespace replace
     // saLegalize
 
     static std::mt19937 rng;
-
-    bool MacroLegalizer::saLegalize(const std::vector<Instance *> &macros, const Die *die)
-    {
-        if (macros.size() == 0)
-            return true;
-
-        // 处理边界
-        for (Instance* macro : macros)
-        {
-          int lx = macro->lx();
-          int ly = macro->ly();
-          lx = std::max(std::min(lx, die->coreUx() - macro->dx()), die->coreLx());
-          ly = std::max(std::min(ly, die->coreUy() - macro->dy()), die->coreLy());
-          macro->setLocation(lx, ly);
-          updateMacroNetBox(macro);
-        }
-
-        // 初始化参数
-        double tot_mac_hpwl = 0;
-        for(Instance* macro : macros)
-            tot_mac_hpwl += getMacroHpwl(macro);
-        double tot_mac_ovlp = getAllMacroOverlap(macros);
-        lgVars_.sa_hpwl_wgt = 1.0;
-        lgVars_.sa_den_wgt = 0.0; // ignore
-        lgVars_.sa_ovlp_wgt = tot_mac_hpwl / tot_mac_ovlp;
-        lgVars_.sa_hpwl_cof = 1.0;
-        lgVars_.sa_den_cof = 1.0;
-        lgVars_.sa_ovlp_cof = 1.5;
-        lgVars_.sa_max_iter0 = 1000;
-
-        double isLegal = (tot_mac_ovlp == 0);
-        for (int iter = 0; iter < lgVars_.sa_max_iter && !isLegal; iter++)
-        {
-            // 初始化参数
-            double cooling_rate;
-            double temp_0 = 0.03 * pow(1.5, (double)iter) / log(2.0);
-            double temp_max = 0.0001 * pow(1.5, (double)iter) / log(2.0);
-            double rcof = 0.05 * pow(1.5, (double)iter);
-
-            int64_t tot_place_region = die->coreDx() * (int64_t)die->coreDy();
-            int max_sa_r_x = static_cast<int>(tot_place_region / sqrt(macros.size()) * rcof);
-            int max_sa_r_y = static_cast<int>(tot_place_region / sqrt(macros.size()) * rcof);
-
-            // 为使结果可复现，应手动设置seed
-            rng.seed(iter * 114 + 514);
-            std::uniform_int_distribution<int> uni(0, macros.size() - 1);
-            std::uniform_real_distribution<double> unf(0.0, 1.0);
-            for (int i = 0; i < lgVars_.sa_max_iter0 && !isLegal; i++)
-            {
-                double temp = temp_0 + (temp_max - temp_0) * (double)(i / lgVars_.sa_max_iter0);
-                //  选择一个宏单元
-                int index = uni(rng);
-                Instance *macro = macros[index];
-                // 计算宏单元的成本函数
-                double old_cost = getMacroCost(macro, macros);
-                // 随机移动
-                std::pair<int, int> move = getRandomMove(macro, iter, die, max_sa_r_x, max_sa_r_y);
-                // 尝试将宏单元移动到新的位置
-                macro->setLocation(macro->lx() + move.first, macro->ly() + move.second);
-                updateMacroNetBox(macro);
-                // 计算宏单元的成本函数
-                double new_cost = getMacroCost(macro, macros);
-                // 判断是否接受新的解
-                double delta = (new_cost - old_cost) / old_cost;
-                double tau = unf(rng);
-                double p = std::exp(-1.0 * delta / temp);
-                int isAccept = 0;
-                // LOG_DEBUG("[MacroLegalization] old_cost: {} new_cost: {} move: {}-{} delta{}", old_cost, new_cost, move.first, move.second, delta);
-                if (p > tau)
-                {
-                    // 接受新的解
-                    // 判断是否满足要求
-                    isAccept = 1;
-                    int om = getAllMacroOverlap(macros);
-                    isLegal = (om == 0);
-                }
-                else
-                {
-                    // 拒绝新的解
-                    isAccept = 0;
-                    macro->setLocation(macro->lx() - move.first, macro->ly() - move.second);
-                    updateMacroNetBox(macro);
-                }
-                // LOG_DEBUG("[MacroLegalization] Iter {} new_cost: {} accept: {}", i, new_cost, isAccept);
-            }
-
-            // update param
-            lgVars_.sa_hpwl_wgt *= lgVars_.sa_hpwl_cof;
-            lgVars_.sa_den_wgt *= lgVars_.sa_den_cof;
-            lgVars_.sa_ovlp_wgt *= lgVars_.sa_ovlp_cof;
-        }
-
-        return isLegal;
-    }
-
-    std::pair<int, int> MacroLegalizer::getRandomMove(const Instance *cell, int iter, const Die *die, int max_sa_r_x, int max_sa_r_y)
-    {
-        int clx = cell->lx();
-        int cly = cell->ly();
-        int cux = cell->ux();
-        int cuy = cell->uy();
-        // 获得die的大小
-        int dlx = die->dieLx();
-        int dly = die->dieLy();
-        int dux = die->dieUx();
-        int duy = die->dieUy();
-        int diewidth = dux - dlx;
-        int dieheight = duy - dly;
-        std::uniform_real_distribution<float> unf(-0.5f, 0.5f);
-        float rndx = unf(rng);
-        float rndy = unf(rng);
-        int rh = die->rowHeight();
-        double rcof = 0.05 * pow(1.5, (double)iter);
-        double rx = (max_sa_r_x - rh) / (double)(iter + 1); // 1 = rowheight
-        double ry = (max_sa_r_y - rh) / (double)(iter + 1);
-        int moveX = static_cast<int>(rndx * rx);
-        int moveY = static_cast<int>(rndy * ry);
-        // LOG_DEBUG("[MacroLegalization] moveX: {} moveY: {} ", moveX, moveY);
-        // 计算移动后的 Macro 的四个角坐标
-        int newcux = cux + moveX;
-        int newcuy = cuy + moveY;
-        int newclx = clx + moveX;
-        int newcly = cly + moveY;
-        // 检查移动后的坐标是否超过 Die 的边界范围，若超过则修正坐标
-        if (newclx < dlx)
-        {
-            int diff = dlx - newclx;
-            moveX += diff;
-        }
-        if (newcuy > duy)
-        {
-            int diff = newcuy - duy;
-            moveY -= diff;
-        }
-        if (newcux > dux)
-        {
-            int diff = newcux - dux;
-            moveX -= diff;
-        }
-        if (newcly < dly)
-        {
-            int diff = newcly - dly;
-            moveY += diff;
-        }
-        return std::make_pair(moveX, moveY);
-    }
-
-    double MacroLegalizer::getMacroCost(const Instance *macro, const std::vector<Instance *> &macros)
-    {
-        double hpwlCost = getMacroHpwl(macro);
-        double denCost = 0;
-        double overlapCost = getMacroOverlap(macro, macros);
-        double totalCost = lgVars_.sa_hpwl_wgt * hpwlCost + lgVars_.sa_den_wgt * denCost + lgVars_.sa_ovlp_wgt * overlapCost;
-        return totalCost;
-    }
 
     double MacroLegalizer::getOverlapArea(const Instance *inst1, const Instance *inst2)
     {
@@ -287,6 +132,11 @@ namespace replace
 
         tot_mac_hpwl = pb_->hpwl();
         tot_mac_den = 0;
+        init_bins();
+        for(const Instance* mac : macros_)
+        {
+            tot_mac_den += get_mac_den(mac);
+        }
         tot_mac_ovlp = getAllMacroOverlap(macros_);
         ovlp_free_flg = (tot_mac_ovlp == 0);
 
@@ -296,18 +146,20 @@ namespace replace
     void MacroLegalizer::sa_param_init_top()
     {
         sa_hpwl_wgt = 1.0;
-        sa_den_wgt = 0.0; // we never use den
+        // sa_den_wgt = 0.0; // we never use den
+        sa_den_wgt = sa_hpwl_wgt * tot_mac_hpwl / tot_mac_den;
         sa_ovlp_wgt = (tot_mac_hpwl * sa_hpwl_wgt + tot_mac_den * sa_den_wgt) / tot_mac_ovlp;
         sa_hpwl_cof = 1.0;
         sa_den_cof = 1.0;
         sa_ovlp_cof = 1.5;
-        sa_max_iter0 = 1000;
+        sa_max_iter0 = 50;
     }
 
     void MacroLegalizer::sa_mac_leg_top()
     {
         for(int iter = 0; iter < sa_max_iter0 && !ovlp_free_flg; iter++)
         {
+            LOG_DEBUG("iter {}, hpwl: {}, den: {}, ovlp: {}", iter+1, tot_mac_hpwl, tot_mac_den, tot_mac_ovlp);
             sa_param_init(iter);
             sa_mac_leg(iter);
             sa_param_update();
@@ -321,7 +173,6 @@ namespace replace
         sa_max_iter = 1000;
         sa_max_iter2 = sa_iter_cof * macros_.size();
 
-        sa_n_disp = 10;
         sa_init_neg_rate = sa_coef * std::pow(1.5, static_cast<double>(iter));
         sa_last_neg_rate = 0.0001 * std::pow(1.5, static_cast<double>(iter));
 
@@ -366,23 +217,21 @@ namespace replace
         //  选择一个宏单元
         int mac_idx = sa_get_mac_idx();
         Instance* mac = macros_[mac_idx];
-        // macro影响的hpwl
-        double old_mac_hpwl = getMacroHpwl(mac);
         // 计算宏单元的成本函数
-        double mac_c0 = sa_get_mac_cost(mac);
+        double old_mac_hpwl, old_mac_den, old_mac_ovlp;
+        double mac_c0 = sa_get_mac_cost(mac, old_mac_hpwl, old_mac_den, old_mac_ovlp);
         // 随机移动
         std::pair<int, int> mov = sa_get_mac_mov(mac);
         sa_do_mac_mov(mac, mov);
-        // macro影响的hpwl
-        double new_mac_hpwl = getMacroHpwl(mac);
         // 计算宏单元的成本函数
-        double mac_c1 = sa_get_mac_cost(mac);
+        double new_mac_hpwl, new_mac_den, new_mac_ovlp;
+        double mac_c1 = sa_get_mac_cost(mac, new_mac_hpwl, new_mac_den, new_mac_ovlp);
         // 判断是否接受新的解
         bool accept = sa_mov_accept(mac_c0, mac_c1);
 
         if(accept)
         {
-            tot_mac_den = 0;
+            tot_mac_den += (new_mac_den - old_mac_den);
             tot_mac_ovlp = getAllMacroOverlap(macros_);
             tot_mac_hpwl += (new_mac_hpwl - old_mac_hpwl);
             ovlp_free_flg = (tot_mac_ovlp == 0);
@@ -436,14 +285,15 @@ namespace replace
         updateMacroNetBox(mac);
     }
 
-    double MacroLegalizer::sa_get_mac_cost(const Instance* mac)
+    double MacroLegalizer::sa_get_mac_cost(const Instance* mac, double& hpwl, double& den, double& ovlp)
     {
-        double hpwl_cost = getMacroHpwl(mac);
-        double den_cost = 0;
-        double ovlp_cost = getMacroOverlap(mac, macros_);
-        double tot_cost = sa_hpwl_wgt * hpwl_cost 
-                         + sa_den_wgt * den_cost
-                         + sa_ovlp_wgt * ovlp_cost;
+        hpwl = getMacroHpwl(mac);
+        // double den = 0;
+        den = get_mac_den(mac);
+        ovlp = getMacroOverlap(mac, macros_);
+        double tot_cost = sa_hpwl_wgt * hpwl 
+                         + sa_den_wgt * den
+                         + sa_ovlp_wgt * ovlp;
         return tot_cost;
     }
 
@@ -457,6 +307,101 @@ namespace replace
             return true;
         else
             return false;
+    }
+
+    void MacroLegalizer::init_bins()
+    {
+        // 初始化bin的大小为最小的macro的1/16
+        bin_size_x = bin_size_y = std::numeric_limits<double>::max();
+        for(const Instance* mac : macros_)
+        {
+            bin_size_x = std::min(static_cast<double>(mac->dx()), bin_size_x);
+            bin_size_y = std::min(static_cast<double>(mac->dy()), bin_size_y);
+        }
+        bin_size_x /= 4.0;
+        bin_size_y /= 4.0;
+        bin_count_x = static_cast<int>(std::round(die_->coreDx() / bin_size_x));
+        bin_count_y = static_cast<int>(std::round(die_->coreDy() / bin_size_y));
+        bin_size_x = die_->coreDx() / static_cast<double>(bin_count_x);
+        bin_size_y = die_->coreDy() / static_cast<double>(bin_count_y);
+
+        bin_density.resize(bin_count_x * bin_count_y, 0.0);
+        for(const Instance* cell : die_->insts())
+        {
+            if(cell->isMacro())
+                continue;
+            int idx_x_low = static_cast<int>((cell->lx() - die_->coreLx()) / bin_size_x);
+            int idx_x_high = static_cast<int>((cell->ux() - die_->coreLx()) / bin_size_x);
+            int idx_y_low = static_cast<int>((cell->ly() - die_->coreLy()) / bin_size_y);
+            int idx_y_high = static_cast<int>((cell->uy() - die_->coreLy()) / bin_size_y);
+            idx_x_low = std::min(std::max(idx_x_low, 0), bin_count_x-1);
+            idx_x_high = std::min(std::max(idx_x_high, 0), bin_count_x-1);
+            idx_y_low = std::min(std::max(idx_y_low, 0), bin_count_y-1);
+            idx_y_high = std::min(std::max(idx_y_high, 0), bin_count_y-1);
+
+            for(int x = idx_x_low; x <= idx_x_high; x++)
+            {
+                double bin_lx = x * bin_size_x;
+                double bin_ux = (x + 1) * bin_size_x;
+                double ovlp_lx = std::max(static_cast<double>(cell->lx()), bin_lx);
+                double ovlp_ux = std::min(static_cast<double>(cell->ux()), bin_ux);
+                for(int y = idx_y_low; y <= idx_y_high; y++)
+                {
+                    double bin_ly = y * bin_size_y;
+                    double bin_uy = (y + 1) * bin_size_y;
+                    double ovlp_ly = std::max(static_cast<double>(cell->ly()), bin_ly);
+                    double ovlp_uy = std::min(static_cast<double>(cell->uy()), bin_uy);
+
+                    if(ovlp_lx < ovlp_ux && ovlp_ly < ovlp_uy)
+                    {
+                        double ovlp_area = (ovlp_ux - ovlp_lx) * (ovlp_uy - ovlp_ly);
+                        bin_density[x * bin_count_y + y] += ovlp_area;
+                    }
+                }
+            }
+        }
+
+        double bin_area = bin_size_x * bin_size_y;
+        for(int x = 0; x < bin_count_x; x++)
+        {
+            for(int y = 0; y < bin_count_y; y++)
+                bin_density[x * bin_count_y + y] /= bin_area;
+        }
+    }
+
+    double MacroLegalizer::get_mac_den(const Instance* mac)
+    {
+        int idx_x_low = static_cast<int>((mac->lx() - die_->coreLx()) / bin_size_x);
+        int idx_x_high = static_cast<int>((mac->ux() - die_->coreLx()) / bin_size_x);
+        int idx_y_low = static_cast<int>((mac->ly() - die_->coreLy()) / bin_size_y);
+        int idx_y_high = static_cast<int>((mac->uy() - die_->coreLy()) / bin_size_y);
+        idx_x_low = std::min(std::max(idx_x_low, 0), bin_count_x-1);
+        idx_x_high = std::min(std::max(idx_x_high, 0), bin_count_x-1);
+        idx_y_low = std::min(std::max(idx_y_low, 0), bin_count_y-1);
+        idx_y_high = std::min(std::max(idx_y_high, 0), bin_count_y-1);
+
+        double den = 0.0;
+        for(int x = idx_x_low; x <= idx_x_high; x++)
+        {
+            double bin_lx = x * bin_size_x;
+            double bin_ux = (x + 1) * bin_size_x;
+            double ovlp_lx = std::max(static_cast<double>(mac->lx()), bin_lx);
+            double ovlp_ux = std::min(static_cast<double>(mac->ux()), bin_ux);
+            for(int y = idx_y_low; y <= idx_y_high; y++)
+            {
+                double bin_ly = y * bin_size_y;
+                double bin_uy = (y + 1) * bin_size_y;
+                double ovlp_ly = std::max(static_cast<double>(mac->ly()), bin_ly);
+                double ovlp_uy = std::min(static_cast<double>(mac->uy()), bin_uy);
+
+                if(ovlp_lx < ovlp_ux && ovlp_ly < ovlp_uy)
+                {
+                    double ovlp_area = (ovlp_ux - ovlp_lx) * (ovlp_uy - ovlp_ly);
+                    den += ovlp_area * bin_density[x * bin_count_y + y];
+                }
+            }
+        }
+        return den;
     }
 
     //////////////////////////////////
