@@ -152,7 +152,7 @@ namespace replace
         sa_hpwl_cof = 1.0;
         sa_den_cof = 1.0;
         sa_ovlp_cof = 1.5;
-        sa_max_iter0 = 20;
+        sa_max_iter0 = 50;
     }
 
     void MacroLegalizer::sa_mac_leg_top()
@@ -309,7 +309,7 @@ namespace replace
             return false;
     }
 
- void MacroLegalizer::init_bins()
+    void MacroLegalizer::init_bins()
     {
         // 初始化bin的大小为最小的macro的1/16
         bin_size_x = bin_size_y = std::numeric_limits<double>::max();
