@@ -1102,7 +1102,7 @@ namespace replace
         double overlapArea = getOverlapDensityArea(bin, gCell) * gCell->densityScale();
         electroForce.x += bell * overlapArea * bin->electroForceX();
         electroForce.y += bell * overlapArea * bin->electroForceY();
-        gradTheta -= derive * overlapArea;
+        gradTheta -= derive * overlapArea * bin->electroPhi();
       }
     }
 
@@ -1128,7 +1128,7 @@ namespace replace
           double overlapArea = (overlapUx - overlapLx) * (overlapUy - overlapLy) * gCell->densityScale();
           electroForce.x += bell * overlapArea * bin->electroForceX();
           electroForce.y += bell * overlapArea * bin->electroForceY();
-          gradTheta -= derive * overlapArea;
+          gradTheta -= derive * overlapArea * bin->electroPhi();
         }
       }
     }
@@ -1231,7 +1231,7 @@ namespace replace
           grad.x += bell * commonMul * bin->electroForceX();
           grad.y += bell * dAdy * commonVal;
           grad.y += bell * commonMul * bin->electroForceY();
-          gradTheta -= derive * nu * shareArea;
+          gradTheta -= derive * nu * shareArea * bin->electroPhi();
         }
       }
     }
@@ -1278,7 +1278,7 @@ namespace replace
           grad.x += bell * commonMul * bin->electroForceX();
           grad.y += bell * dAdy * commonVal;
           grad.y += bell * commonMul * bin->electroForceY();
-          gradTheta -= derive * nu * shareArea;
+          gradTheta -= derive * nu * shareArea * bin->electroPhi();
         }
       }
     }
@@ -1310,7 +1310,7 @@ namespace replace
     double precondi = 0;
     for (const GPin *gPin : gCell->gPins())
       precondi += gPin->offsetCx() * gPin->offsetCx() + gPin->offsetCy() * gPin->offsetCy();
-    //precondi = std::sqrt(precondi);
+    precondi *= 0.5;
     return precondi;
   }
 
