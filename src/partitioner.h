@@ -18,16 +18,18 @@ namespace replace
     void partitioning2(std::shared_ptr<PlacerBase> pb_);
 
     void partitionInstance(std::shared_ptr<PlacerBase> &pb_);
+    void partitionInstance1(std::shared_ptr<PlacerBase> &pb_);
 #if !defined(WIN32) && !defined(_WIN32)
-    void mtPartitionInstance(std::shared_ptr<PlacerBase> &pb_);
+    // void mtPartitionInstance(std::shared_ptr<PlacerBase> &pb_);
 
-    void mtPartitionInstance2(std::shared_ptr<PlacerBase> &pb_);
-    void partitionTest();
+    // void mtPartitionInstance2(std::shared_ptr<PlacerBase> &pb_);
 
-    void mtKahyparTest();
+    // void mtKahyparTest();
 #endif
-    // analysis the different technology
-    double getAverageTechRatio(std::shared_ptr<PlacerBase> &pb_);
+    // analysis the different technology ratio
+    double getAverageStdCellTechRatio(std::shared_ptr<PlacerBase> &pb_);
+
+    double getAverageMacroTechRatio(std::shared_ptr<PlacerBase> &pb_);
 
     int getMacroStdcellAreaRatio(std::shared_ptr<PlacerBase> &pb_);
 

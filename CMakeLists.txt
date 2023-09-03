@@ -5,6 +5,16 @@ project(replace)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+set(Boost_USE_STATIC_LIBS ON)
+set(CMAKE_EXE_LINKER_FLAGS "-static")
+
+find_package(Boost 1.69 REQUIRED COMPONENTS program_options)
+
+include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
+
+message(STATUS "Boost Include: ${Boost_INCLUDE_DIRS}")
+message(STATUS "Boost Library Dirs: ${Boost_LIBRARY_DIRS}")
+message(STATUS "Boost Libraries: ${Boost_LIBRARIES}")
 
 set(REPLACE_HOME ${PROJECT_SOURCE_DIR} )
 set(SPDLOG_HOME
@@ -50,6 +60,9 @@ set(PLACE_HEADER
   src/outputWriter.h
   src/abaxLegalizer.h
 )
+
+set(REPLACE_INCLUDE_DIRS ${Boost_INCLUDE_DIRS} ${PLACE_HEADER})
+set(REPLACE_LINK_LIBRARIES ${Boost_LIBRARIES} ${REPLACE_LINK_LIBRARIES})
 
 set(PLACE_SRC
   src/main.cpp
@@ -98,16 +111,20 @@ if(WIN32)
       $<TARGET_FILE_DIR:${CMAKE_PROJECT_NAME}>/kahypar.dll
   )
 else()
-  target_link_libraries(replace PRIVATE ${GLPK_HOME}/libglpk.so.40 )
+  target_link_libraries(replace PRIVATE ${GLPK_HOME}/libglpk.a)
 
-  add_library( kahypar SHARED IMPORTED )
-  set_target_properties( kahypar PROPERTIES IMPORTED_LOCATION ${KAHYPAR_HOME}/libkahypar.so )
+  target_link_libraries(replace PRIVATE ${KAHYPAR_HOME}/libkahypar.a)
 
-  add_library( mtkahypar SHARED IMPORTED )
-  set_target_properties( mtkahypar PROPERTIES IMPORTED_LOCATION ${MTKAHYPAR_HOME}/libmtkahypar.so )
+  target_link_libraries(replace PRIVATE ${Boost_LIBRARIES})
 
-  target_link_libraries(replace PRIVATE kahypar)
-  target_link_libraries(replace PRIVATE mtkahypar)
+  # add_library( kahypar SHARED IMPORTED )
+  # set_target_properties( kahypar PROPERTIES IMPORTED_LOCATION ${KAHYPAR_HOME}/libkahypar.so )
 
-  target_include_directories(replace PRIVATE ${MTKAHYPAR_HOME}/include)
+  # add_library( mtkahypar SHARED IMPORTED )
+  # set_target_properties( mtkahypar PROPERTIES IMPORTED_LOCATION ${MTKAHYPAR_HOME}/libmtkahypar.so )
+
+  # target_link_libraries(replace PRIVATE kahypar)
+  # target_link_libraries(replace PRIVATE mtkahypar)
+
+  # target_include_directories(replace PRIVATE ${MTKAHYPAR_HOME}/include)
 endif()
