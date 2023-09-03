@@ -13,7 +13,7 @@
 #include <memory>
 #if !defined(WIN32) && !defined(_WIN32)
 // #include <libmtkahypar.h>
-#include <sys/time.h>
+// #include <sys/time.h>
 #endif
 #include <iomanip>
 
@@ -375,8 +375,8 @@ namespace replace
     // get blocks max weights
     if(averageMacroRatio==1){
       double ratioA=0.5;
-      init_block_weights[0]=int(ratioA*vertex_weights_sum1*1.2+1);
-      init_block_weights[1]=int(ratioA*vertex_weights_sum1*1.2+1);
+      init_block_weights[0]=int(ratioA*vertex_weights_sum1*1.1+1);
+      init_block_weights[1]=int(ratioA*vertex_weights_sum1*1.1+1);
     }
     else{
       double ratioA=averageMacroRatio/(averageMacroRatio+1);
@@ -386,11 +386,11 @@ namespace replace
       string Tech1Name=pb_->techs()[0]->name();
       string Tech2Name=pb_->techs()[1]->name();
       if(topTech==Tech1Name){
-        init_block_weights[1]=int(ratioA*vertex_weights_sum1*1.2+1);
-        init_block_weights[0]=int(ratioB*vertex_weights_sum1*1.2+1);
+        init_block_weights[1]=int(ratioA*vertex_weights_sum1*1.1+1);
+        init_block_weights[0]=int(ratioB*vertex_weights_sum1*1.1+1);
       }else if(topTech==Tech2Name){
-        init_block_weights[0]=int(ratioA*vertex_weights_sum1*1.2+1);
-        init_block_weights[1]=int(ratioB*vertex_weights_sum1*1.2+1);
+        init_block_weights[0]=int(ratioA*vertex_weights_sum1*1.1+1);
+        init_block_weights[1]=int(ratioB*vertex_weights_sum1*1.1+1);
       }
     }
 
@@ -398,7 +398,7 @@ namespace replace
     std::cout<<"init_block_weights[1]: "<<init_block_weights[1]<<std::endl;
 
     kahypar_set_custom_target_block_weights(num_blocks,init_block_weights.get() , context);
-    const double imbalance = 0.1;
+    const double imbalance = 0.05;
 
     kahypar_hyperedge_weight_t objective = 0;
 
@@ -474,7 +474,7 @@ namespace replace
 
     double averageStdCellRatio=this->getAverageStdCellTechRatio(pb_);
 
-    vertex_weights_sum2=vertex_weights_sum2*1.1;
+    vertex_weights_sum2=vertex_weights_sum2*1.1+1;
 
     if(averageStdCellRatio==1){
       double ratioA=0.5;
@@ -541,7 +541,7 @@ namespace replace
       {
         auto extid=inst->extId();
         if (partition2[extid] == 1){
-          std::cout<<"instance: "<<extid<<"  partition2: "<<partition2[extid]<<std::endl;
+          // std::cout<<"instance: "<<extid<<"  partition2: "<<partition2[extid]<<std::endl;
           if(isBot[extid] == true){
             continue;
           }
@@ -573,11 +573,20 @@ namespace replace
         break;
       }else{
         long init_block_weights_sum=init_block_weights[0]+init_block_weights[1];
+        int topWeight=0;
+        int botWeight=0;
+        for(int i=0;i<instanceNum;i++){
+          if(isBot[i]){
+            botWeight+=vertex_weights2[i];
+          }else{
+            topWeight+=vertex_weights2[i];
+          }
+        }
         if(topDieUtilizeRatio>1){
-          init_block_weights[0]=int(double(init_block_weights[0])/topDieUtilizeRatio)+1;
+          init_block_weights[0]=int(double(init_block_weights[0])/topWeight)+1;
           init_block_weights[1]=init_block_weights_sum-init_block_weights[0];
         }else if(botDieUtilizeRatio>1){
-          init_block_weights[1]=int(double(init_block_weights[1])/botDieUtilizeRatio)+1;
+          init_block_weights[1]=int(double(init_block_weights[1])/botWeight)+1;
           init_block_weights[0]=init_block_weights_sum-init_block_weights[1];       
         }
         kahypar_set_custom_target_block_weights(num_blocks, init_block_weights.get(), context);
@@ -862,11 +871,20 @@ namespace replace
         break;
       }else{
         long init_block_weights_sum=init_block_weights[0]+init_block_weights[1];
+        int topWeight=0;
+        int botWeight=0;
+        for(int i=0;i<instanceNum;i++){
+          if(isBot[i]){
+            botWeight+=vertex_weights2[i];
+          }else{
+            topWeight+=vertex_weights2[i];
+          }
+        }
         if(topDieUtilizeRatio>1){
-          init_block_weights[0]=int(double(init_block_weights[0])/topDieUtilizeRatio)+1;
+          init_block_weights[0]=int(double(init_block_weights[0])/topWeight)+1;
           init_block_weights[1]=init_block_weights_sum-init_block_weights[0];
         }else if(botDieUtilizeRatio>1){
-          init_block_weights[1]=int(double(init_block_weights[1])/botDieUtilizeRatio)+1;
+          init_block_weights[1]=int(double(init_block_weights[1])/botWeight)+1;
           init_block_weights[0]=init_block_weights_sum-init_block_weights[1];       
         }
         kahypar_set_custom_target_block_weights(num_blocks, init_block_weights.get(), context);

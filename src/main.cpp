@@ -84,7 +84,7 @@ int main(int argc, const char *argv[])
     partitioner.partitionInstance(pb);
 #else
     // partitioner.partitionInstance(pb);
-    partitioner.partitionInstance1(pb);
+    partitioner.partitionInstance(pb);
     // partitioner.mtPartitionInstance2(pb);
 #endif
   }
